@@ -1,39 +1,78 @@
+import React, { useState } from "react";
 import { Toaster } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
-import NotFound from "@/pages/NotFound";
-import { Route, Switch } from "wouter";
 import ErrorBoundary from "./components/ErrorBoundary";
 import { ThemeProvider } from "./contexts/ThemeContext";
-import Home from "./pages/Home";
+import { AppProvider, useApp } from "./contexts/AppContext";
+import { Navbar } from "./components/Navbar";
+import { Login } from "./pages/Login";
+import { Dashboard } from "./pages/Dashboard";
+import { MyKit } from "./pages/MyKit";
+import { JobBoard } from "./pages/JobBoard";
+import { TheDrop } from "./pages/TheDrop";
+import { UniversityPortal } from "./pages/UniversityPortal";
+import { YourWay } from "./pages/YourWay";
 
+function MainLayout() {
+  const { isAuthenticated } = useApp();
+  // Simple state-based routing for static prototype navigation
+  const [currentPage, setCurrentPage] = useState<string>(() => {
+    return isAuthenticated ? "dashboard" : "login";
+  });
 
-function Router() {
+  const handleNavigate = (page: string) => {
+    setCurrentPage(page);
+  };
+
+  const handleLoginSuccess = () => {
+    setCurrentPage("dashboard");
+  };
+
   return (
-    <Switch>
-      <Route path={"/"} component={Home} />
-      <Route path={"/404"} component={NotFound} />
-      {/* Final fallback route */}
-      <Route component={NotFound} />
-    </Switch>
+    <div className="min-h-screen flex flex-col bg-background text-foreground transition-colors duration-200">
+      <Navbar onNavigate={handleNavigate} currentPage={currentPage} />
+      
+      <main className="flex-grow">
+        {!isAuthenticated ? (
+          <Login onLoginSuccess={handleLoginSuccess} />
+        ) : (
+          <>
+            {currentPage === "dashboard" && <Dashboard onNavigate={handleNavigate} />}
+            {currentPage === "my-kit" && <MyKit />}
+            {currentPage === "jobs" && <JobBoard />}
+            {currentPage === "drops" && <TheDrop />}
+            {currentPage === "university" && <UniversityPortal />}
+            {currentPage === "your-way" && <YourWay />}
+            {currentPage === "login" && <Dashboard onNavigate={handleNavigate} />}
+          </>
+        )}
+      </main>
+
+      {/* Footer */}
+      <footer className="border-t-2 border-border bg-card py-6 text-center text-xs text-muted-foreground font-bold uppercase tracking-wider">
+        <div className="container mx-auto px-4 flex flex-col sm:flex-row justify-between items-center gap-4">
+          <p>© 2026 StepOne Platform. Built with care for student success.</p>
+          <div className="flex gap-4">
+            <a href="#privacy" onClick={(e) => { e.preventDefault(); alert("Demo: Privacy Policy"); }} className="hover:underline">Privacy</a>
+            <a href="#terms" onClick={(e) => { e.preventDefault(); alert("Demo: Terms of Service"); }} className="hover:underline">Terms</a>
+            <a href="#contact" onClick={(e) => { e.preventDefault(); alert("Demo: Contact Support"); }} className="hover:underline">Support</a>
+          </div>
+        </div>
+      </footer>
+    </div>
   );
 }
-
-// NOTE: About Theme
-// - First choose a default theme according to your design style (dark or light bg), than change color palette in index.css
-//   to keep consistent foreground/background color across components
-// - If you want to make theme switchable, pass `switchable` ThemeProvider and use `useTheme` hook
 
 function App() {
   return (
     <ErrorBoundary>
-      <ThemeProvider
-        defaultTheme="light"
-        // switchable
-      >
-        <TooltipProvider>
-          <Toaster />
-          <Router />
-        </TooltipProvider>
+      <ThemeProvider defaultTheme="light" switchable>
+        <AppProvider>
+          <TooltipProvider>
+            <Toaster position="top-center" />
+            <MainLayout />
+          </TooltipProvider>
+        </AppProvider>
       </ThemeProvider>
     </ErrorBoundary>
   );
