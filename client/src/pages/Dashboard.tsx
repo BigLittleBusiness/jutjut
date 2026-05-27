@@ -7,7 +7,8 @@ interface DashboardProps {
 }
 
 export const Dashboard: React.FC<DashboardProps> = ({ onNavigate }) => {
-  const { conversations, activeChatId, setActiveChatId, sendMessage, userProfile } = useApp();
+  const { conversations, activeChatId, setActiveChatId, sendMessage, userProfile, anonymousAvatarSetting, setAnonymousAvatarSetting, setSelectedKitUser } = useApp();
+  const [showAdminSettings, setShowAdminSettings] = useState(false);
   const [chatOpen, setChatOpen] = useState(false);
   const [newMessageText, setNewMessageText] = useState("");
   const chatEndRef = useRef<HTMLDivElement>(null);
@@ -16,7 +17,27 @@ export const Dashboard: React.FC<DashboardProps> = ({ onNavigate }) => {
   const [posts, setPosts] = useState([
     {
       id: "p1",
-      user: { name: "Sarah Lin", avatar: "https://images.unsplash.com/photo-1517841905240-472988babdf9?w=150&auto=format&fit=crop&q=80", school: "Downtown High" },
+      user: { 
+        name: "Sarah Lin", 
+        avatar: "https://images.unsplash.com/photo-1517841905240-472988babdf9?w=150&auto=format&fit=crop&q=80", 
+        school: "Downtown High",
+        isVerified: true,
+        email: "sarah.lin@school.edu",
+        vouchedBy: [
+          { name: "Principal Vance", role: "School Principal", status: "verified" },
+          { name: "Coach Harris", role: "Basketball Coach", status: "verified" }
+        ],
+        achievements: [
+          { title: "English Essay Portfolio", detail: "Scored 98% in creative writing essay collection", verified: true, verifier: "Principal Vance" },
+          { title: "Volunteer Leadership", detail: "Organized local community clean-up drive", verified: true, verifier: "Principal Vance" }
+        ],
+        certs: [
+          { name: "Starbucks Interview Record", issuer: "Starbucks", connected: true }
+        ],
+        gradesVerified: true,
+        sportsVerified: true,
+        clubVerified: true
+      },
       type: "achievement",
       content: "Sarah got an interview at Starbucks! ☕",
       meta: "see her Kit",
@@ -44,7 +65,7 @@ export const Dashboard: React.FC<DashboardProps> = ({ onNavigate }) => {
     },
     {
       id: "p3",
-      user: { name: "Anonymous Student", avatar: "https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?w=150&auto=format&fit=crop&q=80", school: "Year 12 Student" },
+      user: { name: "Anonymous Student", avatar: "anon", school: "Year 12 Student" },
       type: "anonymous",
       content: "Am I on track for CS with 80% average? Be honest. I have 3 verified coach vouches and some Google certs, but my math grade took a small hit this term.",
       meta: "anonymous post",
@@ -92,6 +113,22 @@ export const Dashboard: React.FC<DashboardProps> = ({ onNavigate }) => {
     }));
   };
 
+  // Helper to get anonymous avatar source
+  const getAnonymousAvatar = () => {
+    switch (anonymousAvatarSetting) {
+      case "question":
+        return "https://images.unsplash.com/photo-1557683316-973673baf926?w=150&auto=format&fit=crop&q=80"; // A colorful block with a clean look, we'll render a fallback icon on top or use stylized placeholder
+      case "fox":
+        return "https://images.unsplash.com/photo-1484406566174-9da000fda645?w=150&auto=format&fit=crop&q=80"; // Fox
+      case "unicorn":
+        return "https://images.unsplash.com/photo-1550745165-9bc0b252726f?w=150&auto=format&fit=crop&q=80"; // Tech/Unicorn theme
+      case "alien":
+        return "https://images.unsplash.com/photo-1451187580459-43490279c0fa?w=150&auto=format&fit=crop&q=80"; // Space/Alien theme
+      default:
+        return "https://images.unsplash.com/photo-1557683316-973673baf926?w=150&auto=format&fit=crop&q=80";
+    }
+  };
+
   const handleCommentSubmit = (postId: string, e: React.FormEvent) => {
     e.preventDefault();
     setPosts(prev => prev.map(p => {
@@ -128,6 +165,48 @@ export const Dashboard: React.FC<DashboardProps> = ({ onNavigate }) => {
       
       {/* Left Sidebar: Quick Profile & Squads */}
       <div className="lg:col-span-3 space-y-6">
+        {/* System Admin Settings Toggle */}
+        <div className="brutal-card bg-amber-500/10 border-amber-500 brutal-shadow-amber p-4">
+          <button
+            onClick={() => setShowAdminSettings(!showAdminSettings)}
+            className="w-full text-left font-black text-xs uppercase tracking-wider flex items-center justify-between text-amber-700 dark:text-amber-400"
+          >
+            <span><i className="fa-solid fa-gears"></i> System Admin Settings</span>
+            <i className={`fa-solid ${showAdminSettings ? "fa-chevron-up" : "fa-chevron-down"}`}></i>
+          </button>
+          
+          {showAdminSettings && (
+            <div className="mt-4 pt-4 border-t border-amber-500/30 space-y-4 text-xs">
+              <div>
+                <p className="font-extrabold uppercase mb-2 text-foreground">Anonymous Post Avatar</p>
+                <div className="grid grid-cols-2 gap-2">
+                  {[
+                    { key: "question", label: "❓ Default" },
+                    { key: "fox", label: "🦊 Fox" },
+                    { key: "unicorn", label: "🦄 Unicorn" },
+                    { key: "alien", label: "👽 Alien" }
+                  ].map((opt) => (
+                    <button
+                      key={opt.key}
+                      onClick={() => {
+                        setAnonymousAvatarSetting(opt.key as any);
+                        toast.success(`Anonymous avatar changed to ${opt.label}!`);
+                      }}
+                      className={`p-2 rounded border-2 font-bold text-center transition-all ${
+                        anonymousAvatarSetting === opt.key
+                          ? "bg-primary text-primary-foreground border-primary"
+                          : "bg-background border-border hover:bg-accent text-foreground"
+                      }`}
+                    >
+                      {opt.label}
+                    </button>
+                  ))}
+                </div>
+              </div>
+            </div>
+          )}
+        </div>
+
         {/* Profile Card */}
         <div className="brutal-card brutal-shadow-teal bg-card">
           <div className="flex flex-col items-center text-center">
@@ -231,7 +310,20 @@ export const Dashboard: React.FC<DashboardProps> = ({ onNavigate }) => {
               {/* Post Header */}
               <div className="flex justify-between items-start mb-3">
                 <div className="flex gap-3 items-center">
-                  {typeof post.user.avatar === "string" && post.user.avatar.startsWith("http") ? (
+                  {post.type === "anonymous" ? (
+                    <div className="relative w-10 h-10 shrink-0">
+                      <img 
+                        src={getAnonymousAvatar()} 
+                        alt="Anonymous Avatar" 
+                        className="w-10 h-10 rounded-full object-cover brutal-border" 
+                      />
+                      {anonymousAvatarSetting === "question" && (
+                        <div className="absolute inset-0 flex items-center justify-center bg-black/40 rounded-full">
+                          <span className="text-white font-black text-lg">?</span>
+                        </div>
+                      )}
+                    </div>
+                  ) : typeof post.user.avatar === "string" && post.user.avatar.startsWith("http") ? (
                     <img src={post.user.avatar} alt={post.user.name} className="w-10 h-10 rounded-full object-cover brutal-border" />
                   ) : (
                     <div className="w-10 h-10 rounded-full bg-primary/10 text-primary flex items-center justify-center text-lg brutal-border">
@@ -260,7 +352,12 @@ export const Dashboard: React.FC<DashboardProps> = ({ onNavigate }) => {
                 {post.meta && (
                   <button
                     onClick={() => {
-                      if (post.type === "achievement") onNavigate("my-kit");
+                      if (post.type === "achievement") {
+                        // View specific user kit (Sarah's Kit)
+                        setSelectedKitUser(post.user as any);
+                        onNavigate("my-kit");
+                        toast.info(`Viewing ${post.user.name}'s verified Kit.`);
+                      }
                       else if (post.type === "announcement") onNavigate("university");
                       else if (post.type === "employer") onNavigate("jobs");
                       else toast.info(`Viewing details for: ${post.meta}`);

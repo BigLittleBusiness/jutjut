@@ -11,6 +11,42 @@ export const TheDrop: React.FC = () => {
   const [dropOffer, setDropOffer] = useState("");
   const [dropCode, setDropCode] = useState("");
   const [dropDate, setDropDate] = useState("");
+  const [dropImage, setDropImage] = useState<File | null>(null);
+  const [isUploading, setIsUploading] = useState(false);
+  const [uploadedImageUrl, setUploadedImageUrl] = useState("");
+
+  // Calendar States
+  const [currentDate, setCurrentDate] = useState(new Date(2026, 4, 1)); // May 2026 as starting point
+
+  const handleImageChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    setDropImage(file);
+    setIsUploading(true);
+
+    toast.promise(
+      new Promise((resolve) => {
+        setTimeout(() => {
+          // Simulate AWS S3 upload
+          const simulatedUrl = "https://images.unsplash.com/photo-1546069901-ba9599a7e63c?w=400&auto=format&fit=crop&q=80"; // Salad/Food drop image
+          resolve(simulatedUrl);
+        }, 1800);
+      }),
+      {
+        loading: "AWS S3 Bucket: Securely uploading offer banner image...",
+        success: (url: any) => {
+          setIsUploading(false);
+          setUploadedImageUrl(url);
+          return "Image uploaded to AWS S3 bucket successfully!";
+        },
+        error: () => {
+          setIsUploading(false);
+          return "AWS S3 Upload failed.";
+        }
+      }
+    );
+  };
 
   const handleCreateDropSubmit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -39,6 +75,8 @@ export const TheDrop: React.FC = () => {
     setDropOffer("");
     setDropCode("");
     setDropDate("");
+    setDropImage(null);
+    setUploadedImageUrl("");
   };
 
   const activeDrops = drops.filter(d => d.isActive);
@@ -216,6 +254,31 @@ export const TheDrop: React.FC = () => {
                     className="w-full p-3 brutal-border rounded-lg bg-background text-foreground font-semibold text-sm focus:outline-none"
                   />
                 </div>
+                <div>
+                  <label className="block text-xs font-extrabold uppercase mb-1">Offer Banner Image (AWS S3 Upload)</label>
+                  <div className="p-3 bg-background border-2 border-dashed border-border rounded-lg text-center relative">
+                    {uploadedImageUrl ? (
+                      <div className="space-y-2">
+                        <img src={uploadedImageUrl} alt="Preview" className="h-20 mx-auto rounded object-cover border border-border" />
+                        <p className="text-[10px] text-emerald-600 font-bold"><i className="fa-solid fa-cloud-arrow-up"></i> s3://stepone-drops/{dropImage?.name}</p>
+                      </div>
+                    ) : (
+                      <label className="cursor-pointer block py-2">
+                        <span className="text-xs font-bold text-primary hover:underline">
+                          {isUploading ? "Uploading to S3..." : "Choose Image File"}
+                        </span>
+                        <input
+                          type="file"
+                          accept="image/*"
+                          onChange={handleImageChange}
+                          className="hidden"
+                          disabled={isUploading}
+                        />
+                        <p className="text-[9px] text-muted-foreground mt-1">Saves directly to AWS S3 Bucket</p>
+                      </label>
+                    )}
+                  </div>
+                </div>
                 <button type="submit" className="w-full brutal-btn bg-secondary text-secondary-foreground py-2.5 text-sm font-bold">
                   Submit Drop Proposal
                 </button>
@@ -227,22 +290,80 @@ export const TheDrop: React.FC = () => {
           <div className="lg:col-span-7 space-y-6">
             {/* Calendar View */}
             <div className="brutal-card brutal-shadow bg-card">
-              <h3 className="text-md font-extrabold uppercase tracking-wider mb-4 flex items-center gap-2">
-                <i className="fa-solid fa-calendar-days text-primary"></i> Drop Calendar & Analytics
-              </h3>
+              <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3 mb-4 border-b border-border pb-3">
+                <h3 className="text-sm font-black uppercase tracking-wider flex items-center gap-2">
+                  <i className="fa-solid fa-calendar-days text-primary"></i> Drop Scheduler Calendar
+                </h3>
+                
+                {/* Month/Year Navigators */}
+                <div className="flex items-center gap-1.5 bg-background brutal-border p-1 rounded-lg">
+                  <button
+                    onClick={() => {
+                      setCurrentDate(prev => new Date(prev.getFullYear(), prev.getMonth() - 1, 1));
+                    }}
+                    className="h-7 w-7 rounded hover:bg-accent flex items-center justify-center text-xs"
+                    title="Previous Month"
+                  >
+                    <i className="fa-solid fa-chevron-left"></i>
+                  </button>
+                  
+                  {/* Dropdowns for Month and Year */}
+                  <select
+                    value={currentDate.getMonth()}
+                    onChange={(e) => {
+                      setCurrentDate(prev => new Date(prev.getFullYear(), parseInt(e.target.value), 1));
+                    }}
+                    className="text-xs font-bold bg-transparent focus:outline-none cursor-pointer"
+                  >
+                    {["January", "February", "March", "April", "May", "June", "July", "August", "September", "October", "November", "December"].map((m, idx) => (
+                      <option key={m} value={idx}>{m}</option>
+                    ))}
+                  </select>
+
+                  <select
+                    value={currentDate.getFullYear()}
+                    onChange={(e) => {
+                      setCurrentDate(prev => new Date(parseInt(e.target.value), prev.getMonth(), 1));
+                    }}
+                    className="text-xs font-bold bg-transparent focus:outline-none cursor-pointer"
+                  >
+                    {[2025, 2026, 2027, 2028, 2029, 2030].map(y => (
+                      <option key={y} value={y}>{y}</option>
+                    ))}
+                  </select>
+
+                  <button
+                    onClick={() => {
+                      setCurrentDate(prev => new Date(prev.getFullYear(), prev.getMonth() + 1, 1));
+                    }}
+                    className="h-7 w-7 rounded hover:bg-accent flex items-center justify-center text-xs"
+                    title="Next Month"
+                  >
+                    <i className="fa-solid fa-chevron-right"></i>
+                  </button>
+                </div>
+              </div>
               
+              {/* Days Grid */}
               <div className="grid grid-cols-7 gap-1 text-center font-bold text-[10px] text-muted-foreground border-b border-border pb-2">
-                {["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"].map(d => (
+                {["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"].map(d => (
                   <span key={d}>{d}</span>
                 ))}
               </div>
               <div className="grid grid-cols-7 gap-1 text-center text-xs font-bold mt-2">
-                {Array.from({ length: 28 }).map((_, i) => {
+                {/* Empty cells for padding of the first day of month */}
+                {Array.from({ length: new Date(currentDate.getFullYear(), currentDate.getMonth(), 1).getDay() }).map((_, i) => (
+                  <div key={`empty-${i}`} className="aspect-square"></div>
+                ))}
+                
+                {/* Month Days */}
+                {Array.from({ length: new Date(currentDate.getFullYear(), currentDate.getMonth() + 1, 0).getDate() }).map((_, i) => {
                   const day = i + 1;
-                  const isDropDay = day === 2 || day === 16;
+                  // Make some mock drop dates for May 2026, otherwise dynamic mock dates
+                  const isDropDay = (currentDate.getMonth() === 4 && currentDate.getFullYear() === 2026 && (day === 2 || day === 16)) || (day % 14 === 0);
                   return (
                     <div
-                      key={i}
+                      key={day}
                       className={`aspect-square flex flex-col items-center justify-center rounded border-2 border-transparent ${
                         isDropDay
                           ? "bg-amber-500/10 border-amber-500 text-amber-600 dark:text-amber-400"

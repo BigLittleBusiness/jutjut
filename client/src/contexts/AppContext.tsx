@@ -88,6 +88,14 @@ interface AppContextType {
   setTaskBreakdown: (val: boolean) => void;
   simplifyJobs: boolean;
   setSimplifyJobs: (val: boolean) => void;
+
+  // Anonymous Avatar Setting
+  anonymousAvatarSetting: "question" | "fox" | "unicorn" | "alien";
+  setAnonymousAvatarSetting: (val: "question" | "fox" | "unicorn" | "alien") => void;
+
+  // Selected Kit User (for viewing others' profiles)
+  selectedKitUser: UserProfile | null;
+  setSelectedKitUser: (profile: UserProfile | null) => void;
 }
 
 const AppContext = createContext<AppContextType | undefined>(undefined);
@@ -108,6 +116,18 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   const [simplifyJobs, setSimplifyJobs] = useState<boolean>(() => {
     return localStorage.getItem("stepone_simplify_jobs") === "true";
   });
+
+  // Anonymous Avatar Setting state
+  const [anonymousAvatarSetting, setAnonymousAvatarSetting] = useState<"question" | "fox" | "unicorn" | "alien">(() => {
+    return (localStorage.getItem("stepone_anon_avatar") as any) || "question";
+  });
+
+  // Selected Kit User state
+  const [selectedKitUser, setSelectedKitUser] = useState<UserProfile | null>(null);
+
+  useEffect(() => {
+    localStorage.setItem("stepone_anon_avatar", anonymousAvatarSetting);
+  }, [anonymousAvatarSetting]);
 
   // Apply Quiet Mode Class to body
   useEffect(() => {
@@ -385,7 +405,9 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       jobs, applyToJob,
       drops, claimDrop, createDrop,
       conversations, activeChatId, setActiveChatId, sendMessage,
-      quietMode, setQuietMode, taskBreakdown, setTaskBreakdown, simplifyJobs, setSimplifyJobs
+      quietMode, setQuietMode, taskBreakdown, setTaskBreakdown, simplifyJobs, setSimplifyJobs,
+      anonymousAvatarSetting, setAnonymousAvatarSetting,
+      selectedKitUser, setSelectedKitUser
     }}>
       {children}
     </AppContext.Provider>

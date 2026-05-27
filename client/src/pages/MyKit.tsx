@@ -3,7 +3,11 @@ import { useApp } from "@/contexts/AppContext";
 import { toast } from "sonner";
 
 export const MyKit: React.FC = () => {
-  const { userProfile, setUserProfile } = useApp();
+  const { userProfile, setUserProfile, selectedKitUser, setSelectedKitUser } = useApp();
+  
+  // Use selected profile if viewing someone else's Kit, otherwise use own profile
+  const profile = selectedKitUser || userProfile;
+  const isOwnProfile = !selectedKitUser;
   const [newSportTitle, setNewSportTitle] = useState("");
   const [newSportDetail, setNewSportDetail] = useState("");
   const [requestVouchName, setRequestVouchName] = useState("");
@@ -12,21 +16,40 @@ export const MyKit: React.FC = () => {
   const [showRequestVouchModal, setShowRequestVouchModal] = useState(false);
 
   // Simulated File Uploads
-  const handleReportCardUpload = () => {
+  const [gradeFile, setGradeFile] = useState<File | null>(null);
+  const [simulatedGrade, setSimulatedGrade] = useState("");
+  const [simulatedGPA, setSimulatedGPA] = useState("");
+
+  const handleReportCardUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    setGradeFile(file);
+
     toast.promise(
-      new Promise((resolve) => setTimeout(resolve, 1500)),
+      new Promise((resolve) => {
+        setTimeout(() => {
+          // Simulate AI OCR grading
+          const randomGrade = ["A", "A-", "B+", "A+"][Math.floor(Math.random() * 4)];
+          const randomGPA = (3.5 + Math.random() * 0.5).toFixed(2);
+          resolve({ grade: randomGrade, gpa: randomGPA });
+        }, 2000);
+      }),
       {
-        loading: "Analyzing and verifying report card photo...",
-        success: () => {
+        loading: "StepOne AI: Reading report card transcript & calculating grade average...",
+        success: (data: any) => {
+          setSimulatedGrade(data.grade);
+          setSimulatedGPA(data.gpa);
           setUserProfile(prev => ({ ...prev, gradesVerified: true }));
-          return "Report Card verified! Grades updated with verified badge.";
+          return `AI Verification Complete: Grade Average ${data.grade} (GPA: ${data.gpa})!`;
         },
-        error: "Failed to analyze document."
+        error: "AI Parsing failed."
       }
     );
   };
 
   const handleConnectCert = (certName: string) => {
+    if (!isOwnProfile) return;
     toast.promise(
       new Promise((resolve) => setTimeout(resolve, 1200)),
       {
@@ -44,6 +67,7 @@ export const MyKit: React.FC = () => {
   };
 
   const handleAddSportAchievement = (e: React.FormEvent) => {
+    if (!isOwnProfile) return;
     e.preventDefault();
     if (!newSportTitle || !newSportDetail) {
       toast.error("Please fill in all achievement fields.");
@@ -65,6 +89,7 @@ export const MyKit: React.FC = () => {
   };
 
   const handleRequestVouchSubmit = (e: React.FormEvent) => {
+    if (!isOwnProfile) return;
     e.preventDefault();
     if (!requestVouchName || !requestVouchRole) {
       toast.error("Please fill in supervisor name and role.");
@@ -91,28 +116,38 @@ export const MyKit: React.FC = () => {
 
   return (
     <div className="container mx-auto px-4 py-6 max-w-4xl space-y-8">
+      {/* Back to feed button when viewing someone else's kit */}
+      {!isOwnProfile && (
+        <button
+          onClick={() => setSelectedKitUser(null)}
+          className="brutal-btn bg-card text-foreground text-xs py-1.5 px-4 mb-2"
+        >
+          <i className="fa-solid fa-arrow-left"></i> Back to Home Feed
+        </button>
+      )}
+
       {/* Page Header */}
       <div className="brutal-card bg-primary text-primary-foreground brutal-shadow-amber flex flex-col md:flex-row justify-between items-center gap-4">
         <div className="flex items-center gap-4 text-center md:text-left flex-col md:flex-row">
           <img
-            src={userProfile.avatar}
-            alt={userProfile.name}
+            src={profile.avatar}
+            alt={profile.name}
             className="w-24 h-24 rounded-2xl object-cover brutal-border"
           />
           <div>
             <div className="flex items-center justify-center md:justify-start gap-2">
-              <h2 className="text-3xl font-black">My Kit</h2>
+              <h2 className="text-3xl font-black">{isOwnProfile ? "My Kit" : `${profile.name}'s Kit`}</h2>
               <span className="bg-secondary text-secondary-foreground text-xs font-bold px-2.5 py-1 rounded-full brutal-border flex items-center gap-1">
                 <i className="fa-solid fa-circle-check text-emerald-600"></i> Verified Student
               </span>
             </div>
-            <p className="text-sm font-bold opacity-90 mt-1 uppercase tracking-wider">{userProfile.school}</p>
-            <p className="text-xs opacity-75 mt-0.5">{userProfile.email}</p>
+            <p className="text-sm font-bold opacity-90 mt-1 uppercase tracking-wider">{profile.school}</p>
+            <p className="text-xs opacity-75 mt-0.5">{profile.email}</p>
           </div>
         </div>
         <div className="bg-card text-card-foreground p-3 rounded-xl brutal-border font-bold text-xs text-center min-w-[150px]">
           <p className="text-muted-foreground uppercase text-[10px]">Verification Score</p>
-          <p className="text-2xl font-black text-primary mt-1">85%</p>
+          <p className="text-2xl font-black text-primary mt-1">{isOwnProfile ? "85%" : "95%"}</p>
         </div>
       </div>
 
@@ -128,18 +163,37 @@ export const MyKit: React.FC = () => {
               Upload your official school documents to instantly verify your high school grades.
             </p>
             
-            {userProfile.gradesVerified ? (
-              <div className="p-3 bg-emerald-500/10 border-2 border-emerald-500 rounded-lg text-emerald-700 dark:text-emerald-400 font-bold text-xs flex items-center gap-2">
-                <i className="fa-solid fa-circle-check text-lg"></i>
-                <span>Report Card Verified (A- average)</span>
+            {profile.gradesVerified ? (
+              <div className="p-3 bg-emerald-500/10 border-2 border-emerald-500 rounded-lg text-emerald-700 dark:text-emerald-400 font-bold text-xs flex flex-col gap-1">
+                <div className="flex items-center gap-2">
+                  <i className="fa-solid fa-circle-check text-lg text-emerald-600"></i>
+                  <span>Report Card Verified</span>
+                </div>
+                <div className="text-[10px] text-muted-foreground mt-1 bg-background p-1.5 rounded border border-emerald-500/30">
+                  <p className="font-extrabold text-foreground uppercase">AI Extracted Stats:</p>
+                  <p>Grade Average: <span className="font-black text-emerald-600">{isOwnProfile ? (simulatedGrade || "A-") : "A"}</span></p>
+                  <p>GPA: <span className="font-black text-emerald-600">{isOwnProfile ? (simulatedGPA || "3.75") : "3.92"}</span></p>
+                  <p className="text-[8px] mt-0.5">Verified via StepOne OCR Subsystem</p>
+                </div>
               </div>
             ) : (
-              <button
-                onClick={handleReportCardUpload}
-                className="w-full brutal-btn bg-primary text-primary-foreground text-xs py-2.5"
-              >
-                <i className="fa-solid fa-cloud-arrow-up"></i> Upload Report Card Photo
-              </button>
+              isOwnProfile ? (
+                <div className="space-y-2">
+                  <label className="w-full brutal-btn bg-primary text-primary-foreground text-xs py-2.5 cursor-pointer flex items-center justify-center gap-2">
+                    <i className="fa-solid fa-cloud-arrow-up"></i>
+                    <span>Upload Report Card Photo</span>
+                    <input
+                      type="file"
+                      accept="image/*,.pdf"
+                      onChange={handleReportCardUpload}
+                      className="hidden"
+                    />
+                  </label>
+                  <p className="text-[9px] text-muted-foreground text-center">Supports PDF, PNG, JPG. AI automatically reads and calculates GPA.</p>
+                </div>
+              ) : (
+                <p className="text-xs text-muted-foreground italic">Grades not verified yet.</p>
+              )
             )}
           </div>
 
@@ -152,7 +206,7 @@ export const MyKit: React.FC = () => {
               Link your third-party credentials to import badges automatically.
             </p>
             <div className="space-y-3">
-              {userProfile.certs.map((cert, idx) => (
+              {profile.certs.map((cert, idx) => (
                 <div key={idx} className="p-3 bg-background border-2 border-border rounded-lg flex items-center justify-between">
                   <div>
                     <p className="text-xs font-extrabold">{cert.name}</p>
@@ -163,12 +217,16 @@ export const MyKit: React.FC = () => {
                       <i className="fa-solid fa-circle-check"></i> Connected
                     </span>
                   ) : (
-                    <button
-                      onClick={() => handleConnectCert(cert.name)}
-                      className="brutal-btn bg-secondary text-secondary-foreground text-[10px] py-1 px-2.5"
-                    >
-                      Connect
-                    </button>
+                    isOwnProfile ? (
+                      <button
+                        onClick={() => handleConnectCert(cert.name)}
+                        className="brutal-btn bg-secondary text-secondary-foreground text-[10px] py-1 px-2.5"
+                      >
+                        Connect
+                      </button>
+                    ) : (
+                      <span className="text-muted-foreground text-xs italic">Not Connected</span>
+                    )
                   )}
                 </div>
               ))}
@@ -184,16 +242,18 @@ export const MyKit: React.FC = () => {
               <h3 className="text-md font-extrabold uppercase tracking-wider flex items-center gap-2">
                 <i className="fa-solid fa-basketball text-secondary"></i> Achievements & Sports
               </h3>
-              <button
-                onClick={() => setShowAddSportModal(true)}
-                className="brutal-btn bg-secondary text-secondary-foreground text-xs py-1 px-3"
-              >
-                + Add Achievement
-              </button>
+              {isOwnProfile && (
+                <button
+                  onClick={() => setShowAddSportModal(true)}
+                  className="brutal-btn bg-secondary text-secondary-foreground text-xs py-1 px-3"
+                >
+                  + Add Achievement
+                </button>
+              )}
             </div>
 
             <div className="space-y-3">
-              {userProfile.achievements.map((ach, idx) => (
+              {profile.achievements.map((ach, idx) => (
                 <div key={idx} className="p-4 bg-background border-2 border-border rounded-lg relative overflow-hidden">
                   {ach.verified && (
                     <div className="absolute top-0 right-0 bg-emerald-500 text-white text-[9px] font-bold px-2 py-0.5 border-b-2 border-l-2 border-border rounded-bl-lg uppercase">
@@ -212,12 +272,14 @@ export const MyKit: React.FC = () => {
                   ) : (
                     <div className="flex justify-between items-center mt-3">
                       <span className="text-[10px] text-amber-500 font-bold">Unverified</span>
-                      <button
-                        onClick={() => toast.success("Coach verification request pinged!")}
-                        className="text-xs font-bold text-primary hover:underline flex items-center gap-1"
-                      >
-                        Request Coach Vouch <i className="fa-solid fa-chevron-right text-[10px]"></i>
-                      </button>
+                      {isOwnProfile && (
+                        <button
+                          onClick={() => toast.success("Coach verification request pinged!")}
+                          className="text-xs font-bold text-primary hover:underline flex items-center gap-1"
+                        >
+                          Request Coach Vouch <i className="fa-solid fa-chevron-right text-[10px]"></i>
+                        </button>
+                      )}
                     </div>
                   )}
                 </div>
@@ -231,16 +293,18 @@ export const MyKit: React.FC = () => {
               <h3 className="text-md font-extrabold uppercase tracking-wider flex items-center gap-2">
                 <i className="fa-solid fa-user-tie text-primary"></i> Supervisor Vouches
               </h3>
-              <button
-                onClick={() => setShowRequestVouchModal(true)}
-                className="brutal-btn bg-primary text-primary-foreground text-xs py-1 px-3"
-              >
-                Request Vouch
-              </button>
+              {isOwnProfile && (
+                <button
+                  onClick={() => setShowRequestVouchModal(true)}
+                  className="brutal-btn bg-primary text-primary-foreground text-xs py-1 px-3"
+                >
+                  Request Vouch
+                </button>
+              )}
             </div>
 
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-              {userProfile.vouchedBy.map((vouch, idx) => (
+              {profile.vouchedBy.map((vouch, idx) => (
                 <div key={idx} className="p-3 bg-background border-2 border-border rounded-lg flex items-center justify-between">
                   <div>
                     <p className="text-xs font-extrabold">{vouch.name}</p>
@@ -255,13 +319,15 @@ export const MyKit: React.FC = () => {
                       <span className="bg-amber-500/10 text-amber-600 dark:text-amber-400 text-[10px] font-bold px-2 py-1 rounded-full border border-amber-500">
                         Pending
                       </span>
-                      <button
-                        onClick={() => handleRequestVouchFromList(vouch.name)}
-                        className="h-7 w-7 brutal-border rounded bg-card hover:bg-accent flex items-center justify-center text-xs text-muted-foreground hover:text-foreground"
-                        title="Ping Reminder"
-                      >
-                        <i className="fa-solid fa-bell"></i>
-                      </button>
+                      {isOwnProfile && (
+                        <button
+                          onClick={() => handleRequestVouchFromList(vouch.name)}
+                          className="h-7 w-7 brutal-border rounded bg-card hover:bg-accent flex items-center justify-center text-xs text-muted-foreground hover:text-foreground"
+                          title="Ping Reminder"
+                        >
+                          <i className="fa-solid fa-bell"></i>
+                        </button>
+                      )}
                     </div>
                   )}
                 </div>
