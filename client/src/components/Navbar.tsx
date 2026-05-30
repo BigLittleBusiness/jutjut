@@ -2,7 +2,7 @@ import React, { useState } from "react";
 import { useApp } from "@/contexts/AppContext";
 import { useTheme } from "@/contexts/ThemeContext";
 import { Link, useLocation } from "wouter";
-import { motion } from "framer-motion";
+import { motion, AnimatePresence } from "framer-motion";
 
 interface NavbarProps {
   onNavigate: (page: string) => void;
@@ -105,33 +105,41 @@ export const Navbar: React.FC<NavbarProps> = ({ onNavigate, currentPage }) => {
               </button>
 
               {/* Dropdown Menu List */}
-              {isMoreOpen && (
-                <>
-                  <div className="fixed inset-0 z-20" onClick={() => setIsMoreOpen(false)} />
-                  <div className="absolute right-0 mt-2 w-48 bg-card brutal-border rounded-xl p-1.5 brutal-shadow-amber z-30 flex flex-col gap-1">
-                    {secondaryItems.map((item) => {
-                      const isActive = currentPage === item.id;
-                      return (
-                        <button
-                          key={item.id}
-                          onClick={() => {
-                            handleNavClick(item.id);
-                            setIsMoreOpen(false);
-                          }}
-                          className={`w-full px-3 py-2 rounded-lg font-bold flex items-center gap-2 transition-all text-left ${
-                            isActive
-                              ? "bg-primary text-primary-foreground brutal-border"
-                              : "hover:bg-accent text-muted-foreground hover:text-foreground"
-                          }`}
-                        >
-                          <i className={`fa-solid ${item.icon} w-5 text-center`}></i>
-                          <span>{item.label}</span>
-                        </button>
-                      );
-                    })}
-                  </div>
-                </>
-              )}
+              <AnimatePresence>
+                {isMoreOpen && (
+                  <>
+                    <div className="fixed inset-0 z-20" onClick={() => setIsMoreOpen(false)} />
+                    <motion.div
+                      initial={{ opacity: 0, scale: 0.95, y: -10 }}
+                      animate={{ opacity: 1, scale: 1, y: 0 }}
+                      exit={{ opacity: 0, scale: 0.95, y: -10 }}
+                      transition={{ duration: 0.15, ease: [0.23, 1, 0.32, 1] }}
+                      className="absolute right-0 mt-2 w-48 bg-card brutal-border rounded-xl p-1.5 brutal-shadow-amber z-30 flex flex-col gap-1 origin-top-right"
+                    >
+                      {secondaryItems.map((item) => {
+                        const isActive = currentPage === item.id;
+                        return (
+                          <button
+                            key={item.id}
+                            onClick={() => {
+                              handleNavClick(item.id);
+                              setIsMoreOpen(false);
+                            }}
+                            className={`w-full px-3 py-2 rounded-lg font-bold flex items-center gap-2 transition-all text-left ${
+                              isActive
+                                ? "bg-primary text-primary-foreground brutal-border"
+                                : "hover:bg-accent text-muted-foreground hover:text-foreground"
+                            }`}
+                          >
+                            <i className={`fa-solid ${item.icon} w-5 text-center`}></i>
+                            <span>{item.label}</span>
+                          </button>
+                        );
+                      })}
+                    </motion.div>
+                  </>
+                )}
+              </AnimatePresence>
             </div>
           </div>
         )}
