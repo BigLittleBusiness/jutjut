@@ -375,6 +375,26 @@ export type PromoCode = typeof promoCodes.$inferSelect;
 export type InsertPromoCode = typeof promoCodes.$inferInsert;
 
 // ─────────────────────────────────────────────
+// PROMO REDEMPTIONS (per-user redemption log)
+// ─────────────────────────────────────────────
+
+export const promoRedemptions = mysqlTable("promoRedemptions", {
+  id: int("id").autoincrement().primaryKey(),
+  promoCodeId: int("promoCodeId").notNull(),
+  promoCode: varchar("promoCode", { length: 64 }).notNull(),
+  redeemedByUserId: int("redeemedByUserId"), // null if redeemed via webhook without user context
+  redeemedByEmployerId: int("redeemedByEmployerId"),
+  discountType: mysqlEnum("discountType", ["fixed", "percentage"]).notNull(),
+  discountValue: int("discountValue").notNull(),
+  bonusCreditsAwarded: int("bonusCreditsAwarded").default(0).notNull(),
+  chargeToken: varchar("chargeToken", { length: 255 }), // Pin charge reference
+  redeemedAt: timestamp("redeemedAt").defaultNow().notNull(),
+});
+
+export type PromoRedemption = typeof promoRedemptions.$inferSelect;
+export type InsertPromoRedemption = typeof promoRedemptions.$inferInsert;
+
+// ─────────────────────────────────────────────
 // JOB ANALYTICS (views + applies per post)
 // ─────────────────────────────────────────────
 

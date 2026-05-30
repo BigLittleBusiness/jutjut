@@ -59,3 +59,4 @@
 - [x] Admin Promo Codes page — create/list/activate promo codes (admin-only)
 - [x] Routes wired in App.tsx — /employer, /admin-promos
 - [x] Vitest tests — 15 tests covering credit packs, charge calculation, webhook signature (all passing)
+- [x] Promo code redemption detail view — promoRedemptions table, per-user history with name/email/date/discount, drawer UI, 19 new tests (61 total passing)

@@ -10,6 +10,7 @@ import {
   getAllPromoCodes,
   createPromoCode,
   updatePromoCode,
+  getPromoCodeRedemptions,
 } from "../db";
 
 const adminProcedure = protectedProcedure.use(({ ctx, next }) => {
@@ -65,6 +66,12 @@ export const adminRouter = router({
           expiresAt: input.expiresAt ? new Date(input.expiresAt) : null,
         });
         return { ok: true };
+      }),
+
+    redemptions: adminProcedure
+      .input(z.object({ promoCodeId: z.number().int() }))
+      .query(async ({ input }) => {
+        return getPromoCodeRedemptions(input.promoCodeId);
       }),
   }),
 });

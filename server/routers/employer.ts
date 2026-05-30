@@ -14,6 +14,7 @@ import {
   getTransactionHistory,
   getPromoCode,
   incrementPromoCodeUsage,
+  recordPromoRedemption,
   getJobsByPostedUser,
   getJobById,
   getJobAnalyticsForUser,
@@ -205,6 +206,20 @@ const creditsRouter = router({
         await incrementPromoCodeUsage(promo.id);
       } else if (promo) {
         await incrementPromoCodeUsage(promo.id);
+      }
+
+      // Record per-user redemption for admin detail view
+      if (promo) {
+        await recordPromoRedemption({
+          promoCodeId: promo.id,
+          promoCode: promo.code,
+          redeemedByUserId: ctx.user.id,
+          redeemedByEmployerId: employerId,
+          discountType: promo.discountType,
+          discountValue: promo.discountValue,
+          bonusCreditsAwarded: promo.bonusCredits,
+          chargeToken: charge.token,
+        });
       }
 
       const newBalance = await getCreditBalance(employerId);

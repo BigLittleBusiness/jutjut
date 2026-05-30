@@ -11,7 +11,7 @@
 import type { Express, Request, Response } from "express";
 import { ENV } from "../_core/env";
 import { verifyWebhookSignature } from "../pinpayments";
-import { adjustCredits, incrementPromoCodeUsage, getPromoCode } from "../db";
+import { adjustCredits, getPromoCode, incrementPromoCodeUsage, recordPromoRedemption } from "../db";
 
 interface PinWebhookPayload {
   event: {
@@ -80,6 +80,7 @@ async function handleChargeSucceeded(data: PinWebhookPayload["data"]) {
   const employerId = meta.employer_id ? parseInt(meta.employer_id, 10) : null;
   const creditPackSize = meta.credit_pack_size ? parseInt(meta.credit_pack_size, 10) : null;
   const promoCode = meta.promo_code ?? null;
+  const userId = meta.user_id ? parseInt(meta.user_id, 10) : null;
 
   if (!employerId || !creditPackSize) {
     console.warn("[Webhook] charge.succeeded missing employer_id or credit_pack_size in metadata");
@@ -112,6 +113,19 @@ async function handleChargeSucceeded(data: PinWebhookPayload["data"]) {
       console.log(`[Webhook] Added ${promo.bonusCredits} bonus credit(s) from promo ${promo.code}`);
     } else if (promo) {
       await incrementPromoCodeUsage(promo.id);
+    }
+    // Record per-user redemption for admin detail view
+    if (promo) {
+      await recordPromoRedemption({
+        promoCodeId: promo.id,
+        promoCode: promo.code,
+        redeemedByUserId: userId,
+        redeemedByEmployerId: employerId,
+        discountType: promo.discountType,
+        discountValue: promo.discountValue,
+        bonusCreditsAwarded: promo.bonusCredits,
+        chargeToken: data.token,
+      });
     }
   }
 }

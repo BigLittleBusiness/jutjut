@@ -98,6 +98,7 @@ import {
   employerCredits,
   creditTransactions,
   promoCodes,
+  promoRedemptions,
   jobs,
   jobViews,
 } from "../drizzle/schema";
@@ -307,4 +308,56 @@ export async function getAutoRepostCandidates() {
     .select()
     .from(jobs)
     .where(and(eq(jobs.autoRepostEnabled, true), lte(jobs.autoRepostNextDate, now)));
+}
+
+// ─── Promo Redemption History ─────────────────────────────────────────────────
+
+export async function recordPromoRedemption(data: {
+  promoCodeId: number;
+  promoCode: string;
+  redeemedByUserId?: number | null;
+  redeemedByEmployerId?: number | null;
+  discountType: "fixed" | "percentage";
+  discountValue: number;
+  bonusCreditsAwarded?: number;
+  chargeToken?: string | null;
+}) {
+  const db = await getDb();
+  if (!db) return;
+  await db.insert(promoRedemptions).values({
+    promoCodeId: data.promoCodeId,
+    promoCode: data.promoCode.toUpperCase(),
+    redeemedByUserId: data.redeemedByUserId ?? null,
+    redeemedByEmployerId: data.redeemedByEmployerId ?? null,
+    discountType: data.discountType,
+    discountValue: data.discountValue,
+    bonusCreditsAwarded: data.bonusCreditsAwarded ?? 0,
+    chargeToken: data.chargeToken ?? null,
+    redeemedAt: new Date(),
+  });
+}
+
+export async function getPromoCodeRedemptions(promoCodeId: number) {
+  const db = await getDb();
+  if (!db) return [];
+  // Join with users to get name/email for the detail view
+  const rows = await db
+    .select({
+      id: promoRedemptions.id,
+      promoCode: promoRedemptions.promoCode,
+      redeemedByUserId: promoRedemptions.redeemedByUserId,
+      redeemedByEmployerId: promoRedemptions.redeemedByEmployerId,
+      discountType: promoRedemptions.discountType,
+      discountValue: promoRedemptions.discountValue,
+      bonusCreditsAwarded: promoRedemptions.bonusCreditsAwarded,
+      chargeToken: promoRedemptions.chargeToken,
+      redeemedAt: promoRedemptions.redeemedAt,
+      userName: users.name,
+      userEmail: users.email,
+    })
+    .from(promoRedemptions)
+    .leftJoin(users, eq(promoRedemptions.redeemedByUserId, users.id))
+    .where(eq(promoRedemptions.promoCodeId, promoCodeId))
+    .orderBy(desc(promoRedemptions.redeemedAt));
+  return rows;
 }

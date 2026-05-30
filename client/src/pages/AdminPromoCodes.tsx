@@ -5,10 +5,11 @@
  * - Inline edit for expiry and max uses
  * - Status badges (Active / Expired / Exhausted / Inactive)
  * - Copy-to-clipboard for sharing codes
+ * - Redemption detail drawer: list of users who redeemed + date + discount applied
  * - Admin-only access guard
  */
 
-import { useState, useMemo } from "react";
+import { useState } from "react";
 import { trpc } from "@/lib/trpc";
 import { useAuth } from "@/_core/hooks/useAuth";
 import { Button } from "@/components/ui/button";
@@ -24,7 +25,8 @@ import { toast } from "sonner";
 import {
   Tag, Plus, ShieldAlert, Copy, Check, Pencil, X, Save,
   Percent, DollarSign, Gift, CalendarClock, Users, Sparkles,
-  TrendingDown, Info,
+  TrendingDown, Info, Eye, UserCircle, Clock, CreditCard,
+  ChevronRight, ArrowLeft,
 } from "lucide-react";
 
 // ─── Credit pack reference prices (cents) ────────────────────────────────────
@@ -60,340 +62,417 @@ function codeStatus(code: {
   return { label: "Active", variant: "default" };
 }
 
-// ─── Live discount preview panel ─────────────────────────────────────────────
+// ─── Discount preview ─────────────────────────────────────────────────────────
 
-function DiscountPreview({
-  discountType,
-  discountValue,
-  bonusCredits,
-}: {
-  discountType: "percentage" | "fixed";
-  discountValue: number;
-  bonusCredits: number;
-}) {
-  const hasDiscount = discountValue > 0;
-  const hasBonus = bonusCredits > 0;
-
-  if (!hasDiscount && !hasBonus) return null;
-
+function DiscountPreview({ type, value }: { type: "percentage" | "fixed"; value: number }) {
+  if (!value || value <= 0) return null;
   return (
-    <div className="rounded-lg border-2 border-primary/20 bg-primary/5 p-4 space-y-3">
-      <p className="text-xs font-semibold text-primary uppercase tracking-wider flex items-center gap-1.5">
-        <Sparkles className="w-3.5 h-3.5" />
-        Live Preview — what employers will see
-      </p>
-      <div className="space-y-2">
-        {PACKS.map(pack => {
-          const { saving, after } = calcDiscount(pack.priceCents, discountType, discountValue);
-          return (
-            <div key={pack.id} className="flex items-center justify-between text-sm">
-              <span className="text-muted-foreground">{pack.label}</span>
-              <div className="flex items-center gap-2">
-                {saving > 0 && (
-                  <span className="line-through text-muted-foreground text-xs">
-                    {formatAud(pack.priceCents)}
-                  </span>
-                )}
-                <span className="font-semibold text-foreground">{formatAud(after)}</span>
-                {saving > 0 && (
-                  <Badge variant="secondary" className="text-xs text-green-700 dark:text-green-400 bg-green-100 dark:bg-green-900/30">
-                    save {formatAud(saving)}
-                  </Badge>
-                )}
-              </div>
+    <div className="rounded-lg border border-border bg-muted/30 p-3 space-y-2">
+      <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">Live Preview</p>
+      {PACKS.map(pack => {
+        const { saving, after } = calcDiscount(pack.priceCents, type, value);
+        if (saving <= 0) return null;
+        return (
+          <div key={pack.id} className="flex items-center justify-between text-sm">
+            <span className="text-muted-foreground">{pack.label}</span>
+            <div className="flex items-center gap-2">
+              <span className="line-through text-muted-foreground/60 text-xs">{formatAud(pack.priceCents)}</span>
+              <span className="font-semibold text-green-600 dark:text-green-400">{formatAud(after)}</span>
+              <Badge variant="secondary" className="text-xs">save {formatAud(saving)}</Badge>
             </div>
-          );
-        })}
-      </div>
-      {hasBonus && (
-        <div className="flex items-center gap-2 text-sm pt-1 border-t border-primary/20">
-          <Gift className="w-3.5 h-3.5 text-primary" />
-          <span className="text-foreground">
-            +{bonusCredits} bonus credit{bonusCredits !== 1 ? "s" : ""} added on redemption
-          </span>
-        </div>
-      )}
+          </div>
+        );
+      })}
     </div>
   );
 }
 
-// ─── Create promo code modal ──────────────────────────────────────────────────
-
-const EMPTY_FORM = {
-  code: "",
-  discountType: "percentage" as "fixed" | "percentage",
-  discountValue: 20,
-  bonusCredits: 0,
-  maxUses: "" as string | number,
-  expiresAt: "",
-};
+// ─── Create modal ─────────────────────────────────────────────────────────────
 
 function CreatePromoModal({ open, onClose }: { open: boolean; onClose: () => void }) {
-  const [form, setForm] = useState(EMPTY_FORM);
-  const [codeError, setCodeError] = useState("");
-
   const utils = trpc.useUtils();
+  const [code, setCode] = useState("");
+  const [discountType, setDiscountType] = useState<"percentage" | "fixed">("percentage");
+  const [discountValue, setDiscountValue] = useState(20);
+  const [bonusCredits, setBonusCredits] = useState(0);
+  const [maxUses, setMaxUses] = useState("");
+  const [expiresAt, setExpiresAt] = useState("");
 
   const create = trpc.admin.promoCodes.create.useMutation({
     onSuccess: () => {
-      toast.success(`Promo code "${form.code}" created successfully.`);
       utils.admin.promoCodes.list.invalidate();
+      toast.success(`Promo code "${code.toUpperCase()}" created.`);
       onClose();
-      setForm(EMPTY_FORM);
-      setCodeError("");
+      setCode(""); setDiscountValue(20); setBonusCredits(0); setMaxUses(""); setExpiresAt("");
     },
     onError: (err) => toast.error(err.message),
   });
 
-  const handleCodeChange = (raw: string) => {
-    const val = raw.toUpperCase().replace(/[^A-Z0-9_-]/g, "");
-    setForm(f => ({ ...f, code: val }));
-    if (val.length > 0 && val.length < 2) {
-      setCodeError("Code must be at least 2 characters.");
-    } else {
-      setCodeError("");
-    }
-  };
+  const minDatetime = new Date();
+  minDatetime.setMinutes(minDatetime.getMinutes() - minDatetime.getTimezoneOffset());
+  const minStr = minDatetime.toISOString().slice(0, 16);
 
-  const handleSubmit = () => {
-    if (!form.code.trim() || form.code.length < 2) {
-      setCodeError("Code is required (min 2 characters).");
-      return;
-    }
-    if (form.discountType === "percentage" && (form.discountValue < 1 || form.discountValue > 100)) {
-      toast.error("Percentage discount must be between 1 and 100.");
+  const handleSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!code.trim() || code.trim().length < 2) {
+      toast.error("Code must be at least 2 characters.");
       return;
     }
     create.mutate({
-      code: form.code.trim(),
-      discountType: form.discountType,
-      discountValue: Number(form.discountValue),
-      bonusCredits: Number(form.bonusCredits) || 0,
-      maxUses: form.maxUses !== "" ? Number(form.maxUses) : null,
-      expiresAt: form.expiresAt ? new Date(form.expiresAt).toISOString() : null,
+      code: code.toUpperCase(),
+      discountType,
+      discountValue,
+      bonusCredits,
+      maxUses: maxUses !== "" ? Number(maxUses) : null,
+      expiresAt: expiresAt ? new Date(expiresAt).toISOString() : null,
     });
   };
 
-  // Minimum datetime for the expiry picker — now
-  const minDatetime = useMemo(() => {
-    const now = new Date();
-    now.setMinutes(now.getMinutes() - now.getTimezoneOffset());
-    return now.toISOString().slice(0, 16);
-  }, []);
-
   return (
-    <Dialog open={open} onOpenChange={(v) => { if (!v) { onClose(); setForm(EMPTY_FORM); setCodeError(""); } }}>
+    <Dialog open={open} onOpenChange={v => { if (!v) onClose(); }}>
       <DialogContent className="max-w-lg max-h-[90vh] overflow-y-auto">
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
-            <Tag className="w-4 h-4 text-primary" />
+            <Sparkles className="w-5 h-5 text-primary" />
             Create Promo Code
           </DialogTitle>
           <DialogDescription>
-            Codes are applied at checkout by employers to reduce the price of credit packs.
+            New codes are active immediately. Share them with employers for credit purchases.
           </DialogDescription>
         </DialogHeader>
 
-        <div className="space-y-5">
-
-          {/* ── Code ── */}
+        <form onSubmit={handleSubmit} className="space-y-5 pt-1">
+          {/* Code */}
           <div className="space-y-1.5">
-            <Label htmlFor="promo-code">
-              Code <span className="text-destructive">*</span>
-            </Label>
+            <Label htmlFor="promo-code">Code</Label>
             <Input
               id="promo-code"
-              value={form.code}
-              onChange={e => handleCodeChange(e.target.value)}
               placeholder="e.g. LAUNCH20"
-              className="uppercase font-mono tracking-widest text-base"
+              value={code}
+              onChange={e => setCode(e.target.value.toUpperCase().replace(/[^A-Z0-9_-]/g, ""))}
+              className="font-mono tracking-widest uppercase"
               maxLength={64}
             />
-            {codeError && (
-              <p className="text-xs text-destructive flex items-center gap-1">
-                <Info className="w-3 h-3" />{codeError}
-              </p>
-            )}
-            <p className="text-xs text-muted-foreground">
-              Letters, numbers, hyphens and underscores only. Will be uppercased automatically.
-            </p>
+            <p className="text-xs text-muted-foreground">Letters, numbers, hyphens and underscores only.</p>
           </div>
 
-          <Separator />
-
-          {/* ── Discount type toggle ── */}
-          <div className="space-y-3">
+          {/* Discount type */}
+          <div className="space-y-2">
             <Label>Discount Type</Label>
-            <div className="grid grid-cols-2 gap-3">
-              {[
-                { value: "percentage", icon: Percent, label: "Percentage", sub: "e.g. 20% off" },
-                { value: "fixed", icon: DollarSign, label: "Fixed Amount", sub: "e.g. $5.00 off" },
-              ].map(opt => (
+            <div className="grid grid-cols-2 gap-2">
+              {(["percentage", "fixed"] as const).map(t => (
                 <button
-                  key={opt.value}
+                  key={t}
                   type="button"
-                  onClick={() => setForm(f => ({ ...f, discountType: opt.value as "percentage" | "fixed", discountValue: opt.value === "percentage" ? 20 : 5 }))}
-                  className={`p-3 rounded-lg border-2 text-left transition-all ${
-                    form.discountType === opt.value
-                      ? "border-primary bg-primary/5"
-                      : "border-border hover:border-primary/40"
+                  onClick={() => { setDiscountType(t); setDiscountValue(t === "percentage" ? 20 : 5); }}
+                  className={`flex items-center gap-2 p-3 rounded-lg border text-sm font-medium transition-colors ${
+                    discountType === t
+                      ? "border-primary bg-primary/10 text-primary"
+                      : "border-border bg-background hover:bg-muted/50"
                   }`}
                 >
-                  <div className="flex items-center gap-2 mb-1">
-                    <opt.icon className={`w-4 h-4 ${form.discountType === opt.value ? "text-primary" : "text-muted-foreground"}`} />
-                    <span className="font-semibold text-sm">{opt.label}</span>
-                  </div>
-                  <p className="text-xs text-muted-foreground">{opt.sub}</p>
+                  {t === "percentage" ? <Percent className="w-4 h-4" /> : <DollarSign className="w-4 h-4" />}
+                  {t === "percentage" ? "Percentage Off" : "Fixed Amount"}
                 </button>
               ))}
             </div>
           </div>
 
-          {/* ── Discount value ── */}
+          {/* Discount value */}
           <div className="space-y-1.5">
             <Label htmlFor="discount-value">
-              {form.discountType === "percentage" ? "Discount Percentage" : "Discount Amount (AUD)"}
-              <span className="text-destructive"> *</span>
+              {discountType === "percentage" ? "Percentage Off (%)" : "Amount Off (AUD)"}
             </Label>
-            <div className="relative">
-              <div className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground">
-                {form.discountType === "percentage"
-                  ? <Percent className="w-4 h-4" />
-                  : <DollarSign className="w-4 h-4" />}
-              </div>
-              <Input
-                id="discount-value"
-                type="number"
-                min={1}
-                max={form.discountType === "percentage" ? 100 : undefined}
-                step={form.discountType === "percentage" ? 1 : 0.5}
-                value={form.discountValue}
-                onChange={e => setForm(f => ({ ...f, discountValue: Number(e.target.value) }))}
-                className="pl-9"
-              />
-            </div>
-            {form.discountType === "percentage" && (
-              <div className="flex gap-2 flex-wrap pt-1">
-                {[10, 15, 20, 25, 50].map(pct => (
+            {discountType === "percentage" && (
+              <div className="flex flex-wrap gap-1.5 mb-2">
+                {[10, 15, 20, 25, 50].map(v => (
                   <button
-                    key={pct}
+                    key={v}
                     type="button"
-                    onClick={() => setForm(f => ({ ...f, discountValue: pct }))}
-                    className={`px-2.5 py-1 rounded-full text-xs font-semibold border-2 transition-all ${
-                      form.discountValue === pct
-                        ? "border-primary bg-primary text-primary-foreground"
-                        : "border-border hover:border-primary/50 text-muted-foreground"
+                    onClick={() => setDiscountValue(v)}
+                    className={`px-2.5 py-1 rounded-md text-xs font-medium border transition-colors ${
+                      discountValue === v
+                        ? "bg-primary text-primary-foreground border-primary"
+                        : "border-border hover:bg-muted/50"
                     }`}
                   >
-                    {pct}%
+                    {v}%
                   </button>
                 ))}
               </div>
             )}
+            <Input
+              id="discount-value"
+              type="number"
+              min={1}
+              max={discountType === "percentage" ? 100 : undefined}
+              step={discountType === "fixed" ? 0.5 : 1}
+              value={discountValue}
+              onChange={e => setDiscountValue(Number(e.target.value))}
+            />
           </div>
 
-          {/* ── Bonus credits ── */}
+          {/* Live preview */}
+          <DiscountPreview type={discountType} value={discountValue} />
+
+          {/* Bonus credits */}
           <div className="space-y-1.5">
             <Label htmlFor="bonus-credits" className="flex items-center gap-1.5">
               <Gift className="w-3.5 h-3.5 text-primary" />
-              Bonus Credits
-              <span className="text-xs text-muted-foreground font-normal">(awarded on top of the discount)</span>
+              Bonus Credits (on top of discount)
             </Label>
             <Input
               id="bonus-credits"
               type="number"
               min={0}
-              max={20}
-              value={form.bonusCredits}
-              onChange={e => setForm(f => ({ ...f, bonusCredits: Number(e.target.value) }))}
+              value={bonusCredits}
+              onChange={e => setBonusCredits(Number(e.target.value))}
               placeholder="0"
             />
+            <p className="text-xs text-muted-foreground">Extra credits awarded to the employer at redemption.</p>
           </div>
 
           <Separator />
 
-          {/* ── Limits ── */}
+          {/* Max uses + expiry */}
           <div className="grid grid-cols-2 gap-4">
             <div className="space-y-1.5">
-              <Label htmlFor="max-uses" className="flex items-center gap-1.5">
-                <Users className="w-3.5 h-3.5 text-muted-foreground" />
-                Max Uses
-              </Label>
+              <Label htmlFor="max-uses">Max Uses</Label>
               <Input
                 id="max-uses"
                 type="number"
                 min={1}
-                value={form.maxUses}
-                onChange={e => setForm(f => ({ ...f, maxUses: e.target.value }))}
+                value={maxUses}
+                onChange={e => setMaxUses(e.target.value)}
                 placeholder="Unlimited"
               />
-              <p className="text-xs text-muted-foreground">Leave blank for unlimited uses.</p>
             </div>
             <div className="space-y-1.5">
               <Label htmlFor="expires-at" className="flex items-center gap-1.5">
-                <CalendarClock className="w-3.5 h-3.5 text-muted-foreground" />
-                Expiry Date &amp; Time
+                <CalendarClock className="w-3.5 h-3.5" />
+                Expires At
               </Label>
               <Input
                 id="expires-at"
                 type="datetime-local"
-                min={minDatetime}
-                value={form.expiresAt}
-                onChange={e => setForm(f => ({ ...f, expiresAt: e.target.value }))}
+                value={expiresAt}
+                min={minStr}
+                onChange={e => setExpiresAt(e.target.value)}
               />
-              <p className="text-xs text-muted-foreground">Leave blank for no expiry.</p>
             </div>
           </div>
 
-          {/* ── Live preview ── */}
-          <DiscountPreview
-            discountType={form.discountType}
-            discountValue={form.discountValue}
-            bonusCredits={form.bonusCredits}
-          />
-
-          {/* ── Submit ── */}
-          <Button
-            className="w-full"
-            onClick={handleSubmit}
-            disabled={create.isPending || !form.code.trim() || form.code.length < 2}
-          >
-            {create.isPending ? (
-              <span className="flex items-center gap-2">
-                <div className="w-4 h-4 border-2 border-primary-foreground/30 border-t-primary-foreground rounded-full animate-spin" />
-                Creating...
-              </span>
-            ) : (
-              <span className="flex items-center gap-2">
+          <div className="flex justify-end gap-2 pt-1">
+            <Button type="button" variant="outline" onClick={onClose}>Cancel</Button>
+            <Button type="submit" disabled={create.isPending} className="gap-2">
+              {create.isPending ? (
+                <span className="animate-spin rounded-full h-3.5 w-3.5 border-b-2 border-current" />
+              ) : (
                 <Plus className="w-4 h-4" />
-                Create Promo Code
-              </span>
-            )}
-          </Button>
-        </div>
+              )}
+              Create Code
+            </Button>
+          </div>
+        </form>
       </DialogContent>
     </Dialog>
   );
 }
 
-// ─── Inline edit row ──────────────────────────────────────────────────────────
+// ─── Redemption detail drawer ─────────────────────────────────────────────────
+
+type PromoCodeRow = {
+  id: number;
+  code: string;
+  discountType: string;
+  discountValue: number;
+  bonusCredits: number;
+  usedCount: number;
+  maxUses: number | null;
+  expiresAt: Date | null;
+  isActive: boolean;
+};
+
+function RedemptionDrawer({
+  code,
+  onClose,
+}: {
+  code: PromoCodeRow;
+  onClose: () => void;
+}) {
+  const { data: redemptions, isLoading } = trpc.admin.promoCodes.redemptions.useQuery(
+    { promoCodeId: code.id },
+    { enabled: true }
+  );
+
+  const discountLabel = code.discountType === "percentage"
+    ? `${code.discountValue}% off`
+    : `$${code.discountValue} AUD off`;
+
+  const status = codeStatus(code);
+
+  return (
+    <Dialog open onOpenChange={v => { if (!v) onClose(); }}>
+      <DialogContent className="max-w-2xl max-h-[85vh] flex flex-col">
+        <DialogHeader>
+          <div className="flex items-center gap-3">
+            <button
+              onClick={onClose}
+              className="p-1.5 rounded-lg hover:bg-muted transition-colors"
+              aria-label="Back"
+            >
+              <ArrowLeft className="w-4 h-4" />
+            </button>
+            <div className="flex-1 min-w-0">
+              <DialogTitle className="flex items-center gap-2 flex-wrap">
+                <span className="font-mono tracking-widest text-lg">{code.code}</span>
+                <Badge variant={status.variant} className="text-xs">{status.label}</Badge>
+              </DialogTitle>
+              <DialogDescription className="mt-0.5">
+                {discountLabel}
+                {code.bonusCredits > 0 && ` · +${code.bonusCredits} bonus credit${code.bonusCredits !== 1 ? "s" : ""}`}
+                {" · "}
+                {code.usedCount} of {code.maxUses ?? "∞"} uses
+              </DialogDescription>
+            </div>
+          </div>
+        </DialogHeader>
+
+        <Separator />
+
+        {/* Redemption list */}
+        <div className="flex-1 overflow-y-auto min-h-0">
+          {isLoading ? (
+            <div className="space-y-3 py-4">
+              {[1, 2, 3].map(i => (
+                <div key={i} className="flex items-center gap-3 p-3 rounded-lg bg-muted/30 animate-pulse">
+                  <div className="w-8 h-8 rounded-full bg-muted" />
+                  <div className="flex-1 space-y-1.5">
+                    <div className="h-3.5 bg-muted rounded w-40" />
+                    <div className="h-3 bg-muted rounded w-24" />
+                  </div>
+                  <div className="h-3 bg-muted rounded w-28" />
+                </div>
+              ))}
+            </div>
+          ) : !redemptions || redemptions.length === 0 ? (
+            <div className="text-center py-16 text-muted-foreground">
+              <Users className="w-12 h-12 mx-auto mb-3 opacity-20" />
+              <p className="font-medium">No redemptions yet.</p>
+              <p className="text-sm mt-1">
+                Redemptions will appear here as employers use this code at checkout.
+              </p>
+            </div>
+          ) : (
+            <div className="py-2 space-y-1">
+              {/* Column headers */}
+              <div className="grid grid-cols-[1fr_auto_auto] gap-3 px-3 py-1.5 text-xs font-semibold text-muted-foreground uppercase tracking-wide border-b border-border">
+                <span>User</span>
+                <span className="text-right">Discount Applied</span>
+                <span className="text-right w-40">Redeemed</span>
+              </div>
+
+              {redemptions.map((r) => {
+                const displayName = r.userName || r.userEmail || `User #${r.redeemedByUserId ?? r.redeemedByEmployerId ?? "?"}`;
+                const discApplied = r.discountType === "percentage"
+                  ? `${r.discountValue}% off`
+                  : `$${r.discountValue} AUD off`;
+                const redeemedDate = new Date(r.redeemedAt);
+
+                return (
+                  <div
+                    key={r.id}
+                    className="grid grid-cols-[1fr_auto_auto] gap-3 items-center px-3 py-3 rounded-lg hover:bg-muted/30 transition-colors"
+                  >
+                    {/* User info */}
+                    <div className="flex items-center gap-2.5 min-w-0">
+                      <div className="w-8 h-8 rounded-full bg-primary/10 flex items-center justify-center shrink-0">
+                        <UserCircle className="w-4.5 h-4.5 text-primary" />
+                      </div>
+                      <div className="min-w-0">
+                        <p className="text-sm font-medium truncate">{displayName}</p>
+                        {r.userEmail && r.userName && (
+                          <p className="text-xs text-muted-foreground truncate">{r.userEmail}</p>
+                        )}
+                        {r.chargeToken && (
+                          <p className="text-xs text-muted-foreground/60 font-mono truncate" title={r.chargeToken}>
+                            <CreditCard className="w-2.5 h-2.5 inline mr-1" />
+                            {r.chargeToken.slice(0, 16)}…
+                          </p>
+                        )}
+                      </div>
+                    </div>
+
+                    {/* Discount applied */}
+                    <div className="text-right shrink-0">
+                      <span className="text-sm font-medium text-green-600 dark:text-green-400">{discApplied}</span>
+                      {r.bonusCreditsAwarded > 0 && (
+                        <p className="text-xs text-muted-foreground">
+                          <Gift className="w-2.5 h-2.5 inline mr-0.5" />
+                          +{r.bonusCreditsAwarded} bonus
+                        </p>
+                      )}
+                    </div>
+
+                    {/* Date */}
+                    <div className="text-right w-40 shrink-0">
+                      <p className="text-sm text-muted-foreground">
+                        {redeemedDate.toLocaleDateString("en-AU", {
+                          day: "numeric",
+                          month: "short",
+                          year: "numeric",
+                        })}
+                      </p>
+                      <p className="text-xs text-muted-foreground/60">
+                        <Clock className="w-2.5 h-2.5 inline mr-0.5" />
+                        {redeemedDate.toLocaleTimeString("en-AU", {
+                          hour: "2-digit",
+                          minute: "2-digit",
+                        })}
+                      </p>
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          )}
+        </div>
+
+        {/* Footer summary */}
+        {redemptions && redemptions.length > 0 && (
+          <>
+            <Separator />
+            <div className="flex items-center justify-between text-sm text-muted-foreground pt-1 pb-0">
+              <span className="flex items-center gap-1.5">
+                <Users className="w-3.5 h-3.5" />
+                {redemptions.length} total redemption{redemptions.length !== 1 ? "s" : ""}
+              </span>
+              {redemptions.length > 0 && (
+                <span className="text-xs">
+                  Most recent:{" "}
+                  {new Date(redemptions[0].redeemedAt).toLocaleDateString("en-AU", {
+                    day: "numeric", month: "short", year: "numeric",
+                  })}
+                </span>
+              )}
+            </div>
+          </>
+        )}
+      </DialogContent>
+    </Dialog>
+  );
+}
+
+// ─── Editable row ─────────────────────────────────────────────────────────────
 
 function EditableRow({
   code,
   onUpdate,
+  onViewDetail,
 }: {
-  code: {
-    id: number;
-    code: string;
-    discountType: string;
-    discountValue: number;
-    bonusCredits: number;
-    usedCount: number;
-    maxUses: number | null;
-    expiresAt: Date | null;
-    isActive: boolean;
-  };
+  code: PromoCodeRow;
   onUpdate: (id: number, patch: { isActive?: boolean; maxUses?: number | null; expiresAt?: string | null }) => void;
+  onViewDetail: (code: PromoCodeRow) => void;
 }) {
   const [editing, setEditing] = useState(false);
   const [editMaxUses, setEditMaxUses] = useState(code.maxUses?.toString() ?? "");
@@ -456,7 +535,7 @@ function EditableRow({
         </div>
       </td>
 
-      {/* Usage */}
+      {/* Usage — clickable to open detail */}
       <td className="py-3 px-3 text-right">
         {editing ? (
           <Input
@@ -468,10 +547,17 @@ function EditableRow({
             className="w-20 h-7 text-xs text-right ml-auto"
           />
         ) : (
-          <span className="text-sm tabular-nums">
+          <button
+            onClick={() => onViewDetail(code)}
+            className="text-sm tabular-nums hover:text-primary transition-colors group/usage"
+            title="View redemption history"
+          >
             <span className="font-semibold">{code.usedCount}</span>
             <span className="text-muted-foreground"> / {code.maxUses ?? "∞"}</span>
-          </span>
+            {code.usedCount > 0 && (
+              <ChevronRight className="w-3 h-3 inline ml-0.5 opacity-0 group-hover/usage:opacity-100 transition-opacity" />
+            )}
+          </button>
         )}
       </td>
 
@@ -506,7 +592,7 @@ function EditableRow({
         />
       </td>
 
-      {/* Edit actions */}
+      {/* Actions */}
       <td className="py-3 pl-3 text-right">
         {editing ? (
           <div className="flex items-center gap-1 justify-end">
@@ -526,13 +612,22 @@ function EditableRow({
             </button>
           </div>
         ) : (
-          <button
-            onClick={() => setEditing(true)}
-            className="opacity-0 group-hover:opacity-100 transition-opacity p-1.5 rounded hover:bg-accent text-muted-foreground"
-            title="Edit expiry / max uses"
-          >
-            <Pencil className="w-3.5 h-3.5" />
-          </button>
+          <div className="flex items-center gap-1 justify-end opacity-0 group-hover:opacity-100 transition-opacity">
+            <button
+              onClick={() => onViewDetail(code)}
+              className="p-1.5 rounded hover:bg-accent text-muted-foreground"
+              title="View redemptions"
+            >
+              <Eye className="w-3.5 h-3.5" />
+            </button>
+            <button
+              onClick={() => setEditing(true)}
+              className="p-1.5 rounded hover:bg-accent text-muted-foreground"
+              title="Edit expiry / max uses"
+            >
+              <Pencil className="w-3.5 h-3.5" />
+            </button>
+          </div>
         )}
       </td>
     </tr>
@@ -541,7 +636,7 @@ function EditableRow({
 
 // ─── Promo code table ─────────────────────────────────────────────────────────
 
-function PromoCodeTable() {
+function PromoCodeTable({ onViewDetail }: { onViewDetail: (code: PromoCodeRow) => void }) {
   const { data: codes, isLoading } = trpc.admin.promoCodes.list.useQuery();
   const utils = trpc.useUtils();
 
@@ -595,7 +690,7 @@ function PromoCodeTable() {
             <th className="text-right py-2.5 px-3 font-medium">Expires</th>
             <th className="text-center py-2.5 px-3 font-medium">Status</th>
             <th className="text-center py-2.5 px-3 font-medium">Active</th>
-            <th className="py-2.5 pl-3 w-16"></th>
+            <th className="py-2.5 pl-3 w-20"></th>
           </tr>
         </thead>
         <tbody>
@@ -607,7 +702,7 @@ function PromoCodeTable() {
                 </td>
               </tr>
               {active.map(code => (
-                <EditableRow key={code.id} code={code} onUpdate={handleUpdate} />
+                <EditableRow key={code.id} code={code} onUpdate={handleUpdate} onViewDetail={onViewDetail} />
               ))}
             </>
           )}
@@ -619,7 +714,7 @@ function PromoCodeTable() {
                 </td>
               </tr>
               {inactive.map(code => (
-                <EditableRow key={code.id} code={code} onUpdate={handleUpdate} />
+                <EditableRow key={code.id} code={code} onUpdate={handleUpdate} onViewDetail={onViewDetail} />
               ))}
             </>
           )}
@@ -672,6 +767,7 @@ function PromoStats() {
 export default function AdminPromoCodes() {
   const { user, loading } = useAuth();
   const [createOpen, setCreateOpen] = useState(false);
+  const [detailCode, setDetailCode] = useState<PromoCodeRow | null>(null);
 
   if (loading) {
     return (
@@ -709,8 +805,8 @@ export default function AdminPromoCodes() {
               Promo Codes
             </h1>
             <p className="text-sm text-muted-foreground mt-1">
-              Create and manage discount codes for employer credit purchases. Codes support
-              percentage or fixed-amount discounts, optional bonus credits, usage limits, and expiry dates.
+              Create and manage discount codes for employer credit purchases. Click the usage count
+              or the eye icon on any row to view the full redemption history.
             </p>
           </div>
           <Button onClick={() => setCreateOpen(true)} className="gap-2 shrink-0">
@@ -730,17 +826,21 @@ export default function AdminPromoCodes() {
               All Promo Codes
             </CardTitle>
             <CardDescription>
-              Hover a row to copy the code or edit its expiry and usage limit inline.
-              Toggle the Active switch to enable or disable a code immediately.
+              Hover a row to copy the code, view redemptions, or edit its expiry and usage limit inline.
+              Click the usage count to see who redeemed a code and when.
             </CardDescription>
           </CardHeader>
           <CardContent>
-            <PromoCodeTable />
+            <PromoCodeTable onViewDetail={setDetailCode} />
           </CardContent>
         </Card>
       </div>
 
       <CreatePromoModal open={createOpen} onClose={() => setCreateOpen(false)} />
+
+      {detailCode && (
+        <RedemptionDrawer code={detailCode} onClose={() => setDetailCode(null)} />
+      )}
     </div>
   );
 }
