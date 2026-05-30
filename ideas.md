@@ -1,6 +1,6 @@
-# Design Ideas for StepOne Prototype
+# Design Ideas for JutJut Prototype
 
-Here are three distinct stylistic approaches and design philosophies explored for StepOne:
+Here are three distinct stylistic approaches and design philosophies explored for JutJut:
 
 <response>
 <text>

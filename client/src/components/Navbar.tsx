@@ -33,10 +33,10 @@ export const Navbar: React.FC<NavbarProps> = ({ onNavigate, currentPage }) => {
         {/* Brand Logo */}
         <div className="flex items-center gap-2 cursor-pointer" onClick={() => handleNavClick("dashboard")}>
           <div className="bg-primary text-primary-foreground brutal-border h-10 w-10 flex items-center justify-center rounded-xl brutal-shadow-amber transition-transform hover:rotate-3">
-            <span className="font-extrabold text-xl">S1</span>
+            <span className="font-extrabold text-xl">JJ</span>
           </div>
           <span className="font-extrabold text-2xl tracking-tight hidden sm:block">
-            Step<span className="text-primary">One</span>
+            Jut<span className="text-primary">Jut</span>
           </span>
         </div>
 

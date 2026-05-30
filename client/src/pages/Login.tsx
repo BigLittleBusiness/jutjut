@@ -49,7 +49,7 @@ export const Login: React.FC<LoginProps> = ({ onLoginSuccess }) => {
 
         <div className="text-center mb-6">
           <h2 className="text-3xl font-extrabold tracking-tight">
-            {isSignUp ? "Join StepOne 🚀" : "Welcome Back 👋"}
+            {isSignUp ? "Join JutJut 🚀" : "Welcome Back 👋"}
           </h2>
           <p className="text-muted-foreground mt-2 text-sm">
             {isSignUp
@@ -122,7 +122,7 @@ export const Login: React.FC<LoginProps> = ({ onLoginSuccess }) => {
           </div>
 
           <button type="submit" className="w-full brutal-btn bg-primary text-primary-foreground py-3 text-base mt-2">
-            {isSignUp ? "Create My Free Account" : "Sign In to StepOne"}
+            {isSignUp ? "Create My Free Account" : "Sign In to JutJut"}
           </button>
         </form>
 
@@ -134,7 +134,7 @@ export const Login: React.FC<LoginProps> = ({ onLoginSuccess }) => {
             }}
             className="text-sm font-bold text-primary hover:underline"
           >
-            {isSignUp ? "Already have an account? Sign In" : "New to StepOne? Sign up for free!"}
+            {isSignUp ? "Already have an account? Sign In" : "New to JutJut? Sign up for free!"}
           </button>
         </div>
 

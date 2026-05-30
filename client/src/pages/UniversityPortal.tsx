@@ -161,7 +161,7 @@ export const UniversityPortal: React.FC = () => {
               </div>
 
               <div className="bg-muted p-3 rounded-lg border-2 border-border text-xs text-muted-foreground mt-4">
-                <p className="font-bold text-foreground mb-1">ℹ️ StepOne Security Guarantee:</p>
+                <p className="font-bold text-foreground mb-1">ℹ️ JutJut Security Guarantee:</p>
                 <p>All university transmissions are secured with peer-to-peer verification keys. No third-party data tracking. Completely free for students.</p>
               </div>
             </div>
@@ -173,7 +173,7 @@ export const UniversityPortal: React.FC = () => {
           <div className="brutal-card bg-primary text-primary-foreground brutal-shadow p-6 rounded-2xl">
             <h2 className="text-2xl font-black">University Admissions Portal</h2>
             <p className="text-sm font-semibold opacity-90 mt-1">
-              Welcome to the StepOne Admissions Hub. Below is the active queue of student portfolios shared directly with your institution.
+              Welcome to the JutJut Admissions Hub. Below is the active queue of student portfolios shared directly with your institution.
             </p>
           </div>
 

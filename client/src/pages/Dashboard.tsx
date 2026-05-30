@@ -82,7 +82,7 @@ export const Dashboard: React.FC<DashboardProps> = ({ onNavigate }) => {
       id: "p4",
       user: { name: "Teal Mug Specialty Coffee", avatar: "☕", school: "Employer Partner" },
       type: "employer",
-      content: "We loved meeting StepOne students at the local career fair! Your verified kits made it incredibly easy to fast-track interviews. Shoutout to the community!",
+      content: "We loved meeting JutJut students at the local career fair! Your verified kits made it incredibly easy to fast-track interviews. Shoutout to the community!",
       meta: "employer shoutout",
       time: "2 days ago",
       likes: 56,

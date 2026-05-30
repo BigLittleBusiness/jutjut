@@ -135,7 +135,7 @@ export const TheDrop: React.FC = () => {
               </div>
               <h2 className="text-3xl font-black">Chipotle Burrito Feast</h2>
               <p className="text-sm font-semibold text-muted-foreground">
-                Claim 50% off any burrito at Chipotle. Verified StepOne students get one redemption per week. Simply claim, get your unique code, and show it at checkout.
+                Claim 50% off any burrito at Chipotle. Verified JutJut students get one redemption per week. Simply claim, get your unique code, and show it at checkout.
               </p>
 
               {activeDrops[0]?.isClaimed ? (
@@ -260,7 +260,7 @@ export const TheDrop: React.FC = () => {
                     {uploadedImageUrl ? (
                       <div className="space-y-2">
                         <img src={uploadedImageUrl} alt="Preview" className="h-20 mx-auto rounded object-cover border border-border" />
-                        <p className="text-[10px] text-emerald-600 font-bold"><i className="fa-solid fa-cloud-arrow-up"></i> s3://stepone-drops/{dropImage?.name}</p>
+                        <p className="text-[10px] text-emerald-600 font-bold"><i className="fa-solid fa-cloud-arrow-up"></i> s3://jutjut-drops/{dropImage?.name}</p>
                       </div>
                     ) : (
                       <label className="cursor-pointer block py-2">

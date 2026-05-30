@@ -81,7 +81,7 @@ export const YourWay: React.FC = () => {
             </span>
           </div>
           <p className="text-sm font-semibold text-muted-foreground">
-            Customize StepOne to match your learning and working style. Toggle cognitive aids, practice interviews, or generate university disclosure letters.
+            Customize JutJut to match your learning and working style. Toggle cognitive aids, practice interviews, or generate university disclosure letters.
           </p>
         </div>
         <div className="w-24 h-24 shrink-0 hidden md:block">

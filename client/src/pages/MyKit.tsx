@@ -36,7 +36,7 @@ export const MyKit: React.FC = () => {
         }, 2000);
       }),
       {
-        loading: "StepOne AI: Reading report card transcript & calculating grade average...",
+        loading: "JutJut AI: Reading report card transcript & calculating grade average...",
         success: (data: any) => {
           setSimulatedGrade(data.grade);
           setSimulatedGPA(data.gpa);
@@ -173,7 +173,7 @@ export const MyKit: React.FC = () => {
                   <p className="font-extrabold text-foreground uppercase">AI Extracted Stats:</p>
                   <p>Grade Average: <span className="font-black text-emerald-600">{isOwnProfile ? (simulatedGrade || "A-") : "A"}</span></p>
                   <p>GPA: <span className="font-black text-emerald-600">{isOwnProfile ? (simulatedGPA || "3.75") : "3.92"}</span></p>
-                  <p className="text-[8px] mt-0.5">Verified via StepOne OCR Subsystem</p>
+                  <p className="text-[8px] mt-0.5">Verified via JutJut OCR Subsystem</p>
                 </div>
               </div>
             ) : (

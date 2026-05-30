@@ -103,30 +103,30 @@ const AppContext = createContext<AppContextType | undefined>(undefined);
 export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   // Authentication state
   const [isAuthenticated, setIsAuthenticated] = useState<boolean>(() => {
-    return localStorage.getItem("stepone_auth") === "true";
+    return localStorage.getItem("jutjut_auth") === "true";
   });
 
   // Your Way Preferences
   const [quietMode, setQuietMode] = useState<boolean>(() => {
-    return localStorage.getItem("stepone_quiet") === "true";
+    return localStorage.getItem("jutjut_quiet") === "true";
   });
   const [taskBreakdown, setTaskBreakdown] = useState<boolean>(() => {
-    return localStorage.getItem("stepone_task_breakdown") === "true";
+    return localStorage.getItem("jutjut_task_breakdown") === "true";
   });
   const [simplifyJobs, setSimplifyJobs] = useState<boolean>(() => {
-    return localStorage.getItem("stepone_simplify_jobs") === "true";
+    return localStorage.getItem("jutjut_simplify_jobs") === "true";
   });
 
   // Anonymous Avatar Setting state
   const [anonymousAvatarSetting, setAnonymousAvatarSetting] = useState<"question" | "fox" | "unicorn" | "alien">(() => {
-    return (localStorage.getItem("stepone_anon_avatar") as any) || "question";
+    return (localStorage.getItem("jutjut_anon_avatar") as any) || "question";
   });
 
   // Selected Kit User state
   const [selectedKitUser, setSelectedKitUser] = useState<UserProfile | null>(null);
 
   useEffect(() => {
-    localStorage.setItem("stepone_anon_avatar", anonymousAvatarSetting);
+    localStorage.setItem("jutjut_anon_avatar", anonymousAvatarSetting);
   }, [anonymousAvatarSetting]);
 
   // Apply Quiet Mode Class to body
@@ -136,15 +136,15 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     } else {
       document.body.classList.remove("quiet-mode");
     }
-    localStorage.setItem("stepone_quiet", quietMode.toString());
+    localStorage.setItem("jutjut_quiet", quietMode.toString());
   }, [quietMode]);
 
   useEffect(() => {
-    localStorage.setItem("stepone_task_breakdown", taskBreakdown.toString());
+    localStorage.setItem("jutjut_task_breakdown", taskBreakdown.toString());
   }, [taskBreakdown]);
 
   useEffect(() => {
-    localStorage.setItem("stepone_simplify_jobs", simplifyJobs.toString());
+    localStorage.setItem("jutjut_simplify_jobs", simplifyJobs.toString());
   }, [simplifyJobs]);
 
   // User Profile
@@ -299,7 +299,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       lastMessage: "Vouch is completed, good luck with the jobs!",
       unread: false,
       messages: [
-        { id: "m1", sender: { name: "Alex Mercer", role: "Student", avatar: "", isSelf: true }, text: "Hey Coach, can you vouch for my basketball achievements on StepOne?", timestamp: "Yesterday, 4:15 PM" },
+        { id: "m1", sender: { name: "Alex Mercer", role: "Student", avatar: "", isSelf: true }, text: "Hey Coach, can you vouch for my basketball achievements on JutJut?", timestamp: "Yesterday, 4:15 PM" },
         { id: "m2", sender: { name: "Coach Harris", role: "Coach", avatar: "", isSelf: false }, text: "Absolutely Alex! I've approved your state squad record. Vouch is completed, good luck with the jobs!", timestamp: "Yesterday, 5:30 PM" }
       ]
     },
@@ -329,15 +329,15 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   // Authentication Handlers
   const login = (email: string) => {
     setIsAuthenticated(true);
-    localStorage.setItem("stepone_auth", "true");
+    localStorage.setItem("jutjut_auth", "true");
     setUserProfile(prev => ({ ...prev, email }));
-    toast.success("Successfully logged in to StepOne!");
+    toast.success("Successfully logged in to JutJut!");
   };
 
   const logout = () => {
     setIsAuthenticated(false);
-    localStorage.setItem("stepone_auth", "false");
-    toast.info("Logged out of StepOne.");
+    localStorage.setItem("jutjut_auth", "false");
+    toast.info("Logged out of JutJut.");
   };
 
   // Job Board Handler
