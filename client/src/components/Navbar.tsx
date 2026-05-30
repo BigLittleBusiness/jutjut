@@ -44,7 +44,7 @@ export const Navbar: React.FC<NavbarProps> = ({ onNavigate, currentPage }) => {
 
         {/* Desktop Nav Items */}
         {isAuthenticated && (
-          <div className="hidden md:flex items-center gap-1">
+          <div className="hidden md:flex items-center gap-3">
             {navItems.map((item) => {
               const isActive = currentPage === item.id;
               return (
@@ -53,8 +53,8 @@ export const Navbar: React.FC<NavbarProps> = ({ onNavigate, currentPage }) => {
                   onClick={() => handleNavClick(item.id)}
                   className={`px-3 py-2 rounded-lg font-bold flex items-center gap-2 transition-all ${
                     isActive
-                      ? "bg-primary text-primary-foreground brutal-border brutal-shadow-amber"
-                      : "hover:bg-accent text-muted-foreground hover:text-foreground"
+                      ? "bg-primary text-primary-foreground brutal-border brutal-shadow-amber scale-105 mx-0.5"
+                      : "hover:bg-accent text-muted-foreground hover:text-foreground border-2 border-transparent"
                   }`}
                 >
                   <i className={`fa-solid ${item.icon}`}></i>
