@@ -344,10 +344,10 @@ export const Dashboard: React.FC<DashboardProps> = ({ onNavigate }) => {
                       )}
                       {/* Playful identity-hidden tooltip */}
                       <div className="absolute left-1/2 -translate-x-1/2 bottom-full mb-2 hidden group-hover:flex flex-col items-center z-30 w-48">
-                        <div className="bg-neutralDark text-white text-[11px] font-extrabold px-3 py-2 rounded-lg brutal-border brutal-shadow-amber text-center leading-snug">
+                        <div className="bg-slate-900 text-white text-[11px] font-extrabold px-3 py-2 rounded-lg border-2 border-slate-900 shadow-md text-center leading-snug">
                           {ANON_PHRASES[activeTooltipIndex[post.id] ?? 0]}
                         </div>
-                        <div className="w-2.5 h-2.5 bg-neutralDark rotate-45 -mt-1 border-r-2 border-b-2 border-border"></div>
+                        <div className="w-2.5 h-2.5 bg-slate-900 rotate-45 -mt-1 border-r-2 border-b-2 border-slate-900"></div>
                       </div>
                     </div>
                   ) : typeof post.user.avatar === "string" && post.user.avatar.startsWith("http") ? (
