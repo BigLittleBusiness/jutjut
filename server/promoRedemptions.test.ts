@@ -150,6 +150,182 @@ describe("Discount calculation for redemption preview", () => {
   });
 });
 
+// ─── Date range filter logic ─────────────────────────────────────────────────
+
+type MockRedemption = {
+  id: number;
+  redeemedAt: Date;
+  discountType: "percentage" | "fixed";
+  discountValue: number;
+  bonusCreditsAwarded: number;
+  userName: string | null;
+  userEmail: string | null;
+  redeemedByUserId: number | null;
+  redeemedByEmployerId: number | null;
+  chargeToken: string | null;
+};
+
+function filterByDateRange(
+  redemptions: MockRedemption[],
+  from?: Date,
+  to?: Date
+): MockRedemption[] {
+  return redemptions.filter(r => {
+    const d = new Date(r.redeemedAt);
+    if (from && d < from) return false;
+    if (to) {
+      const end = new Date(to);
+      end.setHours(23, 59, 59, 999);
+      if (d > end) return false;
+    }
+    return true;
+  });
+}
+
+function buildTrendData(redemptions: MockRedemption[]): { date: string; redemptions: number }[] {
+  const counts: Record<string, number> = {};
+  redemptions.forEach(r => {
+    const day = new Date(r.redeemedAt).toLocaleDateString("en-CA");
+    counts[day] = (counts[day] ?? 0) + 1;
+  });
+  return Object.entries(counts)
+    .sort(([a], [b]) => a.localeCompare(b))
+    .map(([date, count]) => ({ date, redemptions: count }));
+}
+
+const mockRedemptions: MockRedemption[] = [
+  { id: 1, redeemedAt: new Date("2026-01-05T10:00:00Z"), discountType: "percentage", discountValue: 20, bonusCreditsAwarded: 0, userName: "Alice", userEmail: "alice@a.com", redeemedByUserId: 1, redeemedByEmployerId: null, chargeToken: null },
+  { id: 2, redeemedAt: new Date("2026-01-10T14:00:00Z"), discountType: "fixed", discountValue: 5, bonusCreditsAwarded: 2, userName: "Bob", userEmail: "bob@b.com", redeemedByUserId: 2, redeemedByEmployerId: null, chargeToken: "ch_abc" },
+  { id: 3, redeemedAt: new Date("2026-02-01T09:00:00Z"), discountType: "percentage", discountValue: 10, bonusCreditsAwarded: 0, userName: null, userEmail: "carol@c.com", redeemedByUserId: 3, redeemedByEmployerId: null, chargeToken: null },
+  { id: 4, redeemedAt: new Date("2026-02-15T16:00:00Z"), discountType: "percentage", discountValue: 25, bonusCreditsAwarded: 1, userName: "Dave", userEmail: "dave@d.com", redeemedByUserId: 4, redeemedByEmployerId: null, chargeToken: "ch_xyz" },
+];
+
+describe("Date range filter", () => {
+  it("returns all redemptions when no range is provided", () => {
+    expect(filterByDateRange(mockRedemptions)).toHaveLength(4);
+  });
+
+  it("filters by from date only", () => {
+    const result = filterByDateRange(mockRedemptions, new Date("2026-02-01"));
+    expect(result).toHaveLength(2);
+    expect(result.map(r => r.id)).toEqual([3, 4]);
+  });
+
+  it("filters by to date only", () => {
+    const result = filterByDateRange(mockRedemptions, undefined, new Date("2026-01-31"));
+    expect(result).toHaveLength(2);
+    expect(result.map(r => r.id)).toEqual([1, 2]);
+  });
+
+  it("filters by both from and to", () => {
+    const result = filterByDateRange(mockRedemptions, new Date("2026-01-08"), new Date("2026-01-31"));
+    expect(result).toHaveLength(1);
+    expect(result[0].id).toBe(2);
+  });
+
+  it("includes redemptions on the exact from date", () => {
+    const result = filterByDateRange(mockRedemptions, new Date("2026-01-05"));
+    expect(result.map(r => r.id)).toContain(1);
+  });
+
+  it("includes redemptions on the exact to date (end of day)", () => {
+    const result = filterByDateRange(mockRedemptions, undefined, new Date("2026-01-10"));
+    expect(result.map(r => r.id)).toContain(2);
+  });
+
+  it("returns empty array when range excludes all redemptions", () => {
+    const result = filterByDateRange(mockRedemptions, new Date("2027-01-01"));
+    expect(result).toHaveLength(0);
+  });
+});
+
+describe("Trend data generation", () => {
+  it("groups redemptions by day", () => {
+    const trend = buildTrendData(mockRedemptions);
+    expect(trend).toHaveLength(4); // 4 distinct days
+  });
+
+  it("sorts trend data chronologically", () => {
+    const trend = buildTrendData(mockRedemptions);
+    const dates = trend.map(t => t.date);
+    expect(dates).toEqual([...dates].sort());
+  });
+
+  it("counts multiple redemptions on the same day correctly", () => {
+    const sameDay: MockRedemption[] = [
+      { ...mockRedemptions[0], id: 10, redeemedAt: new Date("2026-03-01T08:00:00Z") },
+      { ...mockRedemptions[1], id: 11, redeemedAt: new Date("2026-03-01T15:00:00Z") },
+      { ...mockRedemptions[2], id: 12, redeemedAt: new Date("2026-03-01T20:00:00Z") },
+    ];
+    const trend = buildTrendData(sameDay);
+    expect(trend).toHaveLength(1);
+    expect(trend[0].redemptions).toBe(3);
+  });
+
+  it("returns empty array for empty input", () => {
+    expect(buildTrendData([])).toHaveLength(0);
+  });
+
+  it("returns single entry for single redemption", () => {
+    const trend = buildTrendData([mockRedemptions[0]]);
+    expect(trend).toHaveLength(1);
+    expect(trend[0].redemptions).toBe(1);
+  });
+});
+
+describe("CSV export content", () => {
+  function buildCsvRows(redemptions: MockRedemption[], code: string) {
+    const rows: string[][] = [
+      ["Code", "User Name", "User Email", "Discount Type", "Discount Value", "Bonus Credits", "Charge Token", "Redeemed At"],
+    ];
+    redemptions.forEach(r => {
+      rows.push([
+        code,
+        r.userName ?? "",
+        r.userEmail ?? "",
+        r.discountType,
+        String(r.discountValue),
+        String(r.bonusCreditsAwarded ?? 0),
+        r.chargeToken ?? "",
+        new Date(r.redeemedAt).toISOString(),
+      ]);
+    });
+    return rows;
+  }
+
+  it("includes header row", () => {
+    const rows = buildCsvRows(mockRedemptions, "LAUNCH20");
+    expect(rows[0][0]).toBe("Code");
+    expect(rows[0]).toHaveLength(8);
+  });
+
+  it("includes one data row per redemption", () => {
+    const rows = buildCsvRows(mockRedemptions, "LAUNCH20");
+    expect(rows).toHaveLength(mockRedemptions.length + 1); // +1 for header
+  });
+
+  it("fills empty string for null userName", () => {
+    const rows = buildCsvRows([mockRedemptions[2]], "LAUNCH20"); // Carol has null userName
+    expect(rows[1][1]).toBe("");
+    expect(rows[1][2]).toBe("carol@c.com");
+  });
+
+  it("fills empty string for null chargeToken", () => {
+    const rows = buildCsvRows([mockRedemptions[0]], "LAUNCH20"); // Alice has null chargeToken
+    expect(rows[1][6]).toBe("");
+  });
+
+  it("includes chargeToken when present", () => {
+    const rows = buildCsvRows([mockRedemptions[1]], "LAUNCH20"); // Bob has ch_abc
+    expect(rows[1][6]).toBe("ch_abc");
+  });
+
+  it("uses ISO format for redeemedAt", () => {
+    const rows = buildCsvRows([mockRedemptions[0]], "LAUNCH20");
+    expect(rows[1][7]).toMatch(/^\d{4}-\d{2}-\d{2}T/);
+  });
+});
+
 describe("Financial summary calculations", () => {
   const avgPackCents = (1500 + 5000) / 2; // 3250
 
