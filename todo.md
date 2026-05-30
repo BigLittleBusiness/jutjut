@@ -60,3 +60,8 @@
 - [x] Routes wired in App.tsx — /employer, /admin-promos
 - [x] Vitest tests — 15 tests covering credit packs, charge calculation, webhook signature (all passing)
 - [x] Promo code redemption detail view — promoRedemptions table, per-user history with name/email/date/discount, drawer UI, 19 new tests (61 total passing)
+
+## Marketing Landing Page
+- [x] Public marketing landing page — 9 sections (Hero + My Kit mockup, For Students, Your Way, For Employers, The Drop, Pricing, Trust, Waitlist form, Footer), fully responsive, self-contained HTML/CSS/JS, live counter, Quiet Mode toggle
+- [x] Landing page renders without app shell (own nav/footer, no Navbar wrapper)
+- [x] LandingPage.tsx component wired into App.tsx routing

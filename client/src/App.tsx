@@ -14,12 +14,13 @@ import { UniversityPortal } from "./pages/UniversityPortal";
 import { YourWay } from "./pages/YourWay";
 import EmployerDashboard from "./pages/EmployerDashboard";
 import AdminPromoCodes from "./pages/AdminPromoCodes";
+import LandingPage from "./pages/LandingPage";
 
 function MainLayout() {
   const { isAuthenticated } = useApp();
   // Simple state-based routing for static prototype navigation
   const [currentPage, setCurrentPage] = useState<string>(() => {
-    return isAuthenticated ? "dashboard" : "login";
+    return isAuthenticated ? "dashboard" : "landing";
   });
   const handleNavigate = (page: string) => {
     setCurrentPage(page);
@@ -29,6 +30,13 @@ function MainLayout() {
     setCurrentPage("dashboard");
   };
 
+  // Landing page renders without the app shell (it has its own nav/footer)
+  if (!isAuthenticated && currentPage === "landing") {
+    return (
+      <LandingPage onSignIn={() => setCurrentPage("login")} />
+    );
+  }
+
   // make sure to consider if you need authentication for certain routes
   return (
     <div className="min-h-screen flex flex-col bg-background text-foreground transition-colors duration-200">
@@ -36,7 +44,9 @@ function MainLayout() {
       
       <main className="flex-grow">
         {!isAuthenticated ? (
-          <Login onLoginSuccess={handleLoginSuccess} />
+          <>
+            {currentPage === "login" && <Login onLoginSuccess={handleLoginSuccess} />}
+          </>
         ) : (
           <>
             {currentPage === "dashboard" && <Dashboard onNavigate={handleNavigate} />}
