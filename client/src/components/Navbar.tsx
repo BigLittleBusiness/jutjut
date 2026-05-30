@@ -14,14 +14,20 @@ export const Navbar: React.FC<NavbarProps> = ({ onNavigate, currentPage }) => {
   const { theme, toggleTheme } = useTheme();
   const [isOpen, setIsOpen] = useState(false);
 
-  const navItems = [
+  const primaryItems = [
     { id: "dashboard", label: "Dashboard", icon: "fa-house" },
     { id: "my-kit", label: "My Kit", icon: "fa-briefcase" },
     { id: "jobs", label: "Job Board", icon: "fa-clipboard-list" },
     { id: "drops", label: "The Drop", icon: "fa-fire" },
+  ];
+
+  const secondaryItems = [
     { id: "university", label: "Uni Portal", icon: "fa-graduation-cap" },
     { id: "your-way", label: "Your Way", icon: "fa-sliders" },
   ];
+
+  const allItems = [...primaryItems, ...secondaryItems];
+  const [isMoreOpen, setIsMoreOpen] = useState(false);
 
   const handleNavClick = (id: string) => {
     onNavigate(id);
@@ -45,13 +51,16 @@ export const Navbar: React.FC<NavbarProps> = ({ onNavigate, currentPage }) => {
 
         {/* Desktop Nav Items */}
         {isAuthenticated && (
-          <div className="hidden md:flex items-center gap-3">
-            {navItems.map((item) => {
+          <div className="hidden md:flex items-center gap-3 relative">
+            {primaryItems.map((item) => {
               const isActive = currentPage === item.id;
               return (
                 <button
                   key={item.id}
-                  onClick={() => handleNavClick(item.id)}
+                  onClick={() => {
+                    handleNavClick(item.id);
+                    setIsMoreOpen(false);
+                  }}
                   className={`relative px-3 py-2 rounded-lg font-bold flex items-center gap-2 transition-all duration-200 ${
                     isActive
                       ? "text-primary-foreground scale-105 mx-0.5 z-10"
@@ -70,6 +79,60 @@ export const Navbar: React.FC<NavbarProps> = ({ onNavigate, currentPage }) => {
                 </button>
               );
             })}
+
+            {/* Desktop "More" Dropdown Trigger */}
+            <div className="relative">
+              <button
+                onClick={() => setIsMoreOpen(!isMoreOpen)}
+                className={`relative px-3 py-2 rounded-lg font-bold flex items-center gap-2 transition-all duration-200 ${
+                  secondaryItems.some(i => i.id === currentPage)
+                    ? "text-primary-foreground scale-105 mx-0.5 z-10"
+                    : isMoreOpen
+                      ? "bg-accent text-foreground border-2 border-transparent"
+                      : "hover:bg-accent/50 text-muted-foreground hover:text-foreground border-2 border-transparent"
+                }`}
+              >
+                {secondaryItems.some(i => i.id === currentPage) && (
+                  <motion.div
+                    layoutId="activeNavIndicator"
+                    className="absolute inset-0 bg-primary brutal-border brutal-shadow-amber rounded-lg -z-10"
+                    transition={{ type: "spring", stiffness: 380, damping: 30 }}
+                  />
+                )}
+                <i className="fa-solid fa-ellipsis z-10"></i>
+                <span className="z-10">More</span>
+                <i className={`fa-solid fa-chevron-down text-xs transition-transform duration-200 z-10 ${isMoreOpen ? "rotate-180" : ""}`}></i>
+              </button>
+
+              {/* Dropdown Menu List */}
+              {isMoreOpen && (
+                <>
+                  <div className="fixed inset-0 z-20" onClick={() => setIsMoreOpen(false)} />
+                  <div className="absolute right-0 mt-2 w-48 bg-card brutal-border rounded-xl p-1.5 brutal-shadow-amber z-30 flex flex-col gap-1">
+                    {secondaryItems.map((item) => {
+                      const isActive = currentPage === item.id;
+                      return (
+                        <button
+                          key={item.id}
+                          onClick={() => {
+                            handleNavClick(item.id);
+                            setIsMoreOpen(false);
+                          }}
+                          className={`w-full px-3 py-2 rounded-lg font-bold flex items-center gap-2 transition-all text-left ${
+                            isActive
+                              ? "bg-primary text-primary-foreground brutal-border"
+                              : "hover:bg-accent text-muted-foreground hover:text-foreground"
+                          }`}
+                        >
+                          <i className={`fa-solid ${item.icon} w-5 text-center`}></i>
+                          <span>{item.label}</span>
+                        </button>
+                      );
+                    })}
+                  </div>
+                </>
+              )}
+            </div>
           </div>
         )}
 
@@ -150,7 +213,8 @@ export const Navbar: React.FC<NavbarProps> = ({ onNavigate, currentPage }) => {
       {/* Mobile Nav Drawer */}
       {isAuthenticated && isOpen && (
         <div className="md:hidden border-t-2 border-border bg-card text-foreground p-4 flex flex-col gap-2">
-          {navItems.map((item) => {
+          {/* Primary Mobile Items */}
+          {primaryItems.map((item) => {
             const isActive = currentPage === item.id;
             return (
               <button
@@ -167,6 +231,31 @@ export const Navbar: React.FC<NavbarProps> = ({ onNavigate, currentPage }) => {
               </button>
             );
           })}
+
+          {/* Secondary Mobile Items Group Header */}
+          <div className="border-t border-border/60 my-1 pt-2 px-1">
+            <p className="text-[10px] font-extrabold uppercase tracking-wider text-muted-foreground">More Features</p>
+          </div>
+
+          {/* Secondary Mobile Items */}
+          {secondaryItems.map((item) => {
+            const isActive = currentPage === item.id;
+            return (
+              <button
+                key={item.id}
+                onClick={() => handleNavClick(item.id)}
+                className={`w-full p-2.5 rounded-lg font-bold flex items-center gap-3 transition-all ${
+                  isActive
+                    ? "bg-primary text-primary-foreground brutal-border brutal-shadow-amber text-left"
+                    : "hover:bg-accent text-left text-muted-foreground hover:text-foreground"
+                }`}
+              >
+                <i className={`fa-solid ${item.icon} w-5 text-center`}></i>
+                <span>{item.label}</span>
+              </button>
+            );
+          })}
+
           <div className="border-t border-border my-2 pt-2">
             <button
               onClick={logout}
