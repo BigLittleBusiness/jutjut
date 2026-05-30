@@ -42,3 +42,20 @@
 - [ ] DM inbox — direct messaging between users
 - [ ] Admin panel — manage users, jobs, drops (admin role only)
 - [ ] Accessibility settings — quiet mode, plain language, stepped forms
+
+## Employer Monetisation (Business Model)
+- [x] Extend DB schema — employers, employerCredits, creditTransactions, promoCodes, jobViews tables
+- [x] Add auto_repost columns to jobs table (autoRepostEnabled, autoRepostNextDate, paymentToken)
+- [x] PinPayments API helper (server/pinpayments.ts) — createCharge, createCustomer, verifyWebhookSignature
+- [x] Credit pack pricing — pack_1 ($15 AUD / 1 credit), pack_5 ($50 AUD / 5 credits)
+- [x] calculateChargeAmount — percentage/fixed discount + optional 10% GST
+- [x] ENV vars for PinPayments (PIN_PAYMENTS_SECRET_KEY, PIN_PAYMENTS_PUBLISHABLE_KEY, PIN_PAYMENTS_WEBHOOK_SECRET, PIN_PAYMENTS_BASE_URL)
+- [x] DB helpers — employer CRUD, credit balance, adjustCredits, transaction history, promo code CRUD, job analytics, auto-repost candidates
+- [x] tRPC employer router — profile upsert, credit balance, pack list, promo validation, credit purchase, job post, job analytics
+- [x] tRPC admin router — promo code list, create, update (admin role gated)
+- [x] Auto-repost cron job (node-cron, daily 02:00 AEST) — deducts credit or charges stored payment token; disables on failure
+- [x] PinPayments webhook handler (POST /webhooks/pinpayments) — HMAC-SHA256 signature verification, charge.succeeded event
+- [x] Employer Dashboard page — credit balance card, buy credits modal, post job modal, analytics table, transaction history
+- [x] Admin Promo Codes page — create/list/activate promo codes (admin-only)
+- [x] Routes wired in App.tsx — /employer, /admin-promos
+- [x] Vitest tests — 15 tests covering credit packs, charge calculation, webhook signature (all passing)

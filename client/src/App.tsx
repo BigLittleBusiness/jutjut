@@ -12,6 +12,8 @@ import { JobBoard } from "./pages/JobBoard";
 import { TheDrop } from "./pages/TheDrop";
 import { UniversityPortal } from "./pages/UniversityPortal";
 import { YourWay } from "./pages/YourWay";
+import EmployerDashboard from "./pages/EmployerDashboard";
+import AdminPromoCodes from "./pages/AdminPromoCodes";
 
 function MainLayout() {
   const { isAuthenticated } = useApp();
@@ -44,6 +46,8 @@ function MainLayout() {
             {currentPage === "university" && <UniversityPortal />}
             {currentPage === "your-way" && <YourWay />}
             {currentPage === "login" && <Dashboard onNavigate={handleNavigate} />}
+            {currentPage === "employer" && <EmployerDashboard />}
+            {currentPage === "admin-promos" && <AdminPromoCodes />}
           </>
         )}
       </main>

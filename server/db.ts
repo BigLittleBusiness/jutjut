@@ -90,3 +90,221 @@ export async function getUserByOpenId(openId: string) {
 }
 
 // TODO: add feature queries here as your schema grows.
+
+// ─── Employer helpers ─────────────────────────────────────────────────────────
+
+import {
+  employers,
+  employerCredits,
+  creditTransactions,
+  promoCodes,
+  jobs,
+  jobViews,
+} from "../drizzle/schema";
+import { and, lte, desc, sql } from "drizzle-orm";
+
+export async function getEmployerByUserId(userId: number) {
+  const db = await getDb();
+  if (!db) return null;
+  const rows = await db.select().from(employers).where(eq(employers.userId, userId)).limit(1);
+  return rows[0] ?? null;
+}
+
+export async function getEmployerById(id: number) {
+  const db = await getDb();
+  if (!db) return null;
+  const rows = await db.select().from(employers).where(eq(employers.id, id)).limit(1);
+  return rows[0] ?? null;
+}
+
+export async function upsertEmployer(data: {
+  userId: number;
+  businessName: string;
+  abn?: string | null;
+  contactEmail?: string | null;
+  isGstRegistered?: boolean;
+}) {
+  const db = await getDb();
+  if (!db) throw new Error("Database not available");
+  const existing = await getEmployerByUserId(data.userId);
+  if (existing) {
+    await db.update(employers).set({ ...data, updatedAt: new Date() }).where(eq(employers.userId, data.userId));
+    return getEmployerByUserId(data.userId);
+  }
+  await db.insert(employers).values({ ...data, createdAt: new Date(), updatedAt: new Date() });
+  const emp = await getEmployerByUserId(data.userId);
+  if (emp) {
+    await db
+      .insert(employerCredits)
+      .values({ employerId: emp.id, creditBalance: 0 })
+      .onDuplicateKeyUpdate({ set: { employerId: emp.id } });
+  }
+  return emp;
+}
+
+export async function setEmployerPaymentToken(employerId: number, token: string) {
+  const db = await getDb();
+  if (!db) throw new Error("Database not available");
+  await db.update(employers).set({ paymentToken: token, updatedAt: new Date() }).where(eq(employers.id, employerId));
+}
+
+// ─── Credits ─────────────────────────────────────────────────────────────────
+
+export async function getCreditBalance(employerId: number): Promise<number> {
+  const db = await getDb();
+  if (!db) return 0;
+  const rows = await db.select().from(employerCredits).where(eq(employerCredits.employerId, employerId)).limit(1);
+  return rows[0]?.creditBalance ?? 0;
+}
+
+export async function adjustCredits(params: {
+  employerId: number;
+  amount: number;
+  type: "purchase" | "job_post" | "refund" | "promo_bonus" | "auto_repost";
+  reference?: string;
+  description?: string;
+}) {
+  const db = await getDb();
+  if (!db) throw new Error("Database not available");
+  await db
+    .insert(employerCredits)
+    .values({ employerId: params.employerId, creditBalance: params.amount })
+    .onDuplicateKeyUpdate({
+      set: {
+        creditBalance: sql`credit_balance + ${params.amount}`,
+        updatedAt: sql`now()`,
+      },
+    });
+  await db.insert(creditTransactions).values({
+    employerId: params.employerId,
+    amount: params.amount,
+    type: params.type,
+    reference: params.reference ?? null,
+    description: params.description ?? null,
+    createdAt: new Date(),
+  });
+}
+
+export async function getTransactionHistory(employerId: number, limit = 50) {
+  const db = await getDb();
+  if (!db) return [];
+  return db
+    .select()
+    .from(creditTransactions)
+    .where(eq(creditTransactions.employerId, employerId))
+    .orderBy(desc(creditTransactions.createdAt))
+    .limit(limit);
+}
+
+// ─── Promo Codes ─────────────────────────────────────────────────────────────
+
+export async function getPromoCode(code: string) {
+  const db = await getDb();
+  if (!db) return null;
+  const now = new Date();
+  const rows = await db
+    .select()
+    .from(promoCodes)
+    .where(and(eq(promoCodes.code, code.toUpperCase()), eq(promoCodes.isActive, true)))
+    .limit(1);
+  const promo = rows[0] ?? null;
+  if (!promo) return null;
+  // Check expiry
+  if (promo.expiresAt && promo.expiresAt < now) return null;
+  // Check max uses
+  if (promo.maxUses !== null && promo.usedCount >= promo.maxUses) return null;
+  return promo;
+}
+
+export async function incrementPromoCodeUsage(id: number) {
+  const db = await getDb();
+  if (!db) return;
+  await db.update(promoCodes).set({ usedCount: sql`used_count + 1` }).where(eq(promoCodes.id, id));
+}
+
+export async function getAllPromoCodes() {
+  const db = await getDb();
+  if (!db) return [];
+  return db.select().from(promoCodes).orderBy(desc(promoCodes.createdAt));
+}
+
+export async function createPromoCode(data: {
+  code: string;
+  discountType: "fixed" | "percentage";
+  discountValue: number;
+  bonusCredits?: number;
+  maxUses?: number | null;
+  expiresAt?: Date | null;
+  createdByUserId: number;
+}) {
+  const db = await getDb();
+  if (!db) throw new Error("Database not available");
+  await db.insert(promoCodes).values({
+    ...data,
+    code: data.code.toUpperCase(),
+    bonusCredits: data.bonusCredits ?? 0,
+    maxUses: data.maxUses ?? null,
+    expiresAt: data.expiresAt ?? null,
+    usedCount: 0,
+    isActive: true,
+    createdAt: new Date(),
+  });
+}
+
+export async function updatePromoCode(id: number, data: { isActive?: boolean; maxUses?: number | null; expiresAt?: Date | null }) {
+  const db = await getDb();
+  if (!db) throw new Error("Database not available");
+  await db.update(promoCodes).set(data).where(eq(promoCodes.id, id));
+}
+
+// ─── Jobs ─────────────────────────────────────────────────────────────────────
+
+export async function getJobsByPostedUser(userId: number) {
+  const db = await getDb();
+  if (!db) return [];
+  return db.select().from(jobs).where(eq(jobs.postedByUserId, userId)).orderBy(desc(jobs.createdAt));
+}
+
+export async function getJobById(id: number) {
+  const db = await getDb();
+  if (!db) return null;
+  const rows = await db.select().from(jobs).where(eq(jobs.id, id)).limit(1);
+  return rows[0] ?? null;
+}
+
+export async function recordJobView(jobId: number, viewerUserId?: number | null) {
+  const db = await getDb();
+  if (!db) return;
+  await db.insert(jobViews).values({ jobId, viewerUserId: viewerUserId ?? null, viewedAt: new Date() });
+  await db.update(jobs).set({ viewCount: sql`view_count + 1` }).where(eq(jobs.id, jobId));
+}
+
+// ─── Analytics ────────────────────────────────────────────────────────────────
+
+export async function getJobAnalyticsForUser(userId: number) {
+  const db = await getDb();
+  if (!db) return [];
+  const employerJobs = await getJobsByPostedUser(userId);
+  return employerJobs.map(j => ({
+    jobId: j.id,
+    title: j.title,
+    viewCount: j.viewCount,
+    applyCount: j.applyCount,
+    isActive: j.isActive,
+    isFeatured: j.isFeatured,
+    createdAt: j.createdAt,
+    expiresAt: j.expiresAt,
+  }));
+}
+
+// ─── Auto-repost ──────────────────────────────────────────────────────────────
+
+export async function getAutoRepostCandidates() {
+  const db = await getDb();
+  if (!db) return [];
+  const now = new Date();
+  return db
+    .select()
+    .from(jobs)
+    .where(and(eq(jobs.autoRepostEnabled, true), lte(jobs.autoRepostNextDate, now)));
+}

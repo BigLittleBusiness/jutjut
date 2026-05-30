@@ -217,6 +217,98 @@ export const Dashboard: React.FC<DashboardProps> = ({ onNavigate }) => {
                   ))}
                 </div>
               </div>
+
+              {/* ── Payment Gateway Credentials ─────────────────── */}
+              <div className="pt-3 border-t border-amber-500/30">
+                <p className="font-extrabold uppercase mb-1 text-foreground flex items-center gap-1">
+                  <i className="fa-solid fa-credit-card text-amber-600"></i> Payment Gateway (PinPayments)
+                </p>
+                <p className="text-[10px] text-muted-foreground mb-3 leading-relaxed">
+                  Add your PinPayments API keys here once your account is approved.
+                  Keys are stored as server-side environment variables and are never
+                  exposed to the browser. Until configured, the credit purchase flow
+                  runs in sandbox / test mode.
+                </p>
+
+                <div className="space-y-2">
+                  {[
+                    {
+                      label: "Secret API Key",
+                      envVar: "PIN_PAYMENTS_SECRET_KEY",
+                      hint: "Starts with sk_live_ (production) or sk_test_ (sandbox)",
+                      icon: "fa-key"
+                    },
+                    {
+                      label: "Publishable Key",
+                      envVar: "PIN_PAYMENTS_PUBLISHABLE_KEY",
+                      hint: "Starts with pk_live_ or pk_test_ — safe to use in the browser",
+                      icon: "fa-unlock"
+                    },
+                    {
+                      label: "Webhook Secret",
+                      envVar: "PIN_PAYMENTS_WEBHOOK_SECRET",
+                      hint: "Set in your PinPayments dashboard when configuring the webhook endpoint",
+                      icon: "fa-webhook"
+                    },
+                    {
+                      label: "API Base URL",
+                      envVar: "PIN_PAYMENTS_BASE_URL",
+                      hint: "https://test-api.pinpayments.com/1 (sandbox) or https://api.pinpayments.com/1 (live)",
+                      icon: "fa-link"
+                    }
+                  ].map((field) => (
+                    <div key={field.envVar} className="rounded-lg border-2 border-amber-500/40 bg-amber-500/5 p-2.5">
+                      <div className="flex items-center gap-1.5 mb-0.5">
+                        <i className={`fa-solid ${field.icon} text-amber-600 text-[10px]`}></i>
+                        <span className="font-extrabold text-[10px] uppercase tracking-wider text-foreground">{field.label}</span>
+                      </div>
+                      <code className="block text-[9px] font-mono text-amber-700 dark:text-amber-400 mb-1">{field.envVar}</code>
+                      <p className="text-[9px] text-muted-foreground leading-relaxed">{field.hint}</p>
+                      <button
+                        onClick={() => {
+                          navigator.clipboard?.writeText(field.envVar);
+                          toast.info(`Copied env var name: ${field.envVar}`);
+                        }}
+                        className="mt-1.5 text-[9px] font-bold text-amber-700 dark:text-amber-400 hover:underline flex items-center gap-1"
+                      >
+                        <i className="fa-regular fa-copy"></i> Copy env var name
+                      </button>
+                    </div>
+                  ))}
+                </div>
+
+                <div className="mt-3 rounded-lg border-2 border-dashed border-amber-500/50 bg-amber-500/5 p-2.5 text-center">
+                  <p className="text-[9px] font-bold text-amber-700 dark:text-amber-400 uppercase tracking-wider mb-1">
+                    How to add credentials
+                  </p>
+                  <ol className="text-[9px] text-muted-foreground text-left space-y-1 list-decimal list-inside">
+                    <li>Open the <strong>Secrets</strong> panel in the Manus project settings.</li>
+                    <li>Add each env var above with its value from your PinPayments dashboard.</li>
+                    <li>Restart the server — the payment flow activates automatically.</li>
+                  </ol>
+                </div>
+              </div>
+
+              {/* ── Quick links ─────────────────────────────────── */}
+              <div className="pt-3 border-t border-amber-500/30">
+                <p className="font-extrabold uppercase mb-2 text-foreground">Admin Pages</p>
+                <div className="space-y-1.5">
+                  <button
+                    onClick={() => onNavigate("employer")}
+                    className="w-full text-left p-2 rounded border-2 border-border bg-background hover:bg-accent font-bold flex items-center gap-2 transition-all"
+                  >
+                    <i className="fa-solid fa-briefcase text-primary text-[10px]"></i>
+                    <span>Employer Dashboard</span>
+                  </button>
+                  <button
+                    onClick={() => onNavigate("admin-promos")}
+                    className="w-full text-left p-2 rounded border-2 border-border bg-background hover:bg-accent font-bold flex items-center gap-2 transition-all"
+                  >
+                    <i className="fa-solid fa-tag text-primary text-[10px]"></i>
+                    <span>Promo Codes</span>
+                  </button>
+                </div>
+              </div>
             </div>
           )}
         </div>

@@ -7,4 +7,9 @@ export const ENV = {
   isProduction: process.env.NODE_ENV === "production",
   forgeApiUrl: process.env.BUILT_IN_FORGE_API_URL ?? "",
   forgeApiKey: process.env.BUILT_IN_FORGE_API_KEY ?? "",
+  // PinPayments
+  pinPaymentsSecretKey: process.env.PIN_PAYMENTS_SECRET_KEY ?? "",
+  pinPaymentsPublishableKey: process.env.PIN_PAYMENTS_PUBLISHABLE_KEY ?? "",
+  pinPaymentsWebhookSecret: process.env.PIN_PAYMENTS_WEBHOOK_SECRET ?? "",
+  pinPaymentsBaseUrl: process.env.PIN_PAYMENTS_BASE_URL ?? "https://test-api.pinpayments.com/1",
 };
