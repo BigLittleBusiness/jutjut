@@ -2,6 +2,14 @@ import React, { useState, useRef, useEffect } from "react";
 import { useApp } from "@/contexts/AppContext";
 import { toast } from "sonner";
 
+const ANON_PHRASES = [
+  "🕵️ Identity hidden! Shhh... keeping it safe and secure on JutJut.",
+  "🤫 Stealth mode active. No paper trails here!",
+  "🛸 Undercover vibes. Your secret is safe with us!",
+  "🕶️ Incognito energy. Just dropping fax, no names.",
+  "🦊 Ghost protocol enabled. Now you see me, now you don't!"
+];
+
 interface DashboardProps {
   onNavigate: (page: string) => void;
 }
@@ -9,6 +17,12 @@ interface DashboardProps {
 export const Dashboard: React.FC<DashboardProps> = ({ onNavigate }) => {
   const { conversations, activeChatId, setActiveChatId, sendMessage, userProfile, anonymousAvatarSetting, setAnonymousAvatarSetting, setSelectedKitUser } = useApp();
   const [showAdminSettings, setShowAdminSettings] = useState(false);
+  const [activeTooltipIndex, setActiveTooltipIndex] = useState<Record<string, number>>({});
+
+  const handleMouseEnterAnon = (postId: string) => {
+    const randomIndex = Math.floor(Math.random() * ANON_PHRASES.length);
+    setActiveTooltipIndex(prev => ({ ...prev, [postId]: randomIndex }));
+  };
   const [chatOpen, setChatOpen] = useState(false);
   const [newMessageText, setNewMessageText] = useState("");
   const chatEndRef = useRef<HTMLDivElement>(null);
@@ -311,7 +325,10 @@ export const Dashboard: React.FC<DashboardProps> = ({ onNavigate }) => {
               <div className="flex justify-between items-start mb-3">
                 <div className="flex gap-3 items-center">
                   {post.type === "anonymous" ? (
-                    <div className="relative w-10 h-10 shrink-0 group cursor-help">
+                    <div 
+                      className="relative w-10 h-10 shrink-0 group cursor-help"
+                      onMouseEnter={() => handleMouseEnterAnon(post.id)}
+                    >
                       {anonymousAvatarSetting === "question" ? (
                         <svg className="w-10 h-10 rounded-full object-cover brutal-border transition-transform group-hover:scale-105" viewBox="0 0 100 100" fill="none" xmlns="http://www.w3.org/2000/svg">
                           <rect width="100" height="100" fill="#0D9488" />
@@ -328,7 +345,7 @@ export const Dashboard: React.FC<DashboardProps> = ({ onNavigate }) => {
                       {/* Playful identity-hidden tooltip */}
                       <div className="absolute left-1/2 -translate-x-1/2 bottom-full mb-2 hidden group-hover:flex flex-col items-center z-30 w-48">
                         <div className="bg-neutralDark text-white text-[11px] font-extrabold px-3 py-2 rounded-lg brutal-border brutal-shadow-amber text-center leading-snug">
-                          🕵️ Identity fully hidden! Shhh... keeping it safe and secure on JutJut.
+                          {ANON_PHRASES[activeTooltipIndex[post.id] ?? 0]}
                         </div>
                         <div className="w-2.5 h-2.5 bg-neutralDark rotate-45 -mt-1 border-r-2 border-b-2 border-border"></div>
                       </div>
