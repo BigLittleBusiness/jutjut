@@ -150,6 +150,87 @@ describe("Discount calculation for redemption preview", () => {
   });
 });
 
+describe("Financial summary calculations", () => {
+  const avgPackCents = (1500 + 5000) / 2; // 3250
+
+  function calcSavedCents(discountType: "percentage" | "fixed", discountValue: number) {
+    if (discountType === "percentage") {
+      return Math.round(avgPackCents * (Math.min(discountValue, 100) / 100));
+    }
+    return discountValue * 100;
+  }
+
+  function calcRevenueCents(discountType: "percentage" | "fixed", discountValue: number) {
+    if (discountType === "percentage") {
+      const saving = Math.round(avgPackCents * (Math.min(discountValue, 100) / 100));
+      return Math.max(0, avgPackCents - saving);
+    }
+    const saving = Math.min(discountValue * 100, avgPackCents);
+    return Math.max(0, avgPackCents - saving);
+  }
+
+  it("calculates total saved for a single 20% redemption", () => {
+    const saved = calcSavedCents("percentage", 20);
+    expect(saved).toBe(Math.round(3250 * 0.2)); // 650
+  });
+
+  it("calculates total saved for a single $5 fixed redemption", () => {
+    const saved = calcSavedCents("fixed", 5);
+    expect(saved).toBe(500);
+  });
+
+  it("calculates revenue for a 20% discount redemption", () => {
+    const rev = calcRevenueCents("percentage", 20);
+    expect(rev).toBe(3250 - Math.round(3250 * 0.2)); // 2600
+  });
+
+  it("calculates revenue for a $5 fixed discount redemption", () => {
+    const rev = calcRevenueCents("fixed", 5);
+    expect(rev).toBe(3250 - 500); // 2750
+  });
+
+  it("sums total saved across multiple redemptions", () => {
+    const redemptions = [
+      { discountType: "percentage" as const, discountValue: 20, bonusCreditsAwarded: 0 },
+      { discountType: "fixed" as const, discountValue: 5, bonusCreditsAwarded: 2 },
+      { discountType: "percentage" as const, discountValue: 10, bonusCreditsAwarded: 0 },
+    ];
+    const totalSaved = redemptions.reduce((sum, r) => sum + calcSavedCents(r.discountType, r.discountValue), 0);
+    const expected = Math.round(3250 * 0.2) + 500 + Math.round(3250 * 0.1);
+    expect(totalSaved).toBe(expected);
+  });
+
+  it("sums total revenue across multiple redemptions", () => {
+    const redemptions = [
+      { discountType: "percentage" as const, discountValue: 20 },
+      { discountType: "fixed" as const, discountValue: 5 },
+    ];
+    const totalRev = redemptions.reduce((sum, r) => sum + calcRevenueCents(r.discountType, r.discountValue), 0);
+    const expected = (3250 - Math.round(3250 * 0.2)) + (3250 - 500);
+    expect(totalRev).toBe(expected);
+  });
+
+  it("sums bonus credits issued across redemptions", () => {
+    const redemptions = [
+      { bonusCreditsAwarded: 2 },
+      { bonusCreditsAwarded: 0 },
+      { bonusCreditsAwarded: 3 },
+    ];
+    const total = redemptions.reduce((sum, r) => sum + (r.bonusCreditsAwarded ?? 0), 0);
+    expect(total).toBe(5);
+  });
+
+  it("clamps 100% discount so revenue is zero", () => {
+    const rev = calcRevenueCents("percentage", 100);
+    expect(rev).toBe(0);
+  });
+
+  it("clamps oversized fixed discount so revenue is zero", () => {
+    const rev = calcRevenueCents("fixed", 100); // $100 > $32.50 avg
+    expect(rev).toBe(0);
+  });
+});
+
 describe("Redemption display helpers", () => {
   it("formats user display name from name field", () => {
     const r = { userName: "Alex Mercer", userEmail: "alex@school.edu", redeemedByUserId: 1, redeemedByEmployerId: null };

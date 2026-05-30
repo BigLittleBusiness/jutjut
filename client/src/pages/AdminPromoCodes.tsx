@@ -340,6 +340,57 @@ function RedemptionDrawer({
 
         <Separator />
 
+        {/* Financial summary banner — shown once redemptions have loaded */}
+        {!isLoading && redemptions && redemptions.length > 0 && (() => {
+          // Calculate total discount value saved across all redemptions
+          const totalSavedCents = redemptions.reduce((sum, r) => {
+            // We use pack_5 ($50 AUD = 5000 cents) as the reference pack for fixed discounts
+            // For percentage discounts we use the weighted average of both packs
+            const avgPackCents = (1500 + 5000) / 2; // 3250 cents
+            if (r.discountType === "percentage") {
+              return sum + Math.round(avgPackCents * (Math.min(r.discountValue, 100) / 100));
+            }
+            return sum + r.discountValue * 100; // fixed AUD → cents
+          }, 0);
+
+          // Revenue generated = total redemptions × average pack price (minus discount)
+          const avgPackCents = (1500 + 5000) / 2;
+          const totalRevenueCents = redemptions.reduce((sum, r) => {
+            if (r.discountType === "percentage") {
+              const saving = Math.round(avgPackCents * (Math.min(r.discountValue, 100) / 100));
+              return sum + Math.max(0, avgPackCents - saving);
+            }
+            const saving = Math.min(r.discountValue * 100, avgPackCents);
+            return sum + Math.max(0, avgPackCents - saving);
+          }, 0);
+
+          const totalBonusCredits = redemptions.reduce((sum, r) => sum + (r.bonusCreditsAwarded ?? 0), 0);
+
+          return (
+            <div className="grid grid-cols-3 gap-3 px-1 py-3">
+              <div className="rounded-xl border border-border bg-green-50 dark:bg-green-950/30 p-3 text-center">
+                <p className="text-xs text-muted-foreground font-medium uppercase tracking-wide mb-1">Total Saved by Employers</p>
+                <p className="text-xl font-bold text-green-600 dark:text-green-400">
+                  {formatAud(totalSavedCents)}
+                </p>
+                <p className="text-xs text-muted-foreground mt-0.5">est. across {redemptions.length} use{redemptions.length !== 1 ? "s" : ""}</p>
+              </div>
+              <div className="rounded-xl border border-border bg-primary/5 p-3 text-center">
+                <p className="text-xs text-muted-foreground font-medium uppercase tracking-wide mb-1">Est. Revenue Generated</p>
+                <p className="text-xl font-bold text-foreground">
+                  {formatAud(totalRevenueCents)}
+                </p>
+                <p className="text-xs text-muted-foreground mt-0.5">after discount, excl. GST</p>
+              </div>
+              <div className="rounded-xl border border-border bg-muted/40 p-3 text-center">
+                <p className="text-xs text-muted-foreground font-medium uppercase tracking-wide mb-1">Bonus Credits Issued</p>
+                <p className="text-xl font-bold text-foreground">{totalBonusCredits}</p>
+                <p className="text-xs text-muted-foreground mt-0.5">credit{totalBonusCredits !== 1 ? "s" : ""} awarded</p>
+              </div>
+            </div>
+          );
+        })()}
+
         {/* Redemption list */}
         <div className="flex-1 overflow-y-auto min-h-0">
           {isLoading ? (
