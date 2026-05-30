@@ -28,6 +28,7 @@ export const Navbar: React.FC<NavbarProps> = ({ onNavigate, currentPage }) => {
 
   const allItems = [...primaryItems, ...secondaryItems];
   const [isMoreOpen, setIsMoreOpen] = useState(false);
+  const [isProfileOpen, setIsProfileOpen] = useState(false);
 
   const handleNavClick = (id: string) => {
     onNavigate(id);
@@ -172,30 +173,75 @@ export const Navbar: React.FC<NavbarProps> = ({ onNavigate, currentPage }) => {
 
           {isAuthenticated ? (
             <div className="flex items-center gap-3">
-              {/* Profile Shortcut */}
-              <button
-                onClick={() => handleNavClick("my-kit")}
-                className="hidden sm:flex items-center gap-2 brutal-border rounded-xl p-1 pr-3 bg-card hover:bg-accent transition-all brutal-shadow active:translate-x-[1px] active:translate-y-[1px] active:shadow-none"
-              >
-                <img
-                  src={userProfile.avatar}
-                  alt={userProfile.name}
-                  className="h-8 w-8 rounded-lg object-cover brutal-border"
-                />
-                <div className="text-left">
-                  <p className="text-xs font-extrabold leading-none">{userProfile.name}</p>
-                  <p className="text-[10px] text-muted-foreground leading-none mt-0.5">{userProfile.school}</p>
-                </div>
-              </button>
+              {/* Profile Dropdown */}
+              <div className="relative hidden sm:block">
+                <button
+                  onClick={() => setIsProfileOpen(!isProfileOpen)}
+                  className="flex items-center gap-2 brutal-border rounded-xl p-1 pr-3 bg-card hover:bg-accent transition-all brutal-shadow active:translate-x-[1px] active:translate-y-[1px] active:shadow-none"
+                >
+                  <img
+                    src={userProfile.avatar}
+                    alt={userProfile.name}
+                    className="h-8 w-8 rounded-lg object-cover brutal-border"
+                  />
+                  <div className="text-left">
+                    <p className="text-xs font-extrabold leading-none">{userProfile.name}</p>
+                    <p className="text-[10px] text-muted-foreground leading-none mt-0.5">{userProfile.school}</p>
+                  </div>
+                  <i className={`fa-solid fa-chevron-down text-xs text-muted-foreground transition-transform duration-200 ml-1 ${isProfileOpen ? "rotate-180" : ""}`}></i>
+                </button>
 
-              {/* Logout */}
-              <button
-                onClick={logout}
-                className="h-10 px-3 brutal-border rounded-xl bg-destructive text-destructive-foreground hover:bg-destructive/90 font-bold text-sm brutal-shadow transition-all active:translate-x-[1px] active:translate-y-[1px] active:shadow-none hidden md:flex items-center gap-1"
-              >
-                <i className="fa-solid fa-right-from-bracket"></i>
-                <span>Log out</span>
-              </button>
+                <AnimatePresence>
+                  {isProfileOpen && (
+                    <>
+                      <div className="fixed inset-0 z-20" onClick={() => setIsProfileOpen(false)} />
+                      <motion.div
+                        initial={{ opacity: 0, scale: 0.95, y: -8 }}
+                        animate={{ opacity: 1, scale: 1, y: 0 }}
+                        exit={{ opacity: 0, scale: 0.95, y: -8 }}
+                        transition={{ duration: 0.15, ease: [0.23, 1, 0.32, 1] }}
+                        className="absolute right-0 mt-2 w-52 bg-card brutal-border rounded-xl p-1.5 brutal-shadow-amber z-30 flex flex-col gap-1 origin-top-right"
+                      >
+                        {/* User info header */}
+                        <div className="px-3 py-2 border-b-2 border-border mb-1">
+                          <p className="text-xs font-extrabold leading-none text-foreground">{userProfile.name}</p>
+                          <p className="text-[10px] text-muted-foreground leading-none mt-1">{userProfile.school}</p>
+                        </div>
+
+                        {/* My Kit / Profile */}
+                        <button
+                          onClick={() => { handleNavClick("my-kit"); setIsProfileOpen(false); }}
+                          className="w-full px-3 py-2 rounded-lg font-bold flex items-center gap-2.5 transition-all text-left hover:bg-accent text-muted-foreground hover:text-foreground"
+                        >
+                          <i className="fa-solid fa-id-card w-4 text-center text-primary"></i>
+                          <span>My Profile</span>
+                        </button>
+
+                        {/* Settings */}
+                        <button
+                          onClick={() => { handleNavClick("settings"); setIsProfileOpen(false); }}
+                          className="w-full px-3 py-2 rounded-lg font-bold flex items-center gap-2.5 transition-all text-left hover:bg-accent text-muted-foreground hover:text-foreground"
+                        >
+                          <i className="fa-solid fa-gear w-4 text-center text-primary"></i>
+                          <span>Settings</span>
+                        </button>
+
+                        {/* Divider */}
+                        <div className="border-t border-border my-0.5" />
+
+                        {/* Logout */}
+                        <button
+                          onClick={() => { logout(); setIsProfileOpen(false); }}
+                          className="w-full px-3 py-2 rounded-lg font-bold flex items-center gap-2.5 transition-all text-left hover:bg-destructive/10 text-destructive"
+                        >
+                          <i className="fa-solid fa-right-from-bracket w-4 text-center"></i>
+                          <span>Log out</span>
+                        </button>
+                      </motion.div>
+                    </>
+                  )}
+                </AnimatePresence>
+              </div>
             </div>
           ) : (
             <button
