@@ -55,7 +55,7 @@ function MainLayout() {
       {/* Footer */}
       <footer className="border-t-2 border-border bg-card py-6 text-center text-xs text-muted-foreground font-bold uppercase tracking-wider">
         <div className="container mx-auto px-4 flex flex-col sm:flex-row justify-between items-center gap-4">
-          <p>© 2026 StepOne Platform. Built with care for student success.</p>
+          <p>© 2026 JutJut. Built with care for student success.</p>
           <div className="flex gap-4">
             <a href="#privacy" onClick={(e) => { e.preventDefault(); alert("Demo: Privacy Policy"); }} className="hover:underline">Privacy</a>
             <a href="#terms" onClick={(e) => { e.preventDefault(); alert("Demo: Terms of Service"); }} className="hover:underline">Terms</a>

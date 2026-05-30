@@ -1,4 +1,4 @@
-# StepOne Prototype — TODO
+# JutJut — TODO
 
 ## Infrastructure & Setup
 - [x] Upgrade project to full-stack (web-db-user features: db, server, user)

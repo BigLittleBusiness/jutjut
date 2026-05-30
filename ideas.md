@@ -1,4 +1,4 @@
-# Design Ideas for JutJut Prototype
+# Design Ideas for JutJut
 
 Here are three distinct stylistic approaches and design philosophies explored for JutJut:
 
