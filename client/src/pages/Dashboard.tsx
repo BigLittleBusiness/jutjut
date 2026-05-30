@@ -330,10 +330,10 @@ export const Dashboard: React.FC<DashboardProps> = ({ onNavigate }) => {
                       onMouseEnter={() => handleMouseEnterAnon(post.id)}
                     >
                       {anonymousAvatarSetting === "question" ? (
-                        <svg className="w-10 h-10 rounded-full object-cover brutal-border transition-transform group-hover:scale-105" viewBox="0 0 100 100" fill="none" xmlns="http://www.w3.org/2000/svg">
+                        <svg className="w-10 h-10 rounded-full object-cover brutal-border transition-all duration-300 group-hover:scale-110 group-hover:rotate-12 group-hover:shadow-md" viewBox="0 0 100 100" fill="none" xmlns="http://www.w3.org/2000/svg">
                           <rect width="100" height="100" fill="#0D9488" />
-                          <circle cx="50" cy="50" r="35" fill="#F59E0B" />
-                          <text x="50" y="62" font-family="Space Grotesk, sans-serif" font-weight="900" font-size="46" fill="#0F172A" text-anchor="middle">?</text>
+                          <circle cx="50" cy="50" r="35" fill="#F59E0B" className="transition-transform duration-300 origin-center group-hover:scale-95" />
+                          <text x="50" y="62" font-family="Space Grotesk, sans-serif" font-weight="900" font-size="46" fill="#0F172A" text-anchor="middle" className="transition-transform duration-300 origin-center group-hover:rotate-[-12deg] group-hover:scale-105">?</text>
                         </svg>
                       ) : (
                         <img 
