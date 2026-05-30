@@ -35,7 +35,7 @@
 :root {
   /* Playful Neo-Brutalism Theme Variables */
   --background: oklch(0.985 0.002 240); /* #F9FAFB Off-white */
-  --foreground: oklch(0.12 0.01 240); /* #0F172A Dark Slate */
+  --foreground: oklch(0.18 0.01 240); /* #1F2937 Text Dark Grey */
   
   --card: oklch(1 0 0); /* White */
   --card-foreground: oklch(0.12 0.01 240);
@@ -43,10 +43,10 @@
   --popover: oklch(1 0 0);
   --popover-foreground: oklch(0.12 0.01 240);
   
-  --primary: oklch(0.55 0.16 195); /* #0D9488 Teal */
+  --primary: oklch(0.58 0.16 195); /* #0D9488 Teal */
   --primary-foreground: oklch(1 0 0);
   
-  --secondary: oklch(0.75 0.18 75); /* #F59E0B Amber */
+  --secondary: oklch(0.76 0.18 75); /* #F59E0B Amber */
   --secondary-foreground: oklch(0.12 0.01 240);
   
   --muted: oklch(0.93 0.01 240); /* Grayish */
@@ -58,7 +58,7 @@
   --destructive: oklch(0.6 0.2 25);
   --destructive-foreground: oklch(0.98 0 0);
   
-  --border: oklch(0.12 0.01 240); /* Solid Dark Border for Brutalism */
+  --border: oklch(0.12 0.01 240); /* #0F172A Solid Dark Border for Brutalism */
   --input: oklch(0.95 0.01 240);
   --ring: oklch(0.55 0.16 195);
   
@@ -70,8 +70,8 @@
 }
 
 .dark {
-  --background: oklch(0.12 0.01 240); /* #0F172A Slate Dark */
-  --foreground: oklch(0.92 0.01 240); /* #E2E8F0 Text */
+  --background: oklch(0.12 0.01 240); /* #0F172A Slate Dark Background */
+  --foreground: oklch(0.98 0.002 240); /* White text on dark */
   
   --card: oklch(0.18 0.015 240); /* Darker Slate */
   --card-foreground: oklch(0.92 0.01 240);
@@ -79,10 +79,10 @@
   --popover: oklch(0.18 0.015 240);
   --popover-foreground: oklch(0.92 0.01 240);
   
-  --primary: oklch(0.55 0.16 195); /* Teal remains */
+  --primary: oklch(0.58 0.16 195); /* Teal remains */
   --primary-foreground: oklch(1 0 0);
   
-  --secondary: oklch(0.75 0.18 75); /* Amber remains */
+  --secondary: oklch(0.76 0.18 75); /* Amber remains */
   --secondary-foreground: oklch(0.12 0.01 240);
   
   --muted: oklch(0.25 0.015 240);

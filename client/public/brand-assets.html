@@ -1,0 +1,386 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>JutJut Brand Identity & Assets Guidelines</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=Space+Grotesk:wght@500;700&display=swap" rel="stylesheet">
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script>
+    tailwind.config = {
+      theme: {
+        extend: {
+          colors: {
+            primary: '#0D9488',
+            secondary: '#F59E0B',
+            neutralLight: '#F9FAFB',
+            neutralDark: '#0F172A',
+            textDark: '#1F2937',
+          },
+          fontFamily: {
+            sans: ['Inter', 'sans-serif'],
+            display: ['Space Grotesk', 'sans-serif'],
+          }
+        }
+      }
+    }
+  </script>
+  <style>
+    .brutal-border {
+      border: 3px solid #0F172A;
+    }
+    .brutal-shadow {
+      box-shadow: 4px 4px 0px 0px #0F172A;
+    }
+    .brutal-shadow-amber {
+      box-shadow: 4px 4px 0px 0px #F59E0B;
+    }
+    .brutal-shadow-teal {
+      box-shadow: 4px 4px 0px 0px #0D9488;
+    }
+    .brutal-btn {
+      transition: all 0.15s cubic-bezier(0.23, 1, 0.32, 1);
+    }
+    .brutal-btn:active {
+      transform: translate(2px, 2px);
+      box-shadow: 0px 0px 0px 0px #0F172A;
+    }
+  </style>
+</head>
+<body class="bg-neutralLight text-textDark font-sans min-h-screen">
+
+  <!-- Header -->
+  <header class="bg-white border-b-4 border-neutralDark py-6 sticky top-0 z-50">
+    <div class="max-w-6xl mx-auto px-4 flex flex-col sm:flex-row items-center justify-between gap-4">
+      <div class="flex items-center gap-3">
+        <!-- Brand Logo Icon -->
+        <svg class="w-10 h-10" viewBox="0 0 100 100" fill="none" xmlns="http://www.w3.org/2000/svg">
+          <rect width="100" height="100" rx="24" fill="#0D9488"/>
+          <path d="M35 30H48V60C48 65.5 44 70 38 70C32 70 28 65.5 28 60H40V58C40 54 35 54 35 54V30Z" fill="white"/>
+          <path d="M58 30H71V60C58 60 58 66 58 70C52 70 51 66 51 60H63V58C63 54 58 54 58 54V30Z" fill="#F59E0B"/>
+        </svg>
+        <span class="font-display font-black text-2xl tracking-tight text-neutralDark">JutJut <span class="text-primary text-sm font-bold">Brand Guidelines</span></span>
+      </div>
+      <div class="flex items-center gap-3">
+        <span class="text-xs font-extrabold bg-secondary text-neutralDark brutal-border px-3 py-1 rounded-full brutal-shadow">JutJut.com.au</span>
+        <a href="/" class="brutal-btn brutal-border brutal-shadow bg-primary text-white font-bold text-xs px-4 py-2 rounded-lg hover:bg-primary/90">
+          Back to Web App
+        </a>
+      </div>
+    </div>
+  </header>
+
+  <main class="max-w-6xl mx-auto px-4 py-12 space-y-12">
+    
+    <!-- Hero / Intro -->
+    <section class="brutal-card brutal-border brutal-shadow bg-white p-8 rounded-2xl relative overflow-hidden">
+      <div class="absolute top-0 right-0 bg-secondary text-neutralDark font-bold text-xs px-4 py-1.5 border-b-3 border-l-3 border-neutralDark rounded-bl-xl uppercase tracking-wider">
+        Official Release v1.0
+      </div>
+      <div class="max-w-3xl space-y-4">
+        <h1 class="text-4xl sm:text-5xl font-display font-black text-neutralDark tracking-tight">
+          JutJut Brand Identity
+        </h1>
+        <p class="text-lg font-medium text-gray-600 leading-relaxed">
+          "JutJut" is a modern, Gen Z-friendly platform built for Australian high school and university students (ages 16–24). It empowers students to construct verified skill profiles, discover local jobs, and connect directly with university admissions.
+        </p>
+        <div class="flex flex-wrap gap-4 pt-2">
+          <div class="bg-primary/10 text-primary brutal-border px-4 py-2 rounded-xl font-bold text-sm">
+            🎯 "JutJut – your proof, your path"
+          </div>
+          <div class="bg-secondary/10 text-secondary brutal-border px-4 py-2 rounded-xl font-bold text-sm">
+            ⚡ "Get your jut together."
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- Logo Showcase Grid -->
+    <section class="space-y-6">
+      <h2 class="text-2xl font-display font-black text-neutralDark flex items-center gap-2">
+        <span class="bg-primary text-white w-8 h-8 rounded-lg flex items-center justify-center text-sm brutal-border">1</span>
+        Logo Series & Variants
+      </h2>
+      
+      <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+        <!-- 1. Primary Logo Light -->
+        <div class="brutal-card brutal-border brutal-shadow bg-white p-6 rounded-2xl space-y-4 flex flex-col justify-between">
+          <div>
+            <span class="text-xs font-bold uppercase tracking-wider text-muted-foreground">Primary Logo (Horizontal) - On Light</span>
+            <div class="h-40 bg-gray-50 border-2 border-dashed border-gray-200 rounded-xl flex items-center justify-center p-4 mt-2" id="logo-primary-light">
+              <!-- Primary SVG -->
+              <svg width="220" height="60" viewBox="0 0 220 60" fill="none" xmlns="http://www.w3.org/2000/svg">
+                <!-- Icon JJ -->
+                <rect width="50" height="50" y="5" rx="12" fill="#0D9488"/>
+                <path d="M18 18H25V40C25 43 23 45 20 45C17 45 15 43 15 40H21V39C21 37 18 37 18 37V18Z" fill="white"/>
+                <path d="M30 18H37V40C30 40 30 43 30 45C27 45 26.5 43 26.5 40H33V39C33 37 30 37 30 37V18Z" fill="#F59E0B"/>
+                <!-- Wordmark -->
+                <text x="65" y="41" font-family="Inter, sans-serif" font-weight="800" font-size="32" fill="#0D9488" letter-spacing="-1">jutjut</text>
+              </svg>
+            </div>
+          </div>
+          <button onclick="downloadSVG('logo-primary-light', 'jutjut-primary-light.svg')" class="w-full brutal-btn brutal-border brutal-shadow bg-primary text-white font-bold text-sm py-2.5 rounded-lg flex items-center justify-center gap-2">
+            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"/></svg>
+            Download Primary SVG (Light)
+          </button>
+        </div>
+
+        <!-- 2. Primary Logo Dark -->
+        <div class="brutal-card brutal-border brutal-shadow bg-neutralDark p-6 rounded-2xl space-y-4 flex flex-col justify-between text-white">
+          <div>
+            <span class="text-xs font-bold uppercase tracking-wider text-gray-400">Primary Logo (Horizontal) - On Dark</span>
+            <div class="h-40 bg-slate-900 border-2 border-dashed border-slate-700 rounded-xl flex items-center justify-center p-4 mt-2" id="logo-primary-dark">
+              <!-- Dark SVG -->
+              <svg width="220" height="60" viewBox="0 0 220 60" fill="none" xmlns="http://www.w3.org/2000/svg">
+                <!-- Icon JJ -->
+                <rect width="50" height="50" y="5" rx="12" fill="#0D9488"/>
+                <path d="M18 18H25V40C25 43 23 45 20 45C17 45 15 43 15 40H21V39C21 37 18 37 18 37V18Z" fill="white"/>
+                <path d="M30 18H37V40C30 40 30 43 30 45C27 45 26.5 43 26.5 40H33V39C33 37 30 37 30 37V18Z" fill="#F59E0B"/>
+                <!-- Wordmark -->
+                <text x="65" y="41" font-family="Inter, sans-serif" font-weight="800" font-size="32" fill="#FFFFFF" letter-spacing="-1">jutjut</text>
+              </svg>
+            </div>
+          </div>
+          <button onclick="downloadSVG('logo-primary-dark', 'jutjut-primary-dark.svg')" class="w-full brutal-btn brutal-border brutal-shadow bg-primary text-white font-bold text-sm py-2.5 rounded-lg flex items-center justify-center gap-2">
+            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"/></svg>
+            Download Primary SVG (Dark)
+          </button>
+        </div>
+
+        <!-- 3. Secondary Logo (Icon Only) - Teal -->
+        <div class="brutal-card brutal-border brutal-shadow bg-white p-6 rounded-2xl space-y-4 flex flex-col justify-between">
+          <div>
+            <span class="text-xs font-bold uppercase tracking-wider text-muted-foreground">Secondary Logo (Icon Only) - Teal</span>
+            <div class="h-40 bg-gray-50 border-2 border-dashed border-gray-200 rounded-xl flex items-center justify-center p-4 mt-2" id="logo-icon-teal">
+              <svg width="100" height="100" viewBox="0 0 100 100" fill="none" xmlns="http://www.w3.org/2000/svg">
+                <rect width="100" height="100" rx="24" fill="#0D9488"/>
+                <path d="M35 30H48V60C48 65.5 44 70 38 70C32 70 28 65.5 28 60H40V58C40 54 35 54 35 54V30Z" fill="white"/>
+                <path d="M58 30H71V60C58 60 58 66 58 70C52 70 51 66 51 60H63V58C63 54 58 54 58 54V30Z" fill="#F59E0B"/>
+              </svg>
+            </div>
+          </div>
+          <button onclick="downloadSVG('logo-icon-teal', 'jutjut-icon-teal.svg')" class="w-full brutal-btn brutal-border brutal-shadow bg-primary text-white font-bold text-sm py-2.5 rounded-lg flex items-center justify-center gap-2">
+            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"/></svg>
+            Download Icon SVG (Teal)
+          </button>
+        </div>
+
+        <!-- 4. Secondary Logo (Icon Only) - White -->
+        <div class="brutal-card brutal-border brutal-shadow bg-neutralDark p-6 rounded-2xl space-y-4 flex flex-col justify-between text-white">
+          <div>
+            <span class="text-xs font-bold uppercase tracking-wider text-gray-400">Secondary Logo (Icon Only) - White Outline</span>
+            <div class="h-40 bg-slate-900 border-2 border-dashed border-slate-700 rounded-xl flex items-center justify-center p-4 mt-2" id="logo-icon-white">
+              <svg width="100" height="100" viewBox="0 0 100 100" fill="none" xmlns="http://www.w3.org/2000/svg">
+                <rect width="100" height="100" rx="24" fill="none" stroke="#FFFFFF" stroke-width="4"/>
+                <path d="M35 30H48V60C48 65.5 44 70 38 70C32 70 28 65.5 28 60H40V58C40 54 35 54 35 54V30Z" fill="white"/>
+                <path d="M58 30H71V60C58 60 58 66 58 70C52 70 51 66 51 60H63V58C63 54 58 54 58 54V30Z" fill="#F59E0B"/>
+              </svg>
+            </div>
+          </div>
+          <button onclick="downloadSVG('logo-icon-white', 'jutjut-icon-white.svg')" class="w-full brutal-btn brutal-border brutal-shadow bg-primary text-white font-bold text-sm py-2.5 rounded-lg flex items-center justify-center gap-2">
+            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"/></svg>
+            Download Icon SVG (White)
+          </button>
+        </div>
+
+        <!-- 5. App Icon (1024x1024 base) -->
+        <div class="brutal-card brutal-border brutal-shadow bg-white p-6 rounded-2xl space-y-4 flex flex-col justify-between">
+          <div>
+            <span class="text-xs font-bold uppercase tracking-wider text-muted-foreground">App Icon (Square Rounded iOS Style)</span>
+            <div class="h-40 bg-gray-50 border-2 border-dashed border-gray-200 rounded-xl flex items-center justify-center p-4 mt-2" id="logo-app-icon">
+              <svg width="120" height="120" viewBox="0 0 120 120" fill="none" xmlns="http://www.w3.org/2000/svg">
+                <defs>
+                  <linearGradient id="appIconGrad" x1="0" y1="0" x2="0" y2="120" gradientUnits="userSpaceOnUse">
+                    <stop offset="0%" stop-color="#0D9488" />
+                    <stop offset="100%" stop-color="#0F172A" />
+                  </linearGradient>
+                </defs>
+                <rect width="120" height="120" rx="28" fill="url(#appIconGrad)"/>
+                <path d="M42 36H55V72C55 76 51 80 45 80C39 80 35 76 35 72H47V70C47 66 42 66 42 66V36Z" fill="white"/>
+                <path d="M65 36H78V72C65 72 65 78 65 80C59 80 58 78 58 72H70V70C70 66 65 66 65 66V36Z" fill="#F59E0B"/>
+              </svg>
+            </div>
+          </div>
+          <button onclick="downloadSVG('logo-app-icon', 'jutjut-app-icon.svg')" class="w-full brutal-btn brutal-border brutal-shadow bg-primary text-white font-bold text-sm py-2.5 rounded-lg flex items-center justify-center gap-2">
+            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"/></svg>
+            Download App Icon SVG
+          </button>
+        </div>
+
+        <!-- 6. Wordmark Only -->
+        <div class="brutal-card brutal-border brutal-shadow bg-white p-6 rounded-2xl space-y-4 flex flex-col justify-between">
+          <div>
+            <span class="text-xs font-bold uppercase tracking-wider text-muted-foreground">Wordmark Only (Teal & Dark)</span>
+            <div class="h-40 bg-gray-50 border-2 border-dashed border-gray-200 rounded-xl flex items-center justify-center p-4 mt-2" id="logo-wordmark">
+              <svg width="180" height="60" viewBox="0 0 180 60" fill="none" xmlns="http://www.w3.org/2000/svg">
+                <text x="10" y="42" font-family="Inter, sans-serif" font-weight="800" font-size="38" fill="#0D9488" letter-spacing="-1.5">jutjut</text>
+              </svg>
+            </div>
+          </div>
+          <button onclick="downloadSVG('logo-wordmark', 'jutjut-wordmark.svg')" class="w-full brutal-btn brutal-border brutal-shadow bg-primary text-white font-bold text-sm py-2.5 rounded-lg flex items-center justify-center gap-2">
+            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"/></svg>
+            Download Wordmark SVG
+          </button>
+        </div>
+      </div>
+    </section>
+
+    <!-- Color Palette Section -->
+    <section class="space-y-6">
+      <h2 class="text-2xl font-display font-black text-neutralDark flex items-center gap-2">
+        <span class="bg-primary text-white w-8 h-8 rounded-lg flex items-center justify-center text-sm brutal-border">2</span>
+        Brand Color Swatches
+      </h2>
+
+      <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-6">
+        <!-- Teal -->
+        <div class="brutal-card brutal-border brutal-shadow bg-white p-4 rounded-2xl space-y-3">
+          <div class="h-24 bg-primary rounded-xl brutal-border"></div>
+          <div>
+            <h4 class="font-bold text-sm">Primary Teal</h4>
+            <p class="text-xs font-mono text-gray-500 mt-1">HEX: #0D9488</p>
+            <p class="text-[10px] text-muted-foreground">Used for primary logo, main buttons, and verified accents.</p>
+          </div>
+        </div>
+        <!-- Amber -->
+        <div class="brutal-card brutal-border brutal-shadow bg-white p-4 rounded-2xl space-y-3">
+          <div class="h-24 bg-secondary rounded-xl brutal-border"></div>
+          <div>
+            <h4 class="font-bold text-sm">Secondary Amber</h4>
+            <p class="text-xs font-mono text-gray-500 mt-1">HEX: #F59E0B</p>
+            <p class="text-[10px] text-muted-foreground">Used for perks, limited weekly drops, and highlights.</p>
+          </div>
+        </div>
+        <!-- Neutral Light -->
+        <div class="brutal-card brutal-border brutal-shadow bg-white p-4 rounded-2xl space-y-3">
+          <div class="h-24 bg-neutralLight rounded-xl brutal-border"></div>
+          <div>
+            <h4 class="font-bold text-sm">Neutral Light</h4>
+            <p class="text-xs font-mono text-gray-500 mt-1">HEX: #F9FAFB</p>
+            <p class="text-[10px] text-muted-foreground">The primary light background color of the platform.</p>
+          </div>
+        </div>
+        <!-- Neutral Dark -->
+        <div class="brutal-card brutal-border brutal-shadow bg-white p-4 rounded-2xl space-y-3">
+          <div class="h-24 bg-neutralDark rounded-xl brutal-border"></div>
+          <div>
+            <h4 class="font-bold text-sm">Neutral Dark</h4>
+            <p class="text-xs font-mono text-gray-500 mt-1">HEX: #0F172A</p>
+            <p class="text-[10px] text-muted-foreground">The main background for dark mode and brutal borders.</p>
+          </div>
+        </div>
+        <!-- Text Dark -->
+        <div class="brutal-card brutal-border brutal-shadow bg-white p-4 rounded-2xl space-y-3">
+          <div class="h-24 bg-textDark rounded-xl brutal-border"></div>
+          <div>
+            <h4 class="font-bold text-sm">Text Dark</h4>
+            <p class="text-xs font-mono text-gray-500 mt-1">HEX: #1F2937</p>
+            <p class="text-[10px] text-muted-foreground">Default body text color to maintain high readability.</p>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- Logo Usage Guidelines -->
+    <section class="space-y-6">
+      <h2 class="text-2xl font-display font-black text-neutralDark flex items-center gap-2">
+        <span class="bg-primary text-white w-8 h-8 rounded-lg flex items-center justify-center text-sm brutal-border">3</span>
+        Logo Usage Guidelines
+      </h2>
+
+      <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+        <!-- Do's -->
+        <div class="brutal-card brutal-border brutal-shadow bg-emerald-50 p-6 rounded-2xl border-emerald-500/50">
+          <h3 class="text-lg font-bold text-emerald-800 flex items-center gap-2 mb-4">
+            <i class="fa-solid fa-circle-check text-emerald-600"></i> The DO's
+          </h3>
+          <ul class="space-y-3 text-sm text-emerald-950 font-medium">
+            <li class="flex items-start gap-2">
+              <span class="text-emerald-600 font-bold">✓</span>
+              <span>Always maintain the aspect ratio when scaling any JutJut logo.</span>
+            </li>
+            <li class="flex items-start gap-2">
+              <span class="text-emerald-600 font-bold">✓</span>
+              <span>Keep a minimum clear space of 15% of the logo's width around it.</span>
+            </li>
+            <li class="flex items-start gap-2">
+              <span class="text-emerald-600 font-bold">✓</span>
+              <span>Use the white logo variant on dark backgrounds to ensure high contrast.</span>
+            </li>
+            <li class="flex items-start gap-2">
+              <span class="text-emerald-600 font-bold">✓</span>
+              <span>Ensure the wordmark is always written in clean lowercase font when used as a logo.</span>
+            </li>
+          </ul>
+        </div>
+
+        <!-- Don'ts -->
+        <div class="brutal-card brutal-border brutal-shadow bg-rose-50 p-6 rounded-2xl border-rose-500/50">
+          <h3 class="text-lg font-bold text-rose-800 flex items-center gap-2 mb-4">
+            <i class="fa-solid fa-circle-xmark text-rose-600"></i> The DON'Ts
+          </h3>
+          <ul class="space-y-3 text-sm text-rose-950 font-medium">
+            <li class="flex items-start gap-2">
+              <span class="text-rose-600 font-bold">✗</span>
+              <span>Do not stretch, squeeze, or skew the logos or wordmarks.</span>
+            </li>
+            <li class="flex items-start gap-2">
+              <span class="text-rose-600 font-bold">✗</span>
+              <span>Do not apply drop shadows, glows, or bevel effects to the minimal SVG design.</span>
+            </li>
+            <li class="flex items-start gap-2">
+              <span class="text-rose-600 font-bold">✗</span>
+              <span>Do not alter the primary colors (Teal #0D9488 and Amber #F59E0B) of the logo.</span>
+            </li>
+            <li class="flex items-start gap-2">
+              <span class="text-rose-600 font-bold">✗</span>
+              <span>Do not rotate the wordmark or place it on complex, busy backgrounds.</span>
+            </li>
+          </ul>
+        </div>
+      </div>
+    </section>
+
+  </main>
+
+  <footer class="bg-white border-t-4 border-neutralDark py-8 text-center text-sm font-semibold mt-12">
+    <p>© 2026 JutJut Pty Ltd (jutjut.com.au). All rights reserved.</p>
+    <p class="text-xs text-gray-400 mt-1">"JutJut – your proof, your path" • "Get your jut together."</p>
+  </footer>
+
+  <script>
+    function downloadSVG(containerId, filename) {
+      const container = document.getElementById(containerId);
+      const svgEl = container.querySelector('svg');
+      if (!svgEl) return;
+
+      const serializer = new XMLSerializer();
+      let source = serializer.serializeToString(svgEl);
+
+      // Add namespaces if not present
+      if (!source.match(/^<svg[^>]+xmlns="http:\/\/www\.w3\.org\/2000\/svg"/)) {
+        source = source.replace(/^<svg/, '<svg xmlns="http://www.w3.org/2000/svg"');
+      }
+      if (!source.match(/^<svg[^>]+xmlns:xlink="http:\/\/www\.w3\.org\/1999\/xlink"/)) {
+        source = source.replace(/^<svg/, '<svg xmlns:xlink="http://www.w3.org/1999/xlink"');
+      }
+
+      // Add xml declaration
+      source = '<?xml version="1.0" standalone="no"?>\r\n' + source;
+
+      // Convert svg source to URI data scheme
+      const url = "data:image/svg+xml;charset=utf-8," + encodeURIComponent(source);
+
+      // Create download link and trigger download
+      const downloadLink = document.createElement("a");
+      downloadLink.href = url;
+      downloadLink.download = filename;
+      document.body.appendChild(downloadLink);
+      downloadLink.click();
+      document.body.removeChild(downloadLink);
+    }
+  </script>
+</body>
+</html>

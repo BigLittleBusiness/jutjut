@@ -31,12 +31,14 @@ export const Navbar: React.FC<NavbarProps> = ({ onNavigate, currentPage }) => {
     <nav className="sticky top-0 z-50 bg-card border-b-2 border-border text-foreground transition-all duration-200">
       <div className="container mx-auto px-4 py-3 flex items-center justify-between">
         {/* Brand Logo */}
-        <div className="flex items-center gap-2 cursor-pointer" onClick={() => handleNavClick("dashboard")}>
-          <div className="bg-primary text-primary-foreground brutal-border h-10 w-10 flex items-center justify-center rounded-xl brutal-shadow-amber transition-transform hover:rotate-3">
-            <span className="font-extrabold text-xl">JJ</span>
-          </div>
-          <span className="font-extrabold text-2xl tracking-tight hidden sm:block">
-            Jut<span className="text-primary">Jut</span>
+        <div className="flex items-center gap-2.5 cursor-pointer" onClick={() => handleNavClick("dashboard")}>
+          <svg className="w-10 h-10 transition-transform hover:rotate-3 active:scale-95" viewBox="0 0 100 100" fill="none" xmlns="http://www.w3.org/2000/svg">
+            <rect width="100" height="100" rx="24" fill="#0D9488" className="brutal-border"/>
+            <path d="M35 30H48V60C48 65.5 44 70 38 70C32 70 28 65.5 28 60H40V58C40 54 35 54 35 54V30Z" fill="white"/>
+            <path d="M58 30H71V60C58 60 58 66 58 70C52 70 51 66 51 60H63V58C63 54 58 54 58 54V30Z" fill="#F59E0B"/>
+          </svg>
+          <span className="font-extrabold text-2xl tracking-tight hidden sm:block font-sans text-neutralDark">
+            jut<span className="text-primary">jut</span>
           </span>
         </div>
 
@@ -63,8 +65,19 @@ export const Navbar: React.FC<NavbarProps> = ({ onNavigate, currentPage }) => {
           </div>
         )}
 
-        {/* Actions / Theme Toggle / Profile */}
+          {/* Actions / Theme Toggle / Profile */}
         <div className="flex items-center gap-3">
+          {/* Brand Guidelines Link */}
+          <a
+            href="/brand-assets.html"
+            target="_blank"
+            rel="noopener noreferrer"
+            className="hidden sm:flex h-10 px-3 brutal-border rounded-xl items-center justify-center bg-background text-foreground hover:bg-accent brutal-shadow font-bold text-xs gap-1.5"
+            title="View Brand Assets Guidelines"
+          >
+            <i className="fa-solid fa-palette text-primary"></i>
+            <span>Brand Assets</span>
+          </a>
           {/* Dark Mode Toggle */}
           <button
             onClick={toggleTheme}
