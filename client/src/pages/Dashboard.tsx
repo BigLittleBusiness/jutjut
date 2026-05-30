@@ -311,9 +311,9 @@ export const Dashboard: React.FC<DashboardProps> = ({ onNavigate }) => {
               <div className="flex justify-between items-start mb-3">
                 <div className="flex gap-3 items-center">
                   {post.type === "anonymous" ? (
-                    <div className="relative w-10 h-10 shrink-0">
+                    <div className="relative w-10 h-10 shrink-0 group cursor-help">
                       {anonymousAvatarSetting === "question" ? (
-                        <svg className="w-10 h-10 rounded-full object-cover brutal-border" viewBox="0 0 100 100" fill="none" xmlns="http://www.w3.org/2000/svg">
+                        <svg className="w-10 h-10 rounded-full object-cover brutal-border transition-transform group-hover:scale-105" viewBox="0 0 100 100" fill="none" xmlns="http://www.w3.org/2000/svg">
                           <rect width="100" height="100" fill="#0D9488" />
                           <circle cx="50" cy="50" r="35" fill="#F59E0B" />
                           <text x="50" y="62" font-family="Space Grotesk, sans-serif" font-weight="900" font-size="46" fill="#0F172A" text-anchor="middle">?</text>
@@ -322,9 +322,16 @@ export const Dashboard: React.FC<DashboardProps> = ({ onNavigate }) => {
                         <img 
                           src={getAnonymousAvatar()} 
                           alt="Anonymous Avatar" 
-                          className="w-10 h-10 rounded-full object-cover brutal-border" 
+                          className="w-10 h-10 rounded-full object-cover brutal-border transition-transform group-hover:scale-105" 
                         />
                       )}
+                      {/* Playful identity-hidden tooltip */}
+                      <div className="absolute left-1/2 -translate-x-1/2 bottom-full mb-2 hidden group-hover:flex flex-col items-center z-30 w-48">
+                        <div className="bg-neutralDark text-white text-[11px] font-extrabold px-3 py-2 rounded-lg brutal-border brutal-shadow-amber text-center leading-snug">
+                          🕵️ Identity fully hidden! Shhh... keeping it safe and secure on JutJut.
+                        </div>
+                        <div className="w-2.5 h-2.5 bg-neutralDark rotate-45 -mt-1 border-r-2 border-b-2 border-border"></div>
+                      </div>
                     </div>
                   ) : typeof post.user.avatar === "string" && post.user.avatar.startsWith("http") ? (
                     <img src={post.user.avatar} alt={post.user.name} className="w-10 h-10 rounded-full object-cover brutal-border" />
