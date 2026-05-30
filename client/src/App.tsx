@@ -19,7 +19,6 @@ function MainLayout() {
   const [currentPage, setCurrentPage] = useState<string>(() => {
     return isAuthenticated ? "dashboard" : "login";
   });
-
   const handleNavigate = (page: string) => {
     setCurrentPage(page);
   };
@@ -28,6 +27,7 @@ function MainLayout() {
     setCurrentPage("dashboard");
   };
 
+  // make sure to consider if you need authentication for certain routes
   return (
     <div className="min-h-screen flex flex-col bg-background text-foreground transition-colors duration-200">
       <Navbar onNavigate={handleNavigate} currentPage={currentPage} />
