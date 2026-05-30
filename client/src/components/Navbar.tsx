@@ -51,7 +51,7 @@ export const Navbar: React.FC<NavbarProps> = ({ onNavigate, currentPage }) => {
 
         {/* Desktop Nav Items */}
         {isAuthenticated && (
-          <div className="hidden md:flex items-center gap-3 relative">
+          <div className="hidden md:flex items-center gap-3 relative ml-10">
             {primaryItems.map((item) => {
               const isActive = currentPage === item.id;
               return (
