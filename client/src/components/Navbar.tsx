@@ -2,6 +2,7 @@ import React, { useState } from "react";
 import { useApp } from "@/contexts/AppContext";
 import { useTheme } from "@/contexts/ThemeContext";
 import { Link, useLocation } from "wouter";
+import { motion } from "framer-motion";
 
 interface NavbarProps {
   onNavigate: (page: string) => void;
@@ -51,14 +52,21 @@ export const Navbar: React.FC<NavbarProps> = ({ onNavigate, currentPage }) => {
                 <button
                   key={item.id}
                   onClick={() => handleNavClick(item.id)}
-                  className={`px-3 py-2 rounded-lg font-bold flex items-center gap-2 transition-all ${
+                  className={`relative px-3 py-2 rounded-lg font-bold flex items-center gap-2 transition-all duration-200 ${
                     isActive
-                      ? "bg-primary text-primary-foreground brutal-border brutal-shadow-amber scale-105 mx-0.5"
-                      : "hover:bg-accent text-muted-foreground hover:text-foreground border-2 border-transparent"
+                      ? "text-primary-foreground scale-105 mx-0.5 z-10"
+                      : "hover:bg-accent/50 text-muted-foreground hover:text-foreground border-2 border-transparent"
                   }`}
                 >
-                  <i className={`fa-solid ${item.icon}`}></i>
-                  <span>{item.label}</span>
+                  {isActive && (
+                    <motion.div
+                      layoutId="activeNavIndicator"
+                      className="absolute inset-0 bg-primary brutal-border brutal-shadow-amber rounded-lg -z-10"
+                      transition={{ type: "spring", stiffness: 380, damping: 30 }}
+                    />
+                  )}
+                  <i className={`fa-solid ${item.icon} z-10`}></i>
+                  <span className="z-10">{item.label}</span>
                 </button>
               );
             })}
