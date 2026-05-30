@@ -181,7 +181,7 @@ export const Dashboard: React.FC<DashboardProps> = ({ onNavigate }) => {
                 <p className="font-extrabold uppercase mb-2 text-foreground">Anonymous Post Avatar</p>
                 <div className="grid grid-cols-2 gap-2">
                   {[
-                    { key: "question", label: "❓ Default" },
+                    { key: "question", label: "🎨 JutJut ?" },
                     { key: "fox", label: "🦊 Fox" },
                     { key: "unicorn", label: "🦄 Unicorn" },
                     { key: "alien", label: "👽 Alien" }
@@ -312,15 +312,18 @@ export const Dashboard: React.FC<DashboardProps> = ({ onNavigate }) => {
                 <div className="flex gap-3 items-center">
                   {post.type === "anonymous" ? (
                     <div className="relative w-10 h-10 shrink-0">
-                      <img 
-                        src={getAnonymousAvatar()} 
-                        alt="Anonymous Avatar" 
-                        className="w-10 h-10 rounded-full object-cover brutal-border" 
-                      />
-                      {anonymousAvatarSetting === "question" && (
-                        <div className="absolute inset-0 flex items-center justify-center bg-black/40 rounded-full">
-                          <span className="text-white font-black text-lg">?</span>
-                        </div>
+                      {anonymousAvatarSetting === "question" ? (
+                        <svg className="w-10 h-10 rounded-full object-cover brutal-border" viewBox="0 0 100 100" fill="none" xmlns="http://www.w3.org/2000/svg">
+                          <rect width="100" height="100" fill="#0D9488" />
+                          <circle cx="50" cy="50" r="35" fill="#F59E0B" />
+                          <text x="50" y="62" font-family="Space Grotesk, sans-serif" font-weight="900" font-size="46" fill="#0F172A" text-anchor="middle">?</text>
+                        </svg>
+                      ) : (
+                        <img 
+                          src={getAnonymousAvatar()} 
+                          alt="Anonymous Avatar" 
+                          className="w-10 h-10 rounded-full object-cover brutal-border" 
+                        />
                       )}
                     </div>
                   ) : typeof post.user.avatar === "string" && post.user.avatar.startsWith("http") ? (
