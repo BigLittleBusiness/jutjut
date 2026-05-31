@@ -65,3 +65,13 @@
 - [x] Public marketing landing page — 9 sections (Hero + My Kit mockup, For Students, Your Way, For Employers, The Drop, Pricing, Trust, Waitlist form, Footer), fully responsive, self-contained HTML/CSS/JS, live counter, Quiet Mode toggle
 - [x] Landing page renders without app shell (own nav/footer, no Navbar wrapper)
 - [x] LandingPage.tsx component wired into App.tsx routing
+
+## Landing Page Enhancements & Feature Pages
+- [x] Wire Sign In button on landing page to app login flow (postMessage → JUTJUT_NAVIGATE)
+- [x] My Kit feature page confirmed fully built — verified skills, report cards, credentials, vouches
+- [x] Jobs feature page confirmed fully built — listings, plain-language toggle, one-click apply
+- [x] Add scroll reveal animations via IntersectionObserver (fade-up, slide-left/right, staggered delays)
+- [x] Add hover lift + shadow effects on all .btn CTA elements (prefers-reduced-motion respected)
+- [x] Deep-link CTAs: "Explore My Kit" and "Browse Jobs Board" route to feature pages (login-gated)
+- [x] Landing page nav items already link to in-page anchor sections (#students, #yourway, #employers, etc.)
+- [x] 15 new landing navigation tests (103 total passing)

@@ -22,12 +22,35 @@ function MainLayout() {
   const [currentPage, setCurrentPage] = useState<string>(() => {
     return isAuthenticated ? "dashboard" : "landing";
   });
+  // Preserve deep-link destination so we can route there after login
+  const [pendingDeepLink, setPendingDeepLink] = useState<string | null>(null);
+
   const handleNavigate = (page: string) => {
     setCurrentPage(page);
   };
 
+  // Listen for deep-link navigation events dispatched by the landing page iframe
+  React.useEffect(() => {
+    function handleDeepLink(e: Event) {
+      const page = (e as CustomEvent<{ page: string }>).detail?.page;
+      if (!page) return;
+      if (!isAuthenticated) {
+        // Remember destination, then send to login
+        setPendingDeepLink(page);
+        setCurrentPage("login");
+      } else {
+        setCurrentPage(page);
+      }
+    }
+    window.addEventListener("jutjut:navigate", handleDeepLink);
+    return () => window.removeEventListener("jutjut:navigate", handleDeepLink);
+  }, [isAuthenticated]);
+
   const handleLoginSuccess = () => {
-    setCurrentPage("dashboard");
+    // Route to the preserved deep-link destination, or fall back to dashboard
+    const destination = pendingDeepLink || "dashboard";
+    setPendingDeepLink(null);
+    setCurrentPage(destination);
   };
 
   // Landing page renders without the app shell (it has its own nav/footer)
