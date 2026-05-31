@@ -101,6 +101,8 @@ import {
   promoRedemptions,
   jobs,
   jobViews,
+  waitlistSignups,
+  WaitlistSignup,
 } from "../drizzle/schema";
 import { and, lte, desc, sql } from "drizzle-orm";
 
@@ -360,4 +362,60 @@ export async function getPromoCodeRedemptions(promoCodeId: number) {
     .where(eq(promoRedemptions.promoCodeId, promoCodeId))
     .orderBy(desc(promoRedemptions.redeemedAt));
   return rows;
+}
+
+// ─── Waitlist Signups ─────────────────────────────────────────────────────────
+
+
+export async function addWaitlistSignup(data: {
+  email: string;
+  firstName?: string | null;
+  role?: "student" | "employer" | "other";
+  school?: string | null;
+  source?: string;
+  ipAddress?: string | null;
+}): Promise<{ success: boolean; duplicate: boolean }> {
+  const db = await getDb();
+  if (!db) return { success: false, duplicate: false };
+
+  // Check for duplicate email first
+  const existing = await db
+    .select({ id: waitlistSignups.id })
+    .from(waitlistSignups)
+    .where(eq(waitlistSignups.email, data.email.toLowerCase().trim()))
+    .limit(1);
+
+  if (existing.length > 0) {
+    return { success: false, duplicate: true };
+  }
+
+  await db.insert(waitlistSignups).values({
+    email: data.email.toLowerCase().trim(),
+    firstName: data.firstName ?? null,
+    role: data.role ?? "student",
+    school: data.school ?? null,
+    source: data.source ?? "landing_page",
+    ipAddress: data.ipAddress ?? null,
+    confirmed: false,
+  });
+
+  return { success: true, duplicate: false };
+}
+
+export async function getAllWaitlistSignups(): Promise<WaitlistSignup[]> {
+  const db = await getDb();
+  if (!db) return [];
+  return db
+    .select()
+    .from(waitlistSignups)
+    .orderBy(desc(waitlistSignups.createdAt));
+}
+
+export async function getWaitlistCount(): Promise<number> {
+  const db = await getDb();
+  if (!db) return 0;
+  const rows = await db
+    .select({ id: waitlistSignups.id })
+    .from(waitlistSignups);
+  return rows.length;
 }

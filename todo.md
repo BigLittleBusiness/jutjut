@@ -77,6 +77,14 @@
 - [x] 15 new landing navigation tests (103 total passing)
 
 ## New Feature Tasks
-- [ ] Jobs board: search bar and category filters (role type, location, wage, timing)
-- [ ] Landing page: interactive FAQ accordion section with common user questions
-- [ ] Login screen: Forgot Password flow with clean UI for credential reset
+- [x] Jobs board: search bar and category filters (role type, location, wage, timing)
+- [x] Landing page: interactive FAQ accordion section with common user questions
+- [x] Login screen: Forgot Password flow with clean UI for credential reset
+
+## Waitlist Email Capture
+- [x] Create waitlistSignups table in database schema
+- [x] Add tRPC public procedure for email submission (validation, duplicate check, owner notification)
+- [x] Wire landing page waitlist form to the tRPC endpoint (role selector, name, email, school, loading/success/duplicate/error states)
+- [x] Show success/error/duplicate states in the form UI
+- [x] Add admin view for waitlist signups in the Dashboard (AdminWaitlist page with search, role filter, CSV export, summary stats)
+- [x] Write 18 Vitest tests for waitlist feature (join success/duplicate/error, input validation, count, list access control) — 169 total passing

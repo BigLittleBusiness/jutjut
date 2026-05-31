@@ -307,6 +307,13 @@ export const Dashboard: React.FC<DashboardProps> = ({ onNavigate }) => {
                     <i className="fa-solid fa-tag text-primary text-[10px]"></i>
                     <span>Promo Codes</span>
                   </button>
+                  <button
+                    onClick={() => onNavigate("admin-waitlist")}
+                    className="w-full text-left p-2 rounded border-2 border-border bg-background hover:bg-accent font-bold flex items-center gap-2 transition-all"
+                  >
+                    <i className="fa-solid fa-list-check text-primary text-[10px]"></i>
+                    <span>Waitlist Signups</span>
+                  </button>
                 </div>
               </div>
             </div>

@@ -407,3 +407,22 @@ export const jobViews = mysqlTable("jobViews", {
 
 export type JobView = typeof jobViews.$inferSelect;
 export type InsertJobView = typeof jobViews.$inferInsert;
+
+// ─────────────────────────────────────────────
+// WAITLIST SIGNUPS (pre-launch email capture)
+// ─────────────────────────────────────────────
+
+export const waitlistSignups = mysqlTable("waitlistSignups", {
+  id: int("id").autoincrement().primaryKey(),
+  email: varchar("email", { length: 320 }).notNull().unique(),
+  firstName: varchar("firstName", { length: 128 }),
+  role: mysqlEnum("role", ["student", "employer", "other"]).default("student").notNull(),
+  school: varchar("school", { length: 255 }),
+  source: varchar("source", { length: 64 }).default("landing_page").notNull(), // where they signed up from
+  ipAddress: varchar("ipAddress", { length: 64 }),
+  confirmed: boolean("confirmed").default(false).notNull(), // future email confirmation
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+});
+
+export type WaitlistSignup = typeof waitlistSignups.$inferSelect;
+export type InsertWaitlistSignup = typeof waitlistSignups.$inferInsert;

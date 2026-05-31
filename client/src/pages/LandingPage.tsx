@@ -19,6 +19,7 @@
  * 11. Footer
  */
 import React, { useState, useEffect, useRef } from "react";
+import { trpc } from "@/lib/trpc";
 
 interface LandingPageProps {
   onSignIn?: () => void;
@@ -126,9 +127,31 @@ const TRUST_PILLARS = [
 export default function LandingPage({ onSignIn }: LandingPageProps) {
   const [faqOpen, setFaqOpen] = useState<number | null>(null);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
-  const [waitlistEmail, setWaitlistEmail] = useState("");
-  const [waitlistSubmitted, setWaitlistSubmitted] = useState(false);
   const [scrolled, setScrolled] = useState(false);
+
+  // Waitlist form state
+  const [waitlistEmail, setWaitlistEmail] = useState("");
+  const [waitlistFirstName, setWaitlistFirstName] = useState("");
+  const [waitlistRole, setWaitlistRole] = useState<"student" | "employer" | "other">("student");
+  const [waitlistSchool, setWaitlistSchool] = useState("");
+  const [waitlistState, setWaitlistState] = useState<"idle" | "loading" | "success" | "duplicate" | "error">("idle");
+  const [waitlistMessage, setWaitlistMessage] = useState("");
+
+  const waitlistMutation = trpc.waitlist.join.useMutation({
+    onSuccess: (data) => {
+      if (data.duplicate) {
+        setWaitlistState("duplicate");
+        setWaitlistMessage(data.message);
+      } else {
+        setWaitlistState("success");
+        setWaitlistMessage(data.message);
+      }
+    },
+    onError: (err) => {
+      setWaitlistState("error");
+      setWaitlistMessage(err.message || "Something went wrong. Please try again.");
+    },
+  });
 
   useEffect(() => {
     const onScroll = () => setScrolled(window.scrollY > 20);
@@ -143,7 +166,15 @@ export default function LandingPage({ onSignIn }: LandingPageProps) {
 
   const handleWaitlist = (e: React.FormEvent) => {
     e.preventDefault();
-    if (waitlistEmail) setWaitlistSubmitted(true);
+    if (!waitlistEmail || waitlistState === "loading") return;
+    setWaitlistState("loading");
+    waitlistMutation.mutate({
+      email: waitlistEmail,
+      firstName: waitlistFirstName || undefined,
+      role: waitlistRole,
+      school: waitlistSchool || undefined,
+      source: "landing_page",
+    });
   };
 
   // ── NAV LINKS ───────────────────────────────────────────────────────────────
@@ -603,28 +634,91 @@ export default function LandingPage({ onSignIn }: LandingPageProps) {
             <p style={{ fontSize: "1.05rem", color: "#9ca3af", marginBottom: "2rem", lineHeight: 1.6 }}>
               Be among the first to experience JutJut when we launch. We'll notify you the moment your school goes live.
             </p>
-            {waitlistSubmitted ? (
+            {waitlistState === "success" ? (
               <div style={{ background: "#134e4a", border: "2px solid #5eead4", borderRadius: 14, padding: "2rem", boxShadow: "4px 4px 0 #0d9488" }}>
                 <div style={{ fontSize: 40, marginBottom: "0.75rem" }}>🎉</div>
                 <div style={{ fontWeight: 800, fontSize: 20, color: "#5eead4", marginBottom: "0.5rem" }}>You're on the list!</div>
-                <div style={{ fontSize: 14, color: "#99f6e4" }}>We'll be in touch as soon as JutJut launches in your area.</div>
+                <div style={{ fontSize: 14, color: "#99f6e4" }}>{waitlistMessage}</div>
+              </div>
+            ) : waitlistState === "duplicate" ? (
+              <div style={{ background: "#1e3a5f", border: "2px solid #60a5fa", borderRadius: 14, padding: "2rem", boxShadow: "4px 4px 0 #3b82f6" }}>
+                <div style={{ fontSize: 40, marginBottom: "0.75rem" }}>👋</div>
+                <div style={{ fontWeight: 800, fontSize: 20, color: "#93c5fd", marginBottom: "0.5rem" }}>Already registered!</div>
+                <div style={{ fontSize: 14, color: "#bfdbfe" }}>{waitlistMessage}</div>
               </div>
             ) : (
-              <form onSubmit={handleWaitlist} style={{ display: "flex", gap: 10, flexWrap: "wrap", justifyContent: "center" }}>
-                <input
-                  type="email"
-                  required
-                  placeholder="your@email.com"
-                  value={waitlistEmail}
-                  onChange={e => setWaitlistEmail(e.target.value)}
-                  style={{ flex: "1 1 240px", background: "#374151", border: "2px solid #4b5563", borderRadius: 10, padding: "14px 18px", fontSize: 15, color: "#f9fafb", outline: "none" }}
-                  onFocus={e => { e.currentTarget.style.borderColor = "#0d9488"; }}
-                  onBlur={e => { e.currentTarget.style.borderColor = "#4b5563"; }}
-                />
-                <button type="submit" style={{ background: "#0d9488", border: "2px solid #5eead4", borderRadius: 10, padding: "14px 28px", fontWeight: 800, fontSize: 15, color: "#fff", cursor: "pointer", boxShadow: "4px 4px 0 #5eead4", transition: "all 0.15s", whiteSpace: "nowrap" }}
-                  onMouseEnter={e => { e.currentTarget.style.transform = "translate(-2px,-2px)"; e.currentTarget.style.boxShadow = "6px 6px 0 #5eead4"; }}
+              <form onSubmit={handleWaitlist} style={{ display: "flex", flexDirection: "column", gap: 12, maxWidth: 480, margin: "0 auto" }}>
+                {/* Role selector */}
+                <div style={{ display: "flex", gap: 8, justifyContent: "center" }}>
+                  {(["student", "employer", "other"] as const).map(r => (
+                    <button
+                      key={r}
+                      type="button"
+                      onClick={() => setWaitlistRole(r)}
+                      style={{
+                        flex: 1,
+                        padding: "10px 8px",
+                        borderRadius: 8,
+                        border: waitlistRole === r ? "2px solid #5eead4" : "2px solid #4b5563",
+                        background: waitlistRole === r ? "#134e4a" : "#374151",
+                        color: waitlistRole === r ? "#5eead4" : "#9ca3af",
+                        fontWeight: 700,
+                        fontSize: 13,
+                        cursor: "pointer",
+                        transition: "all 0.15s",
+                        textTransform: "capitalize",
+                      }}
+                    >{r === "student" ? "🎓 Student" : r === "employer" ? "💼 Employer" : "👤 Other"}</button>
+                  ))}
+                </div>
+                {/* Name + email row */}
+                <div style={{ display: "flex", gap: 10, flexWrap: "wrap" }}>
+                  <input
+                    type="text"
+                    placeholder="First name (optional)"
+                    value={waitlistFirstName}
+                    onChange={e => setWaitlistFirstName(e.target.value)}
+                    style={{ flex: "1 1 140px", background: "#374151", border: "2px solid #4b5563", borderRadius: 10, padding: "13px 16px", fontSize: 14, color: "#f9fafb", outline: "none" }}
+                    onFocus={e => { e.currentTarget.style.borderColor = "#0d9488"; }}
+                    onBlur={e => { e.currentTarget.style.borderColor = "#4b5563"; }}
+                  />
+                  <input
+                    type="email"
+                    required
+                    placeholder="your@email.com"
+                    value={waitlistEmail}
+                    onChange={e => setWaitlistEmail(e.target.value)}
+                    style={{ flex: "2 1 200px", background: "#374151", border: "2px solid #4b5563", borderRadius: 10, padding: "13px 16px", fontSize: 14, color: "#f9fafb", outline: "none" }}
+                    onFocus={e => { e.currentTarget.style.borderColor = "#0d9488"; }}
+                    onBlur={e => { e.currentTarget.style.borderColor = "#4b5563"; }}
+                  />
+                </div>
+                {/* School field — shown for students */}
+                {waitlistRole === "student" && (
+                  <input
+                    type="text"
+                    placeholder="Your school (optional)"
+                    value={waitlistSchool}
+                    onChange={e => setWaitlistSchool(e.target.value)}
+                    style={{ width: "100%", background: "#374151", border: "2px solid #4b5563", borderRadius: 10, padding: "13px 16px", fontSize: 14, color: "#f9fafb", outline: "none", boxSizing: "border-box" }}
+                    onFocus={e => { e.currentTarget.style.borderColor = "#0d9488"; }}
+                    onBlur={e => { e.currentTarget.style.borderColor = "#4b5563"; }}
+                  />
+                )}
+                {/* Error message */}
+                {waitlistState === "error" && (
+                  <div style={{ background: "#450a0a", border: "1px solid #ef4444", borderRadius: 8, padding: "10px 14px", fontSize: 13, color: "#fca5a5" }}>
+                    ⚠️ {waitlistMessage}
+                  </div>
+                )}
+                {/* Submit */}
+                <button
+                  type="submit"
+                  disabled={waitlistState === "loading"}
+                  style={{ background: waitlistState === "loading" ? "#374151" : "#0d9488", border: "2px solid #5eead4", borderRadius: 10, padding: "14px 28px", fontWeight: 800, fontSize: 15, color: waitlistState === "loading" ? "#6b7280" : "#fff", cursor: waitlistState === "loading" ? "not-allowed" : "pointer", boxShadow: "4px 4px 0 #5eead4", transition: "all 0.15s", whiteSpace: "nowrap" }}
+                  onMouseEnter={e => { if (waitlistState !== "loading") { e.currentTarget.style.transform = "translate(-2px,-2px)"; e.currentTarget.style.boxShadow = "6px 6px 0 #5eead4"; } }}
                   onMouseLeave={e => { e.currentTarget.style.transform = ""; e.currentTarget.style.boxShadow = "4px 4px 0 #5eead4"; }}
-                >Join the waitlist →</button>
+                >{waitlistState === "loading" ? "Saving your spot…" : "Join the waitlist →"}</button>
               </form>
             )}
             <p style={{ fontSize: 12, color: "#6b7280", marginTop: "1rem" }}>No spam. Unsubscribe any time. We respect your privacy.</p>

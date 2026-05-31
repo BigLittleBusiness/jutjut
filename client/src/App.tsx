@@ -14,6 +14,7 @@ import { UniversityPortal } from "./pages/UniversityPortal";
 import { YourWay } from "./pages/YourWay";
 import EmployerDashboard from "./pages/EmployerDashboard";
 import AdminPromoCodes from "./pages/AdminPromoCodes";
+import AdminWaitlist from "./pages/AdminWaitlist";
 import LandingPage from "./pages/LandingPage";
 
 function MainLayout() {
@@ -81,6 +82,7 @@ function MainLayout() {
             {currentPage === "login" && <Dashboard onNavigate={handleNavigate} />}
             {currentPage === "employer" && <EmployerDashboard />}
             {currentPage === "admin-promos" && <AdminPromoCodes />}
+            {currentPage === "admin-waitlist" && <AdminWaitlist onNavigate={handleNavigate} />}
           </>
         )}
       </main>
