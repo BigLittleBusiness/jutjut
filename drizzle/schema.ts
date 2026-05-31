@@ -313,6 +313,11 @@ export const employers = mysqlTable("employers", {
   businessName: varchar("businessName", { length: 255 }).notNull(),
   abn: varchar("abn", { length: 16 }),
   contactEmail: varchar("contactEmail", { length: 320 }),
+  contactPhone: varchar("contactPhone", { length: 32 }),
+  industry: varchar("industry", { length: 128 }),
+  postcode: varchar("postcode", { length: 8 }),
+  visibleToSchools: boolean("visibleToSchools").default(true).notNull(),
+  acceptsWorkExperience: boolean("acceptsWorkExperience").default(false).notNull(),
   paymentToken: varchar("paymentToken", { length: 255 }), // PinPayments reusable card token
   isGstRegistered: boolean("isGstRegistered").default(false).notNull(),
   createdAt: timestamp("createdAt").defaultNow().notNull(),
@@ -426,3 +431,75 @@ export const waitlistSignups = mysqlTable("waitlistSignups", {
 
 export type WaitlistSignup = typeof waitlistSignups.$inferSelect;
 export type InsertWaitlistSignup = typeof waitlistSignups.$inferInsert;
+
+// ─────────────────────────────────────────────
+// SCHOOLS (careers & pathways staff portal)
+// ─────────────────────────────────────────────
+
+export const schools = mysqlTable("schools", {
+  id: int("id").autoincrement().primaryKey(),
+  name: varchar("name", { length: 255 }).notNull(),
+  domain: varchar("domain", { length: 255 }).notNull().unique(), // e.g. "brisbaneshs.eq.edu.au"
+  careersContactName: varchar("careersContactName", { length: 255 }),
+  careersContactEmail: varchar("careersContactEmail", { length: 320 }),
+  phone: varchar("phone", { length: 32 }),
+  state: varchar("state", { length: 3 }), // e.g. "QLD", "NSW"
+  approved: boolean("approved").default(false).notNull(), // admin must approve before access is granted
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+  updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
+});
+
+export type School = typeof schools.$inferSelect;
+export type InsertSchool = typeof schools.$inferInsert;
+
+// ─────────────────────────────────────────────
+// SCHOOL STUDENTS (join table)
+// ─────────────────────────────────────────────
+
+export const schoolStudents = mysqlTable("schoolStudents", {
+  id: int("id").autoincrement().primaryKey(),
+  schoolId: int("schoolId").notNull(),
+  studentId: int("studentId").notNull(), // FK → users.id
+  enrolledAt: timestamp("enrolledAt").defaultNow().notNull(),
+});
+
+export type SchoolStudent = typeof schoolStudents.$inferSelect;
+export type InsertSchoolStudent = typeof schoolStudents.$inferInsert;
+
+// ─────────────────────────────────────────────
+// PLACEMENTS (work experience workflow)
+// ─────────────────────────────────────────────
+
+export const placements = mysqlTable("placements", {
+  id: int("id").autoincrement().primaryKey(),
+  schoolId: int("schoolId").notNull(),
+  studentId: int("studentId").notNull(),   // FK → users.id
+  employerId: int("employerId").notNull(), // FK → employers.id
+  jobId: int("jobId"),                     // optional — links to a posted job
+  startDate: varchar("startDate", { length: 16 }).notNull(), // ISO date string "YYYY-MM-DD"
+  endDate: varchar("endDate", { length: 16 }).notNull(),
+  hoursPerWeek: int("hoursPerWeek").notNull(),
+  status: mysqlEnum("status", [
+    "draft",
+    "pending_employer",
+    "approved_by_employer",
+    "approved_by_school",
+    "completed",
+    "rejected",
+  ])
+    .default("draft")
+    .notNull(),
+  // Digital signatures — typed name + timestamp stored as JSON string
+  studentSignature: text("studentSignature"),   // e.g. '{"name":"Jamie Chen","at":"2025-01-15T10:30:00Z"}'
+  employerSignature: text("employerSignature"),
+  schoolSignature: text("schoolSignature"),
+  // Employer approval token (UUID) — sent in the approval email link
+  employerToken: varchar("employerToken", { length: 64 }).unique(),
+  employerComment: text("employerComment"), // optional comment on approve/reject
+  notes: text("notes"),
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+  updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
+});
+
+export type Placement = typeof placements.$inferSelect;
+export type InsertPlacement = typeof placements.$inferInsert;

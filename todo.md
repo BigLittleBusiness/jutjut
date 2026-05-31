@@ -108,3 +108,16 @@
 ## Developer Experience
 - [x] CONTRIBUTING.md — prerequisites, local setup, project structure, conventions, testing guide, PR process
 - [x] JUTJUT_README.md — project overview, tech stack, quick start, scripts, structure, deployment summary
+
+## Schools Portal (Careers & Pathways Dashboard)
+- [x] Extend DB schema: schools, school_students, placements tables; add visibleToSchools/contactPhone/industry/acceptsWorkExperience to employers table
+- [x] DB helpers in server/db.school.ts (school CRUD, student list/kit/enrol, employer directory, placement CRUD, status updates, signatures)
+- [x] School tRPC router: school.auth.register/me, school.manage.list/approve, school.students.list/kit/enrol, school.employers.list, school.placements.create/list/get/signAsSchool/employerRespond/signAsStudent/myPlacements
+- [x] SchoolPortal frontend page with 3 tabs: Students, Employers, Placements
+- [x] Registration gate: unregistered → registration form, pending → pending screen, approved → full dashboard
+- [x] Students tab: searchable table with kit completeness badges (Strong/Building/Empty), drill-down to full student kit view (credentials, vouches, report cards, applications)
+- [x] Employers tab: card grid with search, industry filter, work-experience toggle, contact details, active jobs list
+- [x] Placements tab: status-filtered table, create placement dialog, school sign button, E/S/T signature status indicators
+- [x] Schools Portal button added to Admin Pages quick links in Dashboard (teal accent styling)
+- [x] Route registered in App.tsx (school-portal)
+- [x] 34 Vitest tests for school router (auth, manage, students, employers, placements) — 217 total passing

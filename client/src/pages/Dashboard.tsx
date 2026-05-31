@@ -314,6 +314,13 @@ export const Dashboard: React.FC<DashboardProps> = ({ onNavigate }) => {
                     <i className="fa-solid fa-list-check text-primary text-[10px]"></i>
                     <span>Waitlist Signups</span>
                   </button>
+                  <button
+                    onClick={() => onNavigate("school-portal")}
+                    className="w-full text-left p-2 rounded border-2 border-teal-500 bg-teal-50 hover:bg-teal-100 font-bold flex items-center gap-2 transition-all"
+                  >
+                    <i className="fa-solid fa-school text-teal-600 text-[10px]"></i>
+                    <span className="text-teal-700">Schools Portal</span>
+                  </button>
                 </div>
               </div>
             </div>
