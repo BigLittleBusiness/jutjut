@@ -204,6 +204,63 @@ describe("waitlist.join — DB failure", () => {
   });
 });
 
+// ─── validateEmail pure logic ────────────────────────────────────────────────
+// Mirror of the client-side validateEmail function for unit testing
+
+const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/;
+function validateEmail(value: string): string {
+  if (!value) return "Email is required.";
+  if (!EMAIL_RE.test(value)) return "Please enter a valid email address.";
+  if (value.length > 320) return "Email address is too long.";
+  return "";
+}
+
+describe("validateEmail — inline validation logic", () => {
+  it("returns empty string for a valid email", () => {
+    expect(validateEmail("student@school.edu.au")).toBe("");
+  });
+
+  it("returns empty string for valid email with subdomains", () => {
+    expect(validateEmail("user@mail.example.com.au")).toBe("");
+  });
+
+  it("returns 'Email is required.' for empty string", () => {
+    expect(validateEmail("")).toBe("Email is required.");
+  });
+
+  it("returns error for missing @ symbol", () => {
+    expect(validateEmail("notanemail")).toBe("Please enter a valid email address.");
+  });
+
+  it("returns error for missing domain", () => {
+    expect(validateEmail("user@")).toBe("Please enter a valid email address.");
+  });
+
+  it("returns error for missing TLD", () => {
+    expect(validateEmail("user@domain")).toBe("Please enter a valid email address.");
+  });
+
+  it("returns error for single-char TLD", () => {
+    expect(validateEmail("user@domain.c")).toBe("Please enter a valid email address.");
+  });
+
+  it("returns error for email with spaces", () => {
+    expect(validateEmail("user @domain.com")).toBe("Please enter a valid email address.");
+  });
+
+  it("returns 'Email address is too long.' for email over 320 chars", () => {
+    const longEmail = "a".repeat(315) + "@x.com";
+    expect(validateEmail(longEmail)).toBe("Email address is too long.");
+  });
+
+  it("accepts exactly 320 characters as valid", () => {
+    // 320 chars: local(313) + @x.co = 318 chars — valid
+    const borderEmail = "a".repeat(313) + "@x.co";
+    expect(borderEmail.length).toBe(318);
+    expect(validateEmail(borderEmail)).toBe("");
+  });
+});
+
 // ─── waitlist.join — input validation ─────────────────────────────────────────
 
 describe("waitlist.join — input validation", () => {

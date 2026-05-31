@@ -136,6 +136,30 @@ export default function LandingPage({ onSignIn }: LandingPageProps) {
   const [waitlistSchool, setWaitlistSchool] = useState("");
   const [waitlistState, setWaitlistState] = useState<"idle" | "loading" | "success" | "duplicate" | "error">("idle");
   const [waitlistMessage, setWaitlistMessage] = useState("");
+  // Inline validation state — only shown after the user has touched the email field
+  const [emailTouched, setEmailTouched] = useState(false);
+  const [emailError, setEmailError] = useState("");
+
+  const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/;
+
+  const validateEmail = (value: string): string => {
+    if (!value) return "Email is required.";
+    if (!EMAIL_RE.test(value)) return "Please enter a valid email address.";
+    if (value.length > 320) return "Email address is too long.";
+    return "";
+  };
+
+  const handleEmailChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const val = e.target.value;
+    setWaitlistEmail(val);
+    // Show validation feedback once the user has started typing
+    if (emailTouched) setEmailError(validateEmail(val));
+  };
+
+  const handleEmailBlur = () => {
+    setEmailTouched(true);
+    setEmailError(validateEmail(waitlistEmail));
+  };
 
   const waitlistMutation = trpc.waitlist.join.useMutation({
     onSuccess: (data) => {
@@ -166,7 +190,11 @@ export default function LandingPage({ onSignIn }: LandingPageProps) {
 
   const handleWaitlist = (e: React.FormEvent) => {
     e.preventDefault();
-    if (!waitlistEmail || waitlistState === "loading") return;
+    // Run full validation on submit even if the field was never blurred
+    const err = validateEmail(waitlistEmail);
+    setEmailTouched(true);
+    setEmailError(err);
+    if (err || waitlistState === "loading") return;
     setWaitlistState("loading");
     waitlistMutation.mutate({
       email: waitlistEmail,
@@ -682,16 +710,72 @@ export default function LandingPage({ onSignIn }: LandingPageProps) {
                     onFocus={e => { e.currentTarget.style.borderColor = "#0d9488"; }}
                     onBlur={e => { e.currentTarget.style.borderColor = "#4b5563"; }}
                   />
-                  <input
-                    type="email"
-                    required
-                    placeholder="your@email.com"
-                    value={waitlistEmail}
-                    onChange={e => setWaitlistEmail(e.target.value)}
-                    style={{ flex: "2 1 200px", background: "#374151", border: "2px solid #4b5563", borderRadius: 10, padding: "13px 16px", fontSize: 14, color: "#f9fafb", outline: "none" }}
-                    onFocus={e => { e.currentTarget.style.borderColor = "#0d9488"; }}
-                    onBlur={e => { e.currentTarget.style.borderColor = "#4b5563"; }}
-                  />
+                  {/* Email with inline validation wrapper */}
+                  <div style={{ flex: "2 1 200px", display: "flex", flexDirection: "column", gap: 4 }}>
+                    <div style={{ position: "relative" }}>
+                      <input
+                        type="email"
+                        placeholder="your@email.com"
+                        value={waitlistEmail}
+                        onChange={handleEmailChange}
+                        onBlur={handleEmailBlur}
+                        onFocus={e => {
+                          e.currentTarget.style.borderColor = emailError && emailTouched ? "#ef4444" : "#0d9488";
+                        }}
+                        aria-invalid={emailTouched && !!emailError}
+                        aria-describedby={emailError ? "email-error" : undefined}
+                        style={{
+                          width: "100%",
+                          background: "#374151",
+                          border: `2px solid ${emailTouched && emailError ? "#ef4444" : emailTouched && !emailError && waitlistEmail ? "#10b981" : "#4b5563"}`,
+                          borderRadius: 10,
+                          padding: "13px 40px 13px 16px",
+                          fontSize: 14,
+                          color: "#f9fafb",
+                          outline: "none",
+                          boxSizing: "border-box",
+                          transition: "border-color 0.15s",
+                        }}
+                      />
+                      {/* Status icon inside the field */}
+                      {emailTouched && waitlistEmail && (
+                        <span style={{
+                          position: "absolute",
+                          right: 12,
+                          top: "50%",
+                          transform: "translateY(-50%)",
+                          fontSize: 15,
+                          pointerEvents: "none",
+                          transition: "opacity 0.15s",
+                        }}>
+                          {emailError ? "❌" : "✅"}
+                        </span>
+                      )}
+                    </div>
+                    {/* Inline error message — slides in smoothly */}
+                    {emailTouched && emailError && (
+                      <div
+                        id="email-error"
+                        role="alert"
+                        style={{
+                          display: "flex",
+                          alignItems: "center",
+                          gap: 6,
+                          background: "#450a0a",
+                          border: "1px solid #ef4444",
+                          borderRadius: 7,
+                          padding: "7px 12px",
+                          fontSize: 12,
+                          color: "#fca5a5",
+                          fontWeight: 600,
+                          animation: "fadeSlideDown 0.18s cubic-bezier(0.23,1,0.32,1) both",
+                        }}
+                      >
+                        <span style={{ flexShrink: 0 }}>⚠️</span>
+                        {emailError}
+                      </div>
+                    )}
+                  </div>
                 </div>
                 {/* School field — shown for students */}
                 {waitlistRole === "student" && (

@@ -211,3 +211,22 @@
     max-width: 1280px;
   }
 }
+
+/* Inline validation error animation — used by the waitlist form email field */
+@keyframes fadeSlideDown {
+  from {
+    opacity: 0;
+    transform: translateY(-4px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  @keyframes fadeSlideDown {
+    from { opacity: 0; }
+    to   { opacity: 1; }
+  }
+}
