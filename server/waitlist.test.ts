@@ -105,6 +105,7 @@ describe("waitlist.join — success", () => {
     const caller = appRouter.createCaller(createPublicContext());
     const result = await caller.waitlist.join({
       email: "student@school.edu.au",
+      firstName: "Jamie",
       role: "student",
     });
     expect(result.success).toBe(true);
@@ -117,6 +118,7 @@ describe("waitlist.join — success", () => {
     const caller = appRouter.createCaller(createPublicContext());
     await caller.waitlist.join({
       email: "STUDENT@SCHOOL.EDU.AU",
+      firstName: "Jamie",
       role: "student",
     });
     expect(addWaitlistSignup).toHaveBeenCalledWith(
@@ -147,6 +149,7 @@ describe("waitlist.join — success", () => {
     const caller = appRouter.createCaller(createPublicContext());
     const result = await caller.waitlist.join({
       email: "employer@company.com.au",
+      firstName: "Alex",
       role: "employer",
     });
     expect(result.success).toBe(true);
@@ -156,6 +159,7 @@ describe("waitlist.join — success", () => {
     const caller = appRouter.createCaller(createPublicContext());
     const result = await caller.waitlist.join({
       email: "other@example.com",
+      firstName: "Sam",
       role: "other",
     });
     expect(result.success).toBe(true);
@@ -163,7 +167,7 @@ describe("waitlist.join — success", () => {
 
   it("defaults role to student when not provided", async () => {
     const caller = appRouter.createCaller(createPublicContext());
-    await caller.waitlist.join({ email: "noRole@example.com" });
+    await caller.waitlist.join({ email: "noRole@example.com", firstName: "Jordan" });
     expect(addWaitlistSignup).toHaveBeenCalledWith(
       expect.objectContaining({ role: "student" })
     );
@@ -181,6 +185,7 @@ describe("waitlist.join — duplicate", () => {
     const caller = appRouter.createCaller(createPublicContext());
     const result = await caller.waitlist.join({
       email: "existing@school.edu.au",
+      firstName: "Taylor",
       role: "student",
     });
     expect(result.success).toBe(false);
@@ -199,7 +204,7 @@ describe("waitlist.join — DB failure", () => {
   it("throws INTERNAL_SERVER_ERROR when DB returns success: false, duplicate: false", async () => {
     const caller = appRouter.createCaller(createPublicContext());
     await expect(
-      caller.waitlist.join({ email: "fail@example.com", role: "student" })
+      caller.waitlist.join({ email: "fail@example.com", firstName: "Casey", role: "student" })
     ).rejects.toThrow();
   });
 });
@@ -267,14 +272,14 @@ describe("waitlist.join — input validation", () => {
   it("rejects an invalid email address", async () => {
     const caller = appRouter.createCaller(createPublicContext());
     await expect(
-      caller.waitlist.join({ email: "not-an-email", role: "student" })
+      caller.waitlist.join({ email: "not-an-email", firstName: "Jamie", role: "student" })
     ).rejects.toThrow();
   });
 
   it("rejects an empty email string", async () => {
     const caller = appRouter.createCaller(createPublicContext());
     await expect(
-      caller.waitlist.join({ email: "", role: "student" })
+      caller.waitlist.join({ email: "", firstName: "Jamie", role: "student" })
     ).rejects.toThrow();
   });
 
@@ -282,7 +287,7 @@ describe("waitlist.join — input validation", () => {
     const caller = appRouter.createCaller(createPublicContext());
     await expect(
       // @ts-expect-error intentional invalid role
-      caller.waitlist.join({ email: "valid@example.com", role: "teacher" })
+      caller.waitlist.join({ email: "valid@example.com", firstName: "Jamie", role: "teacher" })
     ).rejects.toThrow();
   });
 
@@ -290,7 +295,21 @@ describe("waitlist.join — input validation", () => {
     const caller = appRouter.createCaller(createPublicContext());
     const longEmail = "a".repeat(315) + "@x.com";
     await expect(
-      caller.waitlist.join({ email: longEmail, role: "student" })
+      caller.waitlist.join({ email: longEmail, firstName: "Jamie", role: "student" })
+    ).rejects.toThrow();
+  });
+
+  it("rejects a missing firstName (empty string)", async () => {
+    const caller = appRouter.createCaller(createPublicContext());
+    await expect(
+      caller.waitlist.join({ email: "valid@example.com", firstName: "", role: "student" })
+    ).rejects.toThrow();
+  });
+
+  it("rejects firstName longer than 128 characters", async () => {
+    const caller = appRouter.createCaller(createPublicContext());
+    await expect(
+      caller.waitlist.join({ email: "valid@example.com", firstName: "A".repeat(129), role: "student" })
     ).rejects.toThrow();
   });
 });

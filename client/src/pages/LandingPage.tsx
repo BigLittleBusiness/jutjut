@@ -136,9 +136,11 @@ export default function LandingPage({ onSignIn }: LandingPageProps) {
   const [waitlistSchool, setWaitlistSchool] = useState("");
   const [waitlistState, setWaitlistState] = useState<"idle" | "loading" | "success" | "duplicate" | "error">("idle");
   const [waitlistMessage, setWaitlistMessage] = useState("");
-  // Inline validation state — only shown after the user has touched the email field
+  // Inline validation state — only shown after the user has touched each field
   const [emailTouched, setEmailTouched] = useState(false);
   const [emailError, setEmailError] = useState("");
+  const [firstNameTouched, setFirstNameTouched] = useState(false);
+  const [firstNameError, setFirstNameError] = useState("");
 
   const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/;
 
@@ -149,16 +151,32 @@ export default function LandingPage({ onSignIn }: LandingPageProps) {
     return "";
   };
 
+  const validateFirstName = (value: string): string => {
+    if (!value.trim()) return "First name is required.";
+    if (value.length > 128) return "First name is too long.";
+    return "";
+  };
+
   const handleEmailChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const val = e.target.value;
     setWaitlistEmail(val);
-    // Show validation feedback once the user has started typing
     if (emailTouched) setEmailError(validateEmail(val));
   };
 
   const handleEmailBlur = () => {
     setEmailTouched(true);
     setEmailError(validateEmail(waitlistEmail));
+  };
+
+  const handleFirstNameChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const val = e.target.value;
+    setWaitlistFirstName(val);
+    if (firstNameTouched) setFirstNameError(validateFirstName(val));
+  };
+
+  const handleFirstNameBlur = () => {
+    setFirstNameTouched(true);
+    setFirstNameError(validateFirstName(waitlistFirstName));
   };
 
   const waitlistMutation = trpc.waitlist.join.useMutation({
@@ -190,15 +208,18 @@ export default function LandingPage({ onSignIn }: LandingPageProps) {
 
   const handleWaitlist = (e: React.FormEvent) => {
     e.preventDefault();
-    // Run full validation on submit even if the field was never blurred
-    const err = validateEmail(waitlistEmail);
+    // Run full validation on submit even if fields were never blurred
+    const nameErr = validateFirstName(waitlistFirstName);
+    const emailErr = validateEmail(waitlistEmail);
+    setFirstNameTouched(true);
+    setFirstNameError(nameErr);
     setEmailTouched(true);
-    setEmailError(err);
-    if (err || waitlistState === "loading") return;
+    setEmailError(emailErr);
+    if (nameErr || emailErr || waitlistState === "loading") return;
     setWaitlistState("loading");
     waitlistMutation.mutate({
       email: waitlistEmail,
-      firstName: waitlistFirstName || undefined,
+      firstName: waitlistFirstName,
       role: waitlistRole,
       school: waitlistSchool || undefined,
       source: "landing_page",
@@ -701,15 +722,56 @@ export default function LandingPage({ onSignIn }: LandingPageProps) {
                 </div>
                 {/* Name + email row */}
                 <div style={{ display: "flex", gap: 10, flexWrap: "wrap" }}>
-                  <input
-                    type="text"
-                    placeholder="First name (optional)"
-                    value={waitlistFirstName}
-                    onChange={e => setWaitlistFirstName(e.target.value)}
-                    style={{ flex: "1 1 140px", background: "#374151", border: "2px solid #4b5563", borderRadius: 10, padding: "13px 16px", fontSize: 14, color: "#f9fafb", outline: "none" }}
-                    onFocus={e => { e.currentTarget.style.borderColor = "#0d9488"; }}
-                    onBlur={e => { e.currentTarget.style.borderColor = "#4b5563"; }}
-                  />
+                  {/* First name with inline validation */}
+                  <div style={{ flex: "1 1 140px", display: "flex", flexDirection: "column", gap: 4 }}>
+                    <div style={{ position: "relative" }}>
+                      <input
+                        type="text"
+                        placeholder="First name *"
+                        value={waitlistFirstName}
+                        onChange={handleFirstNameChange}
+                        onBlur={handleFirstNameBlur}
+                        onFocus={e => {
+                          e.currentTarget.style.borderColor = firstNameError && firstNameTouched ? "#ef4444" : "#0d9488";
+                        }}
+                        aria-required="true"
+                        aria-invalid={firstNameTouched && !!firstNameError}
+                        aria-describedby={firstNameError ? "firstname-error" : undefined}
+                        style={{
+                          width: "100%",
+                          background: "#374151",
+                          border: `2px solid ${firstNameTouched && firstNameError ? "#ef4444" : firstNameTouched && !firstNameError && waitlistFirstName ? "#10b981" : "#4b5563"}`,
+                          borderRadius: 10,
+                          padding: "13px 40px 13px 16px",
+                          fontSize: 14,
+                          color: "#f9fafb",
+                          outline: "none",
+                          boxSizing: "border-box",
+                          transition: "border-color 0.15s",
+                        }}
+                      />
+                      {firstNameTouched && waitlistFirstName && (
+                        <span style={{ position: "absolute", right: 12, top: "50%", transform: "translateY(-50%)", fontSize: 15, pointerEvents: "none" }}>
+                          {firstNameError ? "❌" : "✅"}
+                        </span>
+                      )}
+                    </div>
+                    {firstNameTouched && firstNameError && (
+                      <div
+                        id="firstname-error"
+                        role="alert"
+                        style={{
+                          display: "flex", alignItems: "center", gap: 6,
+                          background: "#450a0a", border: "1px solid #ef4444", borderRadius: 7,
+                          padding: "7px 12px", fontSize: 12, color: "#fca5a5", fontWeight: 600,
+                          animation: "fadeSlideDown 0.18s cubic-bezier(0.23,1,0.32,1) both",
+                        }}
+                      >
+                        <span style={{ flexShrink: 0 }}>⚠️</span>
+                        {firstNameError}
+                      </div>
+                    )}
+                  </div>
                   {/* Email with inline validation wrapper */}
                   <div style={{ flex: "2 1 200px", display: "flex", flexDirection: "column", gap: 4 }}>
                     <div style={{ position: "relative" }}>

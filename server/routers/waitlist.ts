@@ -17,7 +17,7 @@ export const waitlistRouter = router({
           .string()
           .email("Please enter a valid email address")
           .max(320),
-        firstName: z.string().max(128).optional(),
+        firstName: z.string().min(1, "First name is required").max(128),
         role: z.enum(["student", "employer", "other"]).default("student"),
         school: z.string().max(255).optional(),
         source: z.string().max(64).default("landing_page"),
