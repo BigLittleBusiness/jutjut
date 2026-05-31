@@ -216,6 +216,55 @@ describe("Jobs board — job type filter", () => {
   });
 });
 
+// ── Saved jobs logic tests ───────────────────────────────────────────────────
+
+describe("Save Job — toggle logic", () => {
+  it("adds a job id to the saved set", () => {
+    const saved = new Set<string>();
+    saved.add("job-1");
+    expect(saved.has("job-1")).toBe(true);
+  });
+  it("removes a job id from the saved set on second toggle", () => {
+    const saved = new Set<string>(["job-1", "job-2"]);
+    saved.delete("job-1");
+    expect(saved.has("job-1")).toBe(false);
+    expect(saved.has("job-2")).toBe(true);
+  });
+  it("serialises and deserialises saved set via JSON", () => {
+    const saved = new Set<string>(["job-1", "job-3"]);
+    const serialised = JSON.stringify(Array.from(saved));
+    const restored = new Set<string>(JSON.parse(serialised));
+    expect(restored.has("job-1")).toBe(true);
+    expect(restored.has("job-3")).toBe(true);
+    expect(restored.size).toBe(2);
+  });
+  it("handles empty saved set serialisation", () => {
+    const saved = new Set<string>();
+    const serialised = JSON.stringify(Array.from(saved));
+    const restored = new Set<string>(JSON.parse(serialised));
+    expect(restored.size).toBe(0);
+  });
+  it("filters saved jobs from full job list correctly", () => {
+    const savedIds = new Set<string>(["job-2", "job-4"]);
+    const filtered = sampleJobs.filter((j, idx) => savedIds.has(`job-${idx + 1}`));
+    // job-2 = Barista, job-4 = Social Media Manager
+    expect(filtered).toHaveLength(2);
+  });
+  it("returns empty array when no jobs are saved", () => {
+    const savedIds = new Set<string>();
+    const filtered = sampleJobs.filter((j, idx) => savedIds.has(`job-${idx + 1}`));
+    expect(filtered).toHaveLength(0);
+  });
+  it("correctly identifies unsaved job", () => {
+    const savedIds = new Set<string>(["job-1"]);
+    expect(savedIds.has("job-2")).toBe(false);
+  });
+  it("correctly identifies saved job", () => {
+    const savedIds = new Set<string>(["job-1"]);
+    expect(savedIds.has("job-1")).toBe(true);
+  });
+});
+
 describe("Jobs board — combined filters", () => {
   it("combines text search and category filter", () => {
     const result = filterJobs(sampleJobs, "sydney", "Tutoring", "");

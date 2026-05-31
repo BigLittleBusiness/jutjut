@@ -72,6 +72,8 @@ interface AppContextType {
   // Jobs
   jobs: Job[];
   applyToJob: (jobId: string) => void;
+  savedJobIds: Set<string>;
+  toggleSaveJob: (jobId: string) => void;
   
   // Drops
   drops: Drop[];
@@ -119,6 +121,31 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   const [simplifyJobs, setSimplifyJobs] = useState<boolean>(() => {
     return localStorage.getItem("jutjut_simplify_jobs") === "true";
   });
+
+  // Saved (bookmarked) jobs — persisted to localStorage
+  const [savedJobIds, setSavedJobIds] = useState<Set<string>>(() => {
+    try {
+      const stored = localStorage.getItem("jutjut_saved_jobs");
+      return stored ? new Set<string>(JSON.parse(stored)) : new Set<string>();
+    } catch {
+      return new Set<string>();
+    }
+  });
+
+  const toggleSaveJob = (jobId: string) => {
+    setSavedJobIds((prev) => {
+      const next = new Set(prev);
+      if (next.has(jobId)) {
+        next.delete(jobId);
+        toast.success("Job removed from saved roles.");
+      } else {
+        next.add(jobId);
+        toast.success("Job saved! Find it in your Saved Jobs tab.");
+      }
+      localStorage.setItem("jutjut_saved_jobs", JSON.stringify(Array.from(next)));
+      return next;
+    });
+  };
 
   // Anonymous Avatar Setting state
   const [anonymousAvatarSetting, setAnonymousAvatarSetting] = useState<"question" | "fox" | "unicorn" | "alien">(() => {
@@ -410,7 +437,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   return (
     <AppContext.Provider value={{
       isAuthenticated, login, logout, userProfile, setUserProfile,
-      jobs, applyToJob,
+      jobs, applyToJob, savedJobIds, toggleSaveJob,
       drops, claimDrop, createDrop,
       conversations, activeChatId, setActiveChatId, sendMessage,
       quietMode, setQuietMode, taskBreakdown, setTaskBreakdown, simplifyJobs, setSimplifyJobs,

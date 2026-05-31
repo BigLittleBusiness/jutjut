@@ -18,7 +18,10 @@ const CATEGORY_ICONS: Record<JobCategory, string> = {
 };
 
 export const JobBoard: React.FC = () => {
-  const { jobs, applyToJob, simplifyJobs } = useApp();
+  const { jobs, applyToJob, simplifyJobs, savedJobIds, toggleSaveJob } = useApp();
+
+  // Tab: "all" | "saved"
+  const [activeTab, setActiveTab] = useState<"all" | "saved">("all");
 
   // Search & category
   const [searchQuery, setSearchQuery] = useState<string>("");
@@ -113,6 +116,11 @@ export const JobBoard: React.FC = () => {
 
   const handleApplyClick = (job: Job) => setSelectedJob(job);
 
+  const savedJobs = useMemo(
+    () => jobs.filter((j) => savedJobIds.has(j.id)),
+    [jobs, savedJobIds]
+  );
+
   const handleConfirmApply = () => {
     if (selectedJob) {
       applyToJob(selectedJob.id);
@@ -189,6 +197,36 @@ export const JobBoard: React.FC = () => {
             </button>
           )}
         </div>
+      </div>
+
+      {/* ── Tabs ──────────────────────────────────────────────────── */}
+      <div className="flex gap-2 border-b-2 border-border">
+        <button
+          onClick={() => setActiveTab("all")}
+          className={`px-4 py-2 text-sm font-extrabold uppercase tracking-wider transition-colors ${
+            activeTab === "all"
+              ? "border-b-4 border-primary text-primary -mb-0.5"
+              : "text-muted-foreground hover:text-foreground"
+          }`}
+        >
+          All Jobs
+        </button>
+        <button
+          onClick={() => setActiveTab("saved")}
+          className={`px-4 py-2 text-sm font-extrabold uppercase tracking-wider transition-colors flex items-center gap-1.5 ${
+            activeTab === "saved"
+              ? "border-b-4 border-primary text-primary -mb-0.5"
+              : "text-muted-foreground hover:text-foreground"
+          }`}
+        >
+          <i className="fa-solid fa-bookmark text-xs" />
+          Saved
+          {savedJobIds.size > 0 && (
+            <span className="bg-primary text-primary-foreground text-[10px] font-black px-1.5 py-0.5 rounded-full">
+              {savedJobIds.size}
+            </span>
+          )}
+        </button>
       </div>
 
       {/* ── Main grid ─────────────────────────────────────────────── */}
@@ -296,7 +334,77 @@ export const JobBoard: React.FC = () => {
             )}
           </div>
 
-          {filteredJobs.length === 0 ? (
+          {/* Saved Jobs tab content */}
+          {activeTab === "saved" && (
+            <>
+              {savedJobs.length === 0 ? (
+                <div className="brutal-card bg-card text-center py-12">
+                  <div className="text-4xl mb-3">🔖</div>
+                  <h3 className="text-lg font-black">No saved jobs yet</h3>
+                  <p className="text-xs text-muted-foreground mt-1 max-w-xs mx-auto">
+                    Hit the <strong>Save</strong> button on any listing to bookmark roles you want to revisit.
+                  </p>
+                  <button
+                    onClick={() => setActiveTab("all")}
+                    className="mt-4 brutal-btn bg-primary text-primary-foreground text-xs py-2 px-4"
+                  >
+                    Browse All Jobs
+                  </button>
+                </div>
+              ) : (
+                <div className="space-y-4">
+                  <p className="text-xs font-bold text-muted-foreground">
+                    {savedJobs.length} saved {savedJobs.length === 1 ? "role" : "roles"}
+                  </p>
+                  {savedJobs.map((job) => (
+                    <div
+                      key={job.id}
+                      className="brutal-card brutal-shadow bg-card hover:translate-y-[-2px] transition-transform"
+                    >
+                      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
+                        <div className="flex items-start gap-4">
+                          <div className="h-12 w-12 rounded-xl brutal-border bg-primary/10 text-primary flex items-center justify-center text-2xl shrink-0">
+                            {job.logo}
+                          </div>
+                          <div>
+                            <div className="flex flex-wrap items-center gap-2">
+                              <h3 className="text-lg font-extrabold">{job.title}</h3>
+                              <span className="bg-muted text-muted-foreground text-[10px] font-extrabold px-2 py-0.5 rounded border border-border uppercase tracking-wide">
+                                {CATEGORY_ICONS[job.category]} {job.category}
+                              </span>
+                            </div>
+                            <p className="text-xs font-bold text-muted-foreground mt-0.5">
+                              {job.company} • {job.location}
+                            </p>
+                          </div>
+                        </div>
+                        <div className="text-left sm:text-right shrink-0">
+                          <p className="text-lg font-black text-primary">${job.wage}/hr</p>
+                          <p className="text-[10px] text-muted-foreground font-bold uppercase tracking-wider capitalize mt-0.5">{job.timing}</p>
+                        </div>
+                      </div>
+                      <div className="mt-4 flex justify-end items-center gap-2">
+                        <button
+                          onClick={() => toggleSaveJob(job.id)}
+                          className="brutal-btn text-xs py-2 px-3 flex items-center gap-1.5 bg-amber-100 text-amber-700 border-amber-400 hover:bg-amber-200"
+                        >
+                          <i className="fa-solid fa-bookmark text-sm" /> Saved
+                        </button>
+                        <button
+                          onClick={() => handleApplyClick(job)}
+                          className="brutal-btn bg-primary text-primary-foreground text-xs py-2 px-4"
+                        >
+                          Apply with One-Click
+                        </button>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </>
+          )}
+
+          {activeTab === "all" && (filteredJobs.length === 0 ? (
             <div className="brutal-card bg-card text-center py-12">
               <div className="text-4xl mb-3">🔍</div>
               <h3 className="text-lg font-black">No jobs match your search</h3>
@@ -367,21 +475,38 @@ export const JobBoard: React.FC = () => {
                     )}
                   </div>
 
-                  <div className="mt-4 flex justify-between items-center">
-                    <span className="text-[10px] text-muted-foreground font-bold">
+                  <div className="mt-4 flex justify-between items-center gap-2">
+                    <span className="text-[10px] text-muted-foreground font-bold flex-1">
                       💡 Verified credentials from "My Kit" will be attached.
                     </span>
-                    <button
-                      onClick={() => handleApplyClick(job)}
-                      className="brutal-btn bg-primary text-primary-foreground text-xs py-2 px-4"
-                    >
-                      Apply with One-Click
-                    </button>
+                    <div className="flex items-center gap-2 shrink-0">
+                      {/* Save Job button */}
+                      <button
+                        onClick={() => toggleSaveJob(job.id)}
+                        title={savedJobIds.has(job.id) ? "Remove from saved" : "Save this job"}
+                        className={`brutal-btn text-xs py-2 px-3 flex items-center gap-1.5 transition-all ${
+                          savedJobIds.has(job.id)
+                            ? "bg-amber-100 text-amber-700 border-amber-400 hover:bg-amber-200"
+                            : "bg-card text-muted-foreground border-border hover:border-amber-400 hover:text-amber-600"
+                        }`}
+                      >
+                        <i className={`fa-bookmark text-sm ${
+                          savedJobIds.has(job.id) ? "fa-solid" : "fa-regular"
+                        }`} />
+                        {savedJobIds.has(job.id) ? "Saved" : "Save"}
+                      </button>
+                      <button
+                        onClick={() => handleApplyClick(job)}
+                        className="brutal-btn bg-primary text-primary-foreground text-xs py-2 px-4"
+                      >
+                        Apply with One-Click
+                      </button>
+                    </div>
                   </div>
                 </div>
-              ))}
+              )              )}
             </div>
-          )}
+          ))}
         </div>
       </div>
 
