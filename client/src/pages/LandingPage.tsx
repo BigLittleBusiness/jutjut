@@ -115,11 +115,11 @@ const EMPLOYER_FEATURES = [
 ];
 
 // ── Trust stats ───────────────────────────────────────────────────────────────
-const TRUST_STATS = [
-  { value: "1,247+", label: "Students on waitlist" },
-  { value: "94%", label: "Would recommend JutJut" },
-  { value: "3 min", label: "Average time to apply" },
-  { value: "100%", label: "Free for students" },
+const TRUST_PILLARS = [
+  { icon: "🎓", heading: "Designed with students", body: "Every feature was shaped by conversations with Australian high school students, teachers, and school counsellors — not assumptions." },
+  { icon: "🏫", heading: "Built for Australian schools", body: "JutJut is built around the Australian curriculum, local employers, and the real pathways available to students after Year 12." },
+  { icon: "🔒", heading: "Privacy first", body: "Students own their data. Nothing is shared with employers or universities without explicit consent. No ads. No data selling. Ever." },
+  { icon: "♿", heading: "Accessible by design", body: "Quiet Mode, Plain Language, and Stepped Forms are built in from day one — not bolted on as an afterthought." },
 ];
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -213,7 +213,7 @@ export default function LandingPage({ onSignIn }: LandingPageProps) {
 
       {/* ── URGENCY BANNER ─────────────────────────────────────────────────── */}
       <div style={{ background: "#1f2937", color: "#fff", textAlign: "center", padding: "10px 1rem", fontSize: 14, fontWeight: 700 }}>
-        🔥 <span style={{ color: "#f59e0b" }}>1,247 students</span> already on the waitlist — spots filling fast!
+        🔥 JutJut is <span style={{ color: "#f59e0b" }}>coming soon</span> — join the waitlist and be first to know when your school goes live!
       </div>
 
       {/* ── HERO ───────────────────────────────────────────────────────────── */}
@@ -519,31 +519,39 @@ export default function LandingPage({ onSignIn }: LandingPageProps) {
         <div style={{ maxWidth: 1200, margin: "0 auto" }}>
           <Reveal>
             <div style={{ textAlign: "center", marginBottom: "2.5rem" }}>
-              <h2 style={{ fontSize: "clamp(1.6rem, 3.5vw, 2.4rem)", fontWeight: 900, color: "#fff" }}>Students and employers trust JutJut</h2>
+              <h2 style={{ fontSize: "clamp(1.6rem, 3.5vw, 2.4rem)", fontWeight: 900, color: "#fff" }}>Why JutJut is built differently</h2>
             </div>
           </Reveal>
-          <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(180px, 1fr))", gap: "1.5rem", marginBottom: "3rem" }}>
-            {TRUST_STATS.map((s, i) => (
+          <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(240px, 1fr))", gap: "1.5rem", marginBottom: "3rem" }}>
+            {TRUST_PILLARS.map((p, i) => (
               <Reveal key={i} delay={i * 80}>
-                <div style={{ textAlign: "center", background: "rgba(255,255,255,0.12)", border: "2px solid rgba(255,255,255,0.3)", borderRadius: 14, padding: "1.5rem" }}>
-                  <div style={{ fontSize: "2.4rem", fontWeight: 900, color: "#fff", marginBottom: 4 }}>{s.value}</div>
-                  <div style={{ fontSize: 13, color: "#ccfbf1", fontWeight: 600 }}>{s.label}</div>
+                <div style={{ background: "rgba(255,255,255,0.1)", border: "2px solid rgba(255,255,255,0.25)", borderRadius: 14, padding: "1.75rem" }}>
+                  <div style={{ fontSize: "2rem", marginBottom: "0.75rem" }}>{p.icon}</div>
+                  <div style={{ fontSize: 16, fontWeight: 800, color: "#fff", marginBottom: "0.5rem" }}>{p.heading}</div>
+                  <div style={{ fontSize: 13, color: "#ccfbf1", lineHeight: 1.6 }}>{p.body}</div>
                 </div>
               </Reveal>
             ))}
           </div>
-          {/* Testimonials */}
+          {/* Case studies */}
+          <Reveal>
+            <div style={{ textAlign: "center", marginBottom: "1.5rem" }}>
+              <span style={{ background: "rgba(255,255,255,0.15)", border: "2px solid rgba(255,255,255,0.4)", borderRadius: 6, padding: "4px 14px", fontSize: 12, fontWeight: 800, color: "#fff", textTransform: "uppercase", letterSpacing: 1 }}>Illustrative Case Studies</span>
+              <p style={{ color: "#ccfbf1", fontSize: 13, marginTop: "0.6rem" }}>These scenarios are based on the real problems JutJut is designed to solve — not yet live data.</p>
+            </div>
+          </Reveal>
           <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(280px, 1fr))", gap: "1.5rem" }}>
             {[
-              { quote: "I got my first job through JutJut in three days. My teacher verified my maths skills and the café hired me on the spot.", name: "Priya, Year 12", school: "Parramatta High" },
-              { quote: "The Drop saved me so much money. Free coffee every week and a Canva Pro subscription — I use it for all my assignments.", name: "Marcus, Year 10", school: "Brisbane State High" },
-              { quote: "We hired four students through JutJut last month. The verified profiles meant we could trust the applications from day one.", name: "Sarah", school: "Owner, The Grind Café" },
-            ].map((t, i) => (
+              { emoji: "🎓", scenario: "A Year 12 student applies for a part-time café role. Her teacher has verified her customer service and maths skills on JutJut. The employer can see the verification instantly — no reference calls needed.", label: "Student → Local employer", tag: "My Kit scenario" },
+              { emoji: "🏫", scenario: "A school counsellor helps a student with dyslexia use Plain Language Mode to complete his university application through the YourWay portal — at his own pace, one step at a time.", label: "Student → University pathway", tag: "YourWay + Accessibility scenario" },
+              { emoji: "☕", scenario: "A local café partners with JutJut to post a weekly free coffee drop. Students redeem it in-store, driving foot traffic and building a loyal student customer base before they've spent a cent on advertising.", label: "Local business → Student community", tag: "The Drop scenario" },
+            ].map((c, i) => (
               <Reveal key={i} delay={i * 100}>
                 <div style={{ background: "#fff", border: "2px solid #1f2937", borderRadius: 14, padding: "1.5rem", boxShadow: "4px 4px 0 #1f2937" }}>
-                  <p style={{ fontSize: 14, color: "#374151", lineHeight: 1.7, marginBottom: "1rem", fontStyle: "italic" }}>"{t.quote}"</p>
-                  <div style={{ fontWeight: 800, fontSize: 14, color: "#1f2937" }}>{t.name}</div>
-                  <div style={{ fontSize: 12, color: "#6b7280" }}>{t.school}</div>
+                  <div style={{ fontSize: "1.75rem", marginBottom: "0.75rem" }}>{c.emoji}</div>
+                  <div style={{ display: "inline-block", background: "#f0fdf9", border: "1.5px solid #0d9488", borderRadius: 5, padding: "2px 10px", fontSize: 11, fontWeight: 700, color: "#0d9488", marginBottom: "0.75rem", textTransform: "uppercase", letterSpacing: 0.5 }}>{c.tag}</div>
+                  <p style={{ fontSize: 14, color: "#374151", lineHeight: 1.7, marginBottom: "1rem" }}>{c.scenario}</p>
+                  <div style={{ fontWeight: 700, fontSize: 12, color: "#6b7280", borderTop: "1px solid #e5e7eb", paddingTop: "0.75rem" }}>{c.label}</div>
                 </div>
               </Reveal>
             ))}
@@ -593,7 +601,7 @@ export default function LandingPage({ onSignIn }: LandingPageProps) {
               Be first when JutJut launches
             </h2>
             <p style={{ fontSize: "1.05rem", color: "#9ca3af", marginBottom: "2rem", lineHeight: 1.6 }}>
-              Join 1,247+ students already on the waitlist. We'll notify you the moment your school goes live.
+              Be among the first to experience JutJut when we launch. We'll notify you the moment your school goes live.
             </p>
             {waitlistSubmitted ? (
               <div style={{ background: "#134e4a", border: "2px solid #5eead4", borderRadius: 14, padding: "2rem", boxShadow: "4px 4px 0 #0d9488" }}>
