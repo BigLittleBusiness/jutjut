@@ -20,6 +20,7 @@
  */
 import React, { useState, useEffect, useRef } from "react";
 import { trpc } from "@/lib/trpc";
+import confetti from "canvas-confetti";
 
 interface LandingPageProps {
   onSignIn?: () => void;
@@ -136,6 +137,8 @@ export default function LandingPage({ onSignIn }: LandingPageProps) {
   const [waitlistSchool, setWaitlistSchool] = useState("");
   const [waitlistState, setWaitlistState] = useState<"idle" | "loading" | "success" | "duplicate" | "error">("idle");
   const [waitlistMessage, setWaitlistMessage] = useState("");
+  // Honeypot — bots fill this hidden field; real users never see it
+  const [honeypot, setHoneypot] = useState("");
   // Inline validation state — only shown after the user has touched each field
   const [emailTouched, setEmailTouched] = useState(false);
   const [emailError, setEmailError] = useState("");
@@ -179,6 +182,53 @@ export default function LandingPage({ onSignIn }: LandingPageProps) {
     setFirstNameError(validateFirstName(waitlistFirstName));
   };
 
+  // ── Confetti burst ─────────────────────────────────────────────────────────
+  const fireConfetti = () => {
+    // Respect prefers-reduced-motion
+    if (window.matchMedia("(prefers-reduced-motion: reduce)").matches) return;
+
+    // JutJut brand colours: teal + amber + white
+    const colors = ["#0d9488", "#5eead4", "#f59e0b", "#fcd34d", "#ffffff"];
+
+    // First burst — centre-left cannon
+    confetti({
+      particleCount: 80,
+      spread: 70,
+      origin: { x: 0.4, y: 0.6 },
+      colors,
+      scalar: 1.1,
+      gravity: 1.2,
+      ticks: 220,
+    });
+
+    // Second burst — centre-right cannon, slight delay
+    setTimeout(() => {
+      confetti({
+        particleCount: 60,
+        spread: 65,
+        origin: { x: 0.6, y: 0.6 },
+        colors,
+        scalar: 1.0,
+        gravity: 1.2,
+        ticks: 200,
+      });
+    }, 120);
+
+    // Third burst — straight up from centre for extra delight
+    setTimeout(() => {
+      confetti({
+        particleCount: 40,
+        angle: 90,
+        spread: 50,
+        origin: { x: 0.5, y: 0.65 },
+        colors,
+        scalar: 0.9,
+        gravity: 1.0,
+        ticks: 180,
+      });
+    }, 250);
+  };
+
   const waitlistMutation = trpc.waitlist.join.useMutation({
     onSuccess: (data) => {
       if (data.duplicate) {
@@ -187,6 +237,7 @@ export default function LandingPage({ onSignIn }: LandingPageProps) {
       } else {
         setWaitlistState("success");
         setWaitlistMessage(data.message);
+        fireConfetti();
       }
     },
     onError: (err) => {
@@ -208,6 +259,16 @@ export default function LandingPage({ onSignIn }: LandingPageProps) {
 
   const handleWaitlist = (e: React.FormEvent) => {
     e.preventDefault();
+    // Honeypot check — silently discard bot submissions
+    if (honeypot) {
+      // Simulate a brief loading state then fake success to fool bots
+      setWaitlistState("loading");
+      setTimeout(() => {
+        setWaitlistState("success");
+        setWaitlistMessage("You're on the list! We'll let you know the moment JutJut launches at your school.");
+      }, 800);
+      return;
+    }
     // Run full validation on submit even if fields were never blurred
     const nameErr = validateFirstName(waitlistFirstName);
     const emailErr = validateEmail(waitlistEmail);
@@ -684,8 +745,17 @@ export default function LandingPage({ onSignIn }: LandingPageProps) {
               Be among the first to experience JutJut when we launch. We'll notify you the moment your school goes live.
             </p>
             {waitlistState === "success" ? (
-              <div style={{ background: "#134e4a", border: "2px solid #5eead4", borderRadius: 14, padding: "2rem", boxShadow: "4px 4px 0 #0d9488" }}>
-                <div style={{ fontSize: 40, marginBottom: "0.75rem" }}>🎉</div>
+              <div
+                style={{
+                  background: "#134e4a",
+                  border: "2px solid #5eead4",
+                  borderRadius: 14,
+                  padding: "2rem",
+                  boxShadow: "4px 4px 0 #0d9488",
+                  animation: "successPop 0.35s cubic-bezier(0.23,1,0.32,1) both",
+                }}
+              >
+                <div style={{ fontSize: 48, marginBottom: "0.75rem", animation: "bounceIn 0.5s cubic-bezier(0.23,1,0.32,1) 0.1s both" }}>🎉</div>
                 <div style={{ fontWeight: 800, fontSize: 20, color: "#5eead4", marginBottom: "0.5rem" }}>You're on the list!</div>
                 <div style={{ fontSize: 14, color: "#99f6e4" }}>{waitlistMessage}</div>
               </div>
@@ -697,6 +767,19 @@ export default function LandingPage({ onSignIn }: LandingPageProps) {
               </div>
             ) : (
               <form onSubmit={handleWaitlist} style={{ display: "flex", flexDirection: "column", gap: 12, maxWidth: 480, margin: "0 auto" }}>
+                {/* Honeypot — visually hidden, never filled by real users */}
+                <div aria-hidden="true" style={{ position: "absolute", left: "-9999px", width: 1, height: 1, overflow: "hidden", opacity: 0, pointerEvents: "none" }}>
+                  <label htmlFor="website">Website (leave blank)</label>
+                  <input
+                    id="website"
+                    name="website"
+                    type="text"
+                    value={honeypot}
+                    onChange={e => setHoneypot(e.target.value)}
+                    autoComplete="off"
+                    tabIndex={-1}
+                  />
+                </div>
                 {/* Role selector */}
                 <div style={{ display: "flex", gap: 8, justifyContent: "center" }}>
                   {(["student", "employer", "other"] as const).map(r => (

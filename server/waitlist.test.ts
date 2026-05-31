@@ -381,3 +381,37 @@ describe("waitlist.list — access control", () => {
     await expect(caller.waitlist.list()).rejects.toThrow();
   });
 });
+
+// ─── Honeypot — server-side contract ─────────────────────────────────────────
+// The honeypot field is handled entirely on the client before the tRPC call is
+// made. The server schema intentionally has no "website" / honeypot field, so
+// these tests verify that the server contract remains clean.
+
+describe("waitlist.join — honeypot contract", () => {
+  beforeEach(() => {
+    vi.mocked(addWaitlistSignup).mockResolvedValue({ success: true, duplicate: false });
+  });
+
+  it("accepts a valid submission (honeypot check happens client-side, not server-side)", async () => {
+    const caller = appRouter.createCaller(createPublicContext());
+    const result = await caller.waitlist.join({
+      email: "legit@school.edu.au",
+      firstName: "Alex",
+      role: "student",
+    });
+    expect(result.success).toBe(true);
+  });
+
+  it("does not expose a honeypot field in the server schema (extra fields are stripped by Zod)", async () => {
+    const caller = appRouter.createCaller(createPublicContext());
+    // Zod strips unknown keys by default — passing a 'website' field should not cause an error
+    const result = await caller.waitlist.join({
+      email: "legit2@school.edu.au",
+      firstName: "Jordan",
+      role: "student",
+      // @ts-expect-error intentional unknown field to verify Zod strips it silently
+      website: "http://spam.example.com",
+    });
+    expect(result.success).toBe(true);
+  });
+});
