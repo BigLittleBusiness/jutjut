@@ -34,7 +34,7 @@ export default function LandingPage({ onSignIn }: LandingPageProps) {
 
   return (
     <iframe
-      src="/manus-storage/landing_acea617a.html"
+      src="/manus-storage/landing_d6ab6c19.html"
       title="JutJut – Turn your proof into your future"
       style={{
         width: "100%",

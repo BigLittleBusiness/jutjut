@@ -75,3 +75,8 @@
 - [x] Deep-link CTAs: "Explore My Kit" and "Browse Jobs Board" route to feature pages (login-gated)
 - [x] Landing page nav items already link to in-page anchor sections (#students, #yourway, #employers, etc.)
 - [x] 15 new landing navigation tests (103 total passing)
+
+## New Feature Tasks
+- [ ] Jobs board: search bar and category filters (role type, location, wage, timing)
+- [ ] Landing page: interactive FAQ accordion section with common user questions
+- [ ] Login screen: Forgot Password flow with clean UI for credential reset

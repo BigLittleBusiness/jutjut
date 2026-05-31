@@ -16,6 +16,8 @@ export interface UserProfile {
   clubVerified: boolean;
 }
 
+export type JobCategory = "Tutoring" | "Hospitality" | "Retail" | "Library & Admin" | "Digital & Remote";
+
 export interface Job {
   id: string;
   title: string;
@@ -27,6 +29,7 @@ export interface Job {
   timing: "evenings" | "weekends" | "flexible";
   noCoverLetter: boolean;
   neuroFriendly: boolean;
+  category: JobCategory;
   description: string;
   simplifiedDescription: string;
 }
@@ -184,6 +187,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       timing: "weekends",
       noCoverLetter: true,
       neuroFriendly: true,
+      category: "Tutoring" as const,
       description: "Looking for an enthusiastic tutor to help Year 9-10 students with Math and Physics. Requires good communication and solid high school grade records. We offer training materials and pre-designed lessons to take the pressure off.",
       simplifiedDescription: "Help younger students with high school Math and Physics. We give you all the lessons and worksheets. You just need to show up, explain things simply, and support them. Perfect for weekends."
     },
@@ -198,6 +202,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       timing: "flexible",
       noCoverLetter: true,
       neuroFriendly: false,
+      category: "Hospitality" as const,
       description: "Join our busy cafe team! Learn specialty espresso brewing, customer service, and food handling. Must be reliable, quick on your feet, and love morning energy.",
       simplifiedDescription: "Make coffee, serve pastries, and chat with customers in a friendly, fast cafe. No experience needed—we will train you how to brew perfect espresso."
     },
@@ -212,6 +217,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       timing: "weekends",
       noCoverLetter: false,
       neuroFriendly: true,
+      category: "Retail" as const,
       description: "Help customers find unique vintage styles, organize clothing racks, and manage cash registers. We value a quiet, highly organized, and structured work environment where attention to visual detail is appreciated.",
       simplifiedDescription: "Work at a cool vintage clothing shop. Help keep clothes neat, assist customers when they ask, and checkout sales. The shop has a calm, structured routine."
     },
@@ -226,6 +232,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       timing: "evenings",
       noCoverLetter: true,
       neuroFriendly: true,
+      category: "Library & Admin" as const,
       description: "Quiet evening role. Sort returned books, update database catalogs, and maintain shelf organization. Ideal for detail-oriented individuals who thrive in peaceful, low-sensory environments.",
       simplifiedDescription: "A peaceful evening job sorting and organizing library books. Very quiet environment, repetitive structured tasks, and almost zero high-pressure situations."
     },
@@ -240,6 +247,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       timing: "flexible",
       noCoverLetter: true,
       neuroFriendly: false,
+      category: "Digital & Remote" as const,
       description: "Help schedule TikTok and Instagram posts, draft captions, and research trending meme audios. Must be active on social media and understand current Gen-Z humor.",
       simplifiedDescription: "Create and schedule social media posts from home. Help find funny trends, write short captions, and monitor comments. Fully remote and highly flexible."
     }
