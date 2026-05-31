@@ -88,3 +88,23 @@
 - [x] Show success/error/duplicate states in the form UI
 - [x] Add admin view for waitlist signups in the Dashboard (AdminWaitlist page with search, role filter, CSV export, summary stats)
 - [x] Write 18 Vitest tests for waitlist feature (join success/duplicate/error, input validation, count, list access control) — 169 total passing
+
+## Waitlist Form Enhancements
+- [x] Real-time inline email validation (blur + on-change, animated error message, green/red border feedback)
+- [x] Make first name field mandatory (server schema, form UI, 2 new tests — 181 total passing)
+- [x] Confetti success animation (3-burst cannon in brand colours, successPop + bounceIn card animations, prefers-reduced-motion respected)
+- [x] Honeypot spam protection (hidden off-screen input, fake success shown to bots, 2 new server contract tests — 183 total passing)
+
+## Infrastructure & AWS Deployment Readiness
+- [x] .env.example — documents every required and optional environment variable with comments
+- [x] Dockerfile — multi-stage build (deps → build → runner), HEALTHCHECK, non-root production image
+- [x] docker-compose.yml — local dev environment with MySQL 8 + hot-reload app service
+- [x] .github/workflows/ci.yml — type-check + vitest on every push to main and every PR
+- [x] .github/workflows/deploy.yml — build → ECR push → ECS Fargate rolling deploy on push to main
+- [x] infrastructure/nginx.conf — production reverse-proxy with TLS, gzip, security headers, static-asset caching
+- [x] infrastructure/ecs-task-definition.json — ECS Fargate task definition template with Secrets Manager refs
+- [x] infrastructure/DEPLOY.md — step-by-step AWS deployment runbook (ECS Fargate + EC2 options)
+
+## Developer Experience
+- [x] CONTRIBUTING.md — prerequisites, local setup, project structure, conventions, testing guide, PR process
+- [x] JUTJUT_README.md — project overview, tech stack, quick start, scripts, structure, deployment summary

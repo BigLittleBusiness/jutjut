@@ -1,0 +1,58 @@
+{
+  "_comment": "ECS Fargate task definition template for JutJut. Replace all <PLACEHOLDER> values before use. Register with: aws ecs register-task-definition --cli-input-json file://infrastructure/ecs-task-definition.json",
+  "family": "jutjut",
+  "networkMode": "awsvpc",
+  "requiresCompatibilities": ["FARGATE"],
+  "cpu": "512",
+  "memory": "1024",
+  "executionRoleArn": "arn:aws:iam::<AWS_ACCOUNT_ID>:role/ecsTaskExecutionRole",
+  "taskRoleArn": "arn:aws:iam::<AWS_ACCOUNT_ID>:role/jutjutTaskRole",
+  "containerDefinitions": [
+    {
+      "name": "jutjut",
+      "image": "<AWS_ACCOUNT_ID>.dkr.ecr.<AWS_REGION>.amazonaws.com/jutjut:latest",
+      "essential": true,
+      "portMappings": [
+        {
+          "containerPort": 3000,
+          "protocol": "tcp"
+        }
+      ],
+      "environment": [
+        { "name": "NODE_ENV", "value": "production" },
+        { "name": "PORT",     "value": "3000" }
+      ],
+      "secrets": [
+        { "name": "DATABASE_URL",                "valueFrom": "arn:aws:secretsmanager:<AWS_REGION>:<AWS_ACCOUNT_ID>:secret:jutjut/DATABASE_URL" },
+        { "name": "JWT_SECRET",                  "valueFrom": "arn:aws:secretsmanager:<AWS_REGION>:<AWS_ACCOUNT_ID>:secret:jutjut/JWT_SECRET" },
+        { "name": "VITE_APP_ID",                 "valueFrom": "arn:aws:secretsmanager:<AWS_REGION>:<AWS_ACCOUNT_ID>:secret:jutjut/VITE_APP_ID" },
+        { "name": "OAUTH_SERVER_URL",            "valueFrom": "arn:aws:secretsmanager:<AWS_REGION>:<AWS_ACCOUNT_ID>:secret:jutjut/OAUTH_SERVER_URL" },
+        { "name": "VITE_OAUTH_PORTAL_URL",       "valueFrom": "arn:aws:secretsmanager:<AWS_REGION>:<AWS_ACCOUNT_ID>:secret:jutjut/VITE_OAUTH_PORTAL_URL" },
+        { "name": "OWNER_OPEN_ID",               "valueFrom": "arn:aws:secretsmanager:<AWS_REGION>:<AWS_ACCOUNT_ID>:secret:jutjut/OWNER_OPEN_ID" },
+        { "name": "OWNER_NAME",                  "valueFrom": "arn:aws:secretsmanager:<AWS_REGION>:<AWS_ACCOUNT_ID>:secret:jutjut/OWNER_NAME" },
+        { "name": "BUILT_IN_FORGE_API_URL",      "valueFrom": "arn:aws:secretsmanager:<AWS_REGION>:<AWS_ACCOUNT_ID>:secret:jutjut/BUILT_IN_FORGE_API_URL" },
+        { "name": "BUILT_IN_FORGE_API_KEY",      "valueFrom": "arn:aws:secretsmanager:<AWS_REGION>:<AWS_ACCOUNT_ID>:secret:jutjut/BUILT_IN_FORGE_API_KEY" },
+        { "name": "VITE_FRONTEND_FORGE_API_KEY", "valueFrom": "arn:aws:secretsmanager:<AWS_REGION>:<AWS_ACCOUNT_ID>:secret:jutjut/VITE_FRONTEND_FORGE_API_KEY" },
+        { "name": "VITE_FRONTEND_FORGE_API_URL", "valueFrom": "arn:aws:secretsmanager:<AWS_REGION>:<AWS_ACCOUNT_ID>:secret:jutjut/VITE_FRONTEND_FORGE_API_URL" },
+        { "name": "PIN_PAYMENTS_SECRET_KEY",     "valueFrom": "arn:aws:secretsmanager:<AWS_REGION>:<AWS_ACCOUNT_ID>:secret:jutjut/PIN_PAYMENTS_SECRET_KEY" },
+        { "name": "PIN_PAYMENTS_PUBLISHABLE_KEY","valueFrom": "arn:aws:secretsmanager:<AWS_REGION>:<AWS_ACCOUNT_ID>:secret:jutjut/PIN_PAYMENTS_PUBLISHABLE_KEY" },
+        { "name": "PIN_PAYMENTS_WEBHOOK_SECRET", "valueFrom": "arn:aws:secretsmanager:<AWS_REGION>:<AWS_ACCOUNT_ID>:secret:jutjut/PIN_PAYMENTS_WEBHOOK_SECRET" }
+      ],
+      "logConfiguration": {
+        "logDriver": "awslogs",
+        "options": {
+          "awslogs-group":         "/ecs/jutjut",
+          "awslogs-region":        "<AWS_REGION>",
+          "awslogs-stream-prefix": "ecs"
+        }
+      },
+      "healthCheck": {
+        "command":     ["CMD-SHELL", "wget -qO- http://localhost:3000/api/trpc/system.health || exit 1"],
+        "interval":    30,
+        "timeout":     5,
+        "retries":     3,
+        "startPeriod": 15
+      }
+    }
+  ]
+}
