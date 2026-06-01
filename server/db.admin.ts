@@ -357,11 +357,23 @@ export async function adminGetStudentById(id: number) {
 
 export async function adminUpdateUser(
   id: number,
-  data: Partial<{ name: string; email: string; yearLevel: string; bio: string; profilePictureUrl: string }>
+  data: Partial<{ name: string; email: string; yearLevel: string; bio: string; profilePictureUrl: string; status: "active" | "suspended"; suspendedAt: Date | null; suspendedReason: string | null }>
 ) {
   const db = await getDb();
   if (!db) throw new Error("Database unavailable");
-  await db.update(users).set(data).where(eq(users.id, id));
+  await db.update(users).set(data as any).where(eq(users.id, id));
+}
+
+export async function adminSuspendUser(id: number, reason: string) {
+  const db = await getDb();
+  if (!db) throw new Error("Database unavailable");
+  await db.update(users).set({ status: "suspended", suspendedAt: new Date(), suspendedReason: reason } as any).where(eq(users.id, id));
+}
+
+export async function adminReinstateUser(id: number) {
+  const db = await getDb();
+  if (!db) throw new Error("Database unavailable");
+  await db.update(users).set({ status: "active", suspendedAt: null, suspendedReason: null } as any).where(eq(users.id, id));
 }
 
 // ─── Drops (approval queue) ───────────────────────────────────────────────────

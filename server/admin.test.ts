@@ -103,6 +103,8 @@ vi.mock("./db.admin", () => ({
   adminSearchStudents: vi.fn().mockResolvedValue([]),
   adminGetStudentById: vi.fn().mockResolvedValue(null),
   adminUpdateUser: vi.fn().mockResolvedValue(undefined),
+  adminSuspendUser: vi.fn().mockResolvedValue(undefined),
+  adminReinstateUser: vi.fn().mockResolvedValue(undefined),
   adminListDrops: vi.fn().mockResolvedValue([]),
   adminUpdateDrop: vi.fn().mockResolvedValue(undefined),
   adminDeleteDrop: vi.fn().mockResolvedValue(undefined),
@@ -170,6 +172,8 @@ import {
   demoteFromAdmin,
   globalUserSearch,
   getAdminLogs,
+  adminSuspendUser,
+  adminReinstateUser,
 } from "./db.admin";
 
 // ─── 1. Overview ──────────────────────────────────────────────────────────────
@@ -424,8 +428,39 @@ describe("admin.students.get", () => {
   });
 });
 
-// ─── 6. The Drop queue ────────────────────────────────────────────────────────
+describe("admin.students.suspend", () => {
+  it("suspends a user and writes an audit log", async () => {
+    const caller = appRouter.createCaller(createAdminContext());
+    const result = await caller.admin.students.suspend({ id: 42, reason: "Violated community guidelines" });
+    expect(result.ok).toBe(true);
+    expect(adminSuspendUser).toHaveBeenCalledWith(42, "Violated community guidelines");
+    expect(writeAdminLog).toHaveBeenCalledWith(expect.objectContaining({ action: "suspend_user" }));
+  });
+  it("rejects empty reason", async () => {
+    const caller = appRouter.createCaller(createAdminContext());
+    await expect(caller.admin.students.suspend({ id: 42, reason: "" })).rejects.toMatchObject({ code: "BAD_REQUEST" });
+  });
+  it("blocks non-admin", async () => {
+    const caller = appRouter.createCaller(createUserContext());
+    await expect(caller.admin.students.suspend({ id: 42, reason: "test" })).rejects.toMatchObject({ code: "FORBIDDEN" });
+  });
+});
 
+describe("admin.students.reinstate", () => {
+  it("reinstates a user and writes an audit log", async () => {
+    const caller = appRouter.createCaller(createAdminContext());
+    const result = await caller.admin.students.reinstate({ id: 42 });
+    expect(result.ok).toBe(true);
+    expect(adminReinstateUser).toHaveBeenCalledWith(42);
+    expect(writeAdminLog).toHaveBeenCalledWith(expect.objectContaining({ action: "reinstate_user" }));
+  });
+  it("blocks non-admin", async () => {
+    const caller = appRouter.createCaller(createUserContext());
+    await expect(caller.admin.students.reinstate({ id: 42 })).rejects.toMatchObject({ code: "FORBIDDEN" });
+  });
+});
+
+// ─── 6. The Drop queue ────────────────────────────────────────────────────────
 describe("admin.drops.list", () => {
   it("returns drops for admin", async () => {
     vi.mocked(adminListDrops).mockResolvedValueOnce([

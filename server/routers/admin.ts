@@ -42,6 +42,8 @@ import {
   adminSearchStudents,
   adminGetStudentById,
   adminUpdateUser,
+  adminSuspendUser,
+  adminReinstateUser,
   adminListDrops,
   adminUpdateDrop,
   adminDeleteDrop,
@@ -433,6 +435,25 @@ export const adminRouter = router({
         const { id, ...data } = input;
         await adminUpdateUser(id, data);
         await log(ctx.user.id, "update_student", "user", id, data as Record<string, unknown>);
+        return { ok: true };
+      }),
+
+    suspend: adminProcedure
+      .input(z.object({
+        id: z.number().int(),
+        reason: z.string().min(1, "Reason is required").max(500),
+      }))
+      .mutation(async ({ ctx, input }) => {
+        await adminSuspendUser(input.id, input.reason);
+        await log(ctx.user.id, "suspend_user", "user", input.id, { reason: input.reason });
+        return { ok: true };
+      }),
+
+    reinstate: adminProcedure
+      .input(z.object({ id: z.number().int() }))
+      .mutation(async ({ ctx, input }) => {
+        await adminReinstateUser(input.id);
+        await log(ctx.user.id, "reinstate_user", "user", input.id);
         return { ok: true };
       }),
   }),

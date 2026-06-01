@@ -965,48 +965,381 @@ function AdminsSection({ currentUserId }: { currentUserId: number }) {
 function SearchSection() {
   const [query, setQuery] = useState("");
   const [debouncedQuery, setDebouncedQuery] = useState("");
+  const [selectedUser, setSelectedUser] = useState<any>(null);
+  const [suspendOpen, setSuspendOpen] = useState(false);
+  const [suspendReason, setSuspendReason] = useState("");
+  const [detailOpen, setDetailOpen] = useState(false);
 
   React.useEffect(() => {
     const t = setTimeout(() => setDebouncedQuery(query), 400);
     return () => clearTimeout(t);
   }, [query]);
 
-  const { data } = trpc.admin.search.useQuery(
+  const utils = trpc.useUtils();
+
+  const { data, isLoading } = trpc.admin.search.useQuery(
     { query: debouncedQuery },
     { enabled: debouncedQuery.length >= 2 }
   );
 
+  const detailQuery = trpc.admin.students.get.useQuery(
+    { id: selectedUser?.id ?? 0 },
+    { enabled: detailOpen && !!selectedUser }
+  );
+
+  const suspendMutation = trpc.admin.students.suspend.useMutation({
+    onSuccess: () => {
+      toast.success(`${selectedUser?.name ?? "User"} suspended.`);
+      setSuspendOpen(false);
+      setSuspendReason("");
+      utils.admin.search.invalidate();
+    },
+    onError: (e) => toast.error(e.message),
+  });
+
+  const reinstateMutation = trpc.admin.students.reinstate.useMutation({
+    onSuccess: () => {
+      toast.success(`${selectedUser?.name ?? "User"} reinstated.`);
+      utils.admin.search.invalidate();
+    },
+    onError: (e) => toast.error(e.message),
+  });
+
+  const promoteMutation = trpc.admin.admins.promote.useMutation({
+    onSuccess: () => {
+      toast.success(`${selectedUser?.name ?? "User"} promoted to admin.`);
+      utils.admin.search.invalidate();
+    },
+    onError: (e) => toast.error(e.message),
+  });
+
+  const demoteMutation = trpc.admin.admins.demote.useMutation({
+    onSuccess: () => {
+      toast.success(`${selectedUser?.name ?? "User"} demoted to user.`);
+      utils.admin.search.invalidate();
+    },
+    onError: (e) => toast.error(e.message),
+  });
+
+  function openSuspend(u: any) {
+    setSelectedUser(u);
+    setSuspendReason("");
+    setSuspendOpen(true);
+  }
+
+  function openDetail(u: any) {
+    setSelectedUser(u);
+    setDetailOpen(true);
+  }
+
+  const statusBadge = (u: any) => {
+    const s = (u as any).status ?? "active";
+    return (
+      <Badge variant={s === "suspended" ? "destructive" : "secondary"}
+        className="text-[10px] px-1.5 py-0">
+        {s}
+      </Badge>
+    );
+  };
+
   return (
     <div className="space-y-4">
       <h2 className="text-2xl font-bold">Global User Search</h2>
-      <Input placeholder="Search by name or email…" value={query} onChange={e => setQuery(e.target.value)} className="max-w-md" autoFocus />
+      <p className="text-sm text-muted-foreground">Search by name or email. Quick actions are available inline for each result.</p>
+      <Input
+        placeholder="Search by name or email…"
+        value={query}
+        onChange={e => setQuery(e.target.value)}
+        className="max-w-md"
+        autoFocus
+      />
+
+      {isLoading && debouncedQuery.length >= 2 && (
+        <p className="text-sm text-muted-foreground animate-pulse">Searching…</p>
+      )}
+
       {data && (
-        <div className="overflow-x-auto">
+        <div className="overflow-x-auto rounded-md border">
           <Table>
             <TableHeader>
-              <TableRow>
-                <TableHead>Name</TableHead>
-                <TableHead>Email</TableHead>
+              <TableRow className="bg-muted/50">
+                <TableHead>User</TableHead>
                 <TableHead>Role</TableHead>
+                <TableHead>Status</TableHead>
                 <TableHead>Joined</TableHead>
+                <TableHead className="text-right">Quick Actions</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
               {data.map((u: any) => (
-                <TableRow key={u.id}>
-                  <TableCell className="font-medium">{u.name}</TableCell>
-                  <TableCell className="text-xs text-muted-foreground">{u.email}</TableCell>
-                  <TableCell><Badge variant={u.role === "admin" ? "default" : "secondary"}>{u.role}</Badge></TableCell>
-                  <TableCell className="text-xs">{fmt(u.createdAt)}</TableCell>
+                <TableRow key={u.id} className="group hover:bg-muted/30 transition-colors">
+                  {/* User identity */}
+                  <TableCell>
+                    <div className="flex flex-col">
+                      <span className="font-semibold text-sm">{u.name ?? "—"}</span>
+                      <span className="text-xs text-muted-foreground">{u.email}</span>
+                      <span className="text-[10px] text-muted-foreground/60">ID #{u.id}</span>
+                    </div>
+                  </TableCell>
+
+                  {/* Role badge */}
+                  <TableCell>
+                    <Badge variant={u.role === "admin" ? "default" : "outline"} className="text-xs">
+                      {u.role === "admin" ? "🔑 Admin" : "👤 User"}
+                    </Badge>
+                  </TableCell>
+
+                  {/* Status badge */}
+                  <TableCell>{statusBadge(u)}</TableCell>
+
+                  {/* Joined date */}
+                  <TableCell className="text-xs text-muted-foreground whitespace-nowrap">
+                    {fmt(u.createdAt)}
+                  </TableCell>
+
+                  {/* Quick action buttons */}
+                  <TableCell className="text-right">
+                    <div className="flex items-center justify-end gap-1.5 flex-wrap">
+                      {/* View Details */}
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        className="h-7 text-xs px-2 gap-1"
+                        onClick={() => openDetail(u)}
+                      >
+                        🔍 View Details
+                      </Button>
+
+                      {/* Suspend / Reinstate */}
+                      {(u as any).status === "suspended" ? (
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          className="h-7 text-xs px-2 gap-1 border-emerald-500 text-emerald-700 hover:bg-emerald-50"
+                          disabled={reinstateMutation.isPending}
+                          onClick={() => {
+                            setSelectedUser(u);
+                            reinstateMutation.mutate({ id: u.id });
+                          }}
+                        >
+                          ✅ Reinstate
+                        </Button>
+                      ) : (
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          className="h-7 text-xs px-2 gap-1 border-red-400 text-red-600 hover:bg-red-50"
+                          onClick={() => openSuspend(u)}
+                        >
+                          🚫 Suspend
+                        </Button>
+                      )}
+
+                      {/* Promote / Demote admin */}
+                      {u.role === "user" ? (
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          className="h-7 text-xs px-2 gap-1 border-violet-400 text-violet-700 hover:bg-violet-50"
+                          disabled={promoteMutation.isPending}
+                          onClick={() => {
+                            setSelectedUser(u);
+                            if (u.email) promoteMutation.mutate({ email: u.email });
+                          }}
+                        >
+                          🔑 Make Admin
+                        </Button>
+                      ) : (
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          className="h-7 text-xs px-2 gap-1 border-amber-400 text-amber-700 hover:bg-amber-50"
+                          disabled={demoteMutation.isPending}
+                          onClick={() => {
+                            setSelectedUser(u);
+                            demoteMutation.mutate({ userId: u.id });
+                          }}
+                        >
+                          ↓ Remove Admin
+                        </Button>
+                      )}
+                    </div>
+                  </TableCell>
                 </TableRow>
               ))}
               {data.length === 0 && (
-                <TableRow><TableCell colSpan={4} className="text-center text-muted-foreground py-6">No users found.</TableCell></TableRow>
+                <TableRow>
+                  <TableCell colSpan={5} className="text-center text-muted-foreground py-8">
+                    No users found for &ldquo;{debouncedQuery}&rdquo;.
+                  </TableCell>
+                </TableRow>
               )}
             </TableBody>
           </Table>
         </div>
       )}
+
+      {/* ── Suspend dialog ──────────────────────────────────────────────── */}
+      <Dialog open={suspendOpen} onOpenChange={setSuspendOpen}>
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle>Suspend {selectedUser?.name ?? "User"}</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-3 py-2">
+            <p className="text-sm text-muted-foreground">
+              The user will be marked as suspended. Provide a reason for the audit log.
+            </p>
+            <div className="space-y-1">
+              <Label>Reason <span className="text-red-500">*</span></Label>
+              <Input
+                placeholder="e.g. Violation of community guidelines"
+                value={suspendReason}
+                onChange={e => setSuspendReason(e.target.value)}
+                maxLength={500}
+              />
+            </div>
+          </div>
+          <div className="flex justify-end gap-2 pt-2">
+            <Button variant="outline" onClick={() => setSuspendOpen(false)}>Cancel</Button>
+            <Button
+              variant="destructive"
+              disabled={!suspendReason.trim() || suspendMutation.isPending}
+              onClick={() => suspendMutation.mutate({ id: selectedUser.id, reason: suspendReason.trim() })}
+            >
+              {suspendMutation.isPending ? "Suspending…" : "Confirm Suspend"}
+            </Button>
+          </div>
+        </DialogContent>
+      </Dialog>
+
+      {/* ── View Details dialog ─────────────────────────────────────────── */}
+      <Dialog open={detailOpen} onOpenChange={setDetailOpen}>
+        <DialogContent className="max-w-2xl max-h-[80vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle>User Details — {selectedUser?.name ?? ""}</DialogTitle>
+          </DialogHeader>
+          {detailQuery.isLoading && <p className="text-muted-foreground py-4">Loading…</p>}
+          {detailQuery.data && (
+            <div className="space-y-4 py-2">
+              {/* Identity card */}
+              <Card>
+                <CardHeader className="pb-2"><CardTitle className="text-sm">Identity</CardTitle></CardHeader>
+                <CardContent className="grid grid-cols-2 gap-3 text-sm">
+                  <div><span className="text-muted-foreground">ID:</span> #{detailQuery.data.user.id}</div>
+                  <div><span className="text-muted-foreground">Name:</span> {detailQuery.data.user.name ?? "—"}</div>
+                  <div><span className="text-muted-foreground">Email:</span> {detailQuery.data.user.email ?? "—"}</div>
+                  <div><span className="text-muted-foreground">Role:</span> <Badge variant={detailQuery.data.user.role === "admin" ? "default" : "secondary"}>{detailQuery.data.user.role}</Badge></div>
+                  <div><span className="text-muted-foreground">Status:</span> {statusBadge(detailQuery.data.user)}</div>
+                  <div><span className="text-muted-foreground">Joined:</span> {fmt(detailQuery.data.user.createdAt)}</div>
+                  <div><span className="text-muted-foreground">Year Level:</span> {(detailQuery.data.user as any).yearLevel ?? "—"}</div>
+                  {(detailQuery.data.user as any).suspendedReason && (
+                    <div className="col-span-2">
+                      <span className="text-muted-foreground">Suspension reason:</span>{" "}
+                      <span className="text-red-600 text-xs">{(detailQuery.data.user as any).suspendedReason}</span>
+                    </div>
+                  )}
+                </CardContent>
+              </Card>
+
+              {/* Applications */}
+              <Card>
+                <CardHeader className="pb-2"><CardTitle className="text-sm">Job Applications ({detailQuery.data.applications.length})</CardTitle></CardHeader>
+                <CardContent>
+                  {detailQuery.data.applications.length === 0
+                    ? <p className="text-xs text-muted-foreground">No applications.</p>
+                    : (
+                      <div className="space-y-1">
+                        {detailQuery.data.applications.map((a: any) => (
+                          <div key={a.id} className="flex justify-between text-xs border-b pb-1">
+                            <span>{a.jobTitle ?? `Job #${a.jobId}`}</span>
+                            <Badge variant="outline" className="text-[10px]">{a.status}</Badge>
+                          </div>
+                        ))}
+                      </div>
+                    )}
+                </CardContent>
+              </Card>
+
+              {/* Placements */}
+              <Card>
+                <CardHeader className="pb-2"><CardTitle className="text-sm">Placements ({detailQuery.data.placements.length})</CardTitle></CardHeader>
+                <CardContent>
+                  {detailQuery.data.placements.length === 0
+                    ? <p className="text-xs text-muted-foreground">No placements.</p>
+                    : (
+                      <div className="space-y-1">
+                        {detailQuery.data.placements.map((p: any) => (
+                          <div key={p.id} className="flex justify-between text-xs border-b pb-1">
+                            <span>Employer #{p.employerId}</span>
+                            <Badge variant="outline" className="text-[10px]">{p.status}</Badge>
+                          </div>
+                        ))}
+                      </div>
+                    )}
+                </CardContent>
+              </Card>
+
+              {/* Inline quick actions inside detail dialog */}
+              <div className="flex gap-2 pt-2 border-t flex-wrap">
+                {(detailQuery.data.user as any).status === "suspended" ? (
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    className="border-emerald-500 text-emerald-700 hover:bg-emerald-50"
+                    disabled={reinstateMutation.isPending}
+                    onClick={() => {
+                      setSelectedUser(detailQuery.data!.user);
+                      reinstateMutation.mutate({ id: detailQuery.data!.user.id });
+                      setDetailOpen(false);
+                    }}
+                  >
+                    ✅ Reinstate User
+                  </Button>
+                ) : (
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    className="border-red-400 text-red-600 hover:bg-red-50"
+                    onClick={() => {
+                      setDetailOpen(false);
+                      openSuspend(detailQuery.data!.user);
+                    }}
+                  >
+                    🚫 Suspend User
+                  </Button>
+                )}
+                {detailQuery.data.user.role === "user" ? (
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    className="border-violet-400 text-violet-700 hover:bg-violet-50"
+                    disabled={promoteMutation.isPending}
+                    onClick={() => {
+                      if (detailQuery.data!.user.email) promoteMutation.mutate({ email: detailQuery.data!.user.email! });
+                      setDetailOpen(false);
+                    }}
+                  >
+                    🔑 Make Admin
+                  </Button>
+                ) : (
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    className="border-amber-400 text-amber-700 hover:bg-amber-50"
+                    disabled={demoteMutation.isPending}
+                    onClick={() => {
+                      demoteMutation.mutate({ userId: detailQuery.data!.user.id });
+                      setDetailOpen(false);
+                    }}
+                  >
+                    ↓ Remove Admin
+                  </Button>
+                )}
+              </div>
+            </div>
+          )}
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
