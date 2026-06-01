@@ -121,3 +121,13 @@
 - [x] Schools Portal button added to Admin Pages quick links in Dashboard (teal accent styling)
 - [x] Route registered in App.tsx (school-portal)
 - [x] 34 Vitest tests for school router (auth, manage, students, employers, placements) — 217 total passing
+
+## Admin Dashboard (10 Sections)
+- [x] Extend DB schema: adminLogs, schoolRequests, schoolGroups, schoolGroupMembers, paymentGatewaySettings tables; employers.status/suspendedAt/suspendedReason; jobs.reported/reportReason columns
+- [x] Encryption utility (AES-256-GCM) for gateway key storage at rest
+- [x] DB helpers in server/db.admin.ts — all 10 admin sections (overview metrics, school requests/management/groups, employer moderation, student support, drops, payments, admin management, global search, audit logs)
+- [x] Admin tRPC router: overview, schools (requests/list/create/update/groups), promoCodes, drops, employers (list/suspend/reinstate/adjustCredits/flaggedJobs/resolveJob/paymentTokens), students (search/get/update), payments (transactions/refund/gatewaySettings/setGatewaySetting), admins (list/promote/demote), search, logs
+- [x] AdminDashboard.tsx: collapsible sidebar shell with 10 section views (Overview, School Management, Promo Codes, The Drop Queue, Employer Moderation, Student Support, Payments, Admin Management, Global Search, System Logs)
+- [x] Admin Dashboard button added to Dashboard quick links (violet accent)
+- [x] Route registered in App.tsx (admin-dashboard)
+- [x] 45 Vitest tests for all admin procedures — 262 total passing across 9 test files

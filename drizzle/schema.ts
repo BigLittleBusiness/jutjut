@@ -158,6 +158,8 @@ export const jobs = mysqlTable("jobs", {
   autoRepostNextDate: timestamp("autoRepostNextDate"),
   paymentToken: varchar("paymentToken", { length: 255 }),
   creditTransactionId: int("creditTransactionId"),
+  reported: boolean("reported").default(false).notNull(),
+  reportReason: text("reportReason"),
   createdAt: timestamp("createdAt").defaultNow().notNull(),
   updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
 });
@@ -320,6 +322,9 @@ export const employers = mysqlTable("employers", {
   acceptsWorkExperience: boolean("acceptsWorkExperience").default(false).notNull(),
   paymentToken: varchar("paymentToken", { length: 255 }), // PinPayments reusable card token
   isGstRegistered: boolean("isGstRegistered").default(false).notNull(),
+  status: mysqlEnum("status", ["active", "suspended"]).default("active").notNull(),
+  suspendedAt: timestamp("suspendedAt"),
+  suspendedReason: text("suspendedReason"),
   createdAt: timestamp("createdAt").defaultNow().notNull(),
   updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
 });
@@ -503,3 +508,105 @@ export const placements = mysqlTable("placements", {
 
 export type Placement = typeof placements.$inferSelect;
 export type InsertPlacement = typeof placements.$inferInsert;
+
+// ─────────────────────────────────────────────
+// ADMIN AUDIT LOGS
+// ─────────────────────────────────────────────
+
+export const adminLogs = mysqlTable("adminLogs", {
+  id: int("id").autoincrement().primaryKey(),
+  adminId: int("adminId").notNull(), // FK → users.id
+  action: varchar("action", { length: 128 }).notNull(), // e.g. "approve_school", "adjust_credits"
+  targetType: varchar("targetType", { length: 64 }), // e.g. "school", "employer", "user"
+  targetId: int("targetId"), // the ID of the affected record
+  details: text("details"), // JSON string with before/after or extra context
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+});
+
+export type AdminLog = typeof adminLogs.$inferSelect;
+export type InsertAdminLog = typeof adminLogs.$inferInsert;
+
+// ─────────────────────────────────────────────
+// SCHOOL REQUESTS (self-service applications)
+// ─────────────────────────────────────────────
+
+export const schoolRequests = mysqlTable("schoolRequests", {
+  id: int("id").autoincrement().primaryKey(),
+  schoolName: varchar("schoolName", { length: 255 }).notNull(),
+  domain: varchar("domain", { length: 255 }).notNull(),
+  contactName: varchar("contactName", { length: 255 }).notNull(),
+  contactEmail: varchar("contactEmail", { length: 320 }).notNull(),
+  phone: varchar("phone", { length: 32 }),
+  status: mysqlEnum("status", ["pending", "approved", "rejected"]).default("pending").notNull(),
+  adminNote: text("adminNote"),
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+  updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
+});
+
+export type SchoolRequest = typeof schoolRequests.$inferSelect;
+export type InsertSchoolRequest = typeof schoolRequests.$inferInsert;
+
+// ─────────────────────────────────────────────
+// SCHOOL GROUPS (admin-created groups per school)
+// ─────────────────────────────────────────────
+
+export const schoolGroups = mysqlTable("schoolGroups", {
+  id: int("id").autoincrement().primaryKey(),
+  schoolId: int("schoolId").notNull(), // FK → schools.id
+  groupName: varchar("groupName", { length: 255 }).notNull(),
+  description: text("description"),
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+  updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
+});
+
+export type SchoolGroup = typeof schoolGroups.$inferSelect;
+export type InsertSchoolGroup = typeof schoolGroups.$inferInsert;
+
+export const studentGroupMemberships = mysqlTable("studentGroupMemberships", {
+  id: int("id").autoincrement().primaryKey(),
+  studentId: int("studentId").notNull(), // FK → users.id
+  groupId: int("groupId").notNull(),     // FK → schoolGroups.id
+  joinedAt: timestamp("joinedAt").defaultNow().notNull(),
+});
+
+export type StudentGroupMembership = typeof studentGroupMemberships.$inferSelect;
+export type InsertStudentGroupMembership = typeof studentGroupMemberships.$inferInsert;
+
+// ─────────────────────────────────────────────
+// PAYMENT GATEWAY SETTINGS (encrypted API keys)
+// ─────────────────────────────────────────────
+
+export const paymentGatewaySettings = mysqlTable("paymentGatewaySettings", {
+  id: int("id").autoincrement().primaryKey(),
+  keyName: varchar("keyName", { length: 128 }).notNull().unique(), // e.g. "pin_secret_key"
+  encryptedValue: text("encryptedValue").notNull(),
+  updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
+  updatedBy: int("updatedBy").notNull(), // FK → users.id (admin)
+});
+
+export type PaymentGatewaySetting = typeof paymentGatewaySettings.$inferSelect;
+export type InsertPaymentGatewaySetting = typeof paymentGatewaySettings.$inferInsert;
+
+// ─────────────────────────────────────────────
+// TRANSACTIONS (PinPayments charge records)
+// ─────────────────────────────────────────────
+
+export const transactions = mysqlTable("transactions", {
+  id: int("id").autoincrement().primaryKey(),
+  employerId: int("employerId").notNull(), // FK → employers.id
+  amountCents: int("amountCents").notNull(), // amount in cents (AUD)
+  pinpaymentsChargeId: varchar("pinpaymentsChargeId", { length: 255 }),
+  status: mysqlEnum("status", ["pending", "succeeded", "refunded"]).default("pending").notNull(),
+  description: text("description"),
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+  updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
+});
+
+export type Transaction = typeof transactions.$inferSelect;
+export type InsertTransaction = typeof transactions.$inferInsert;
+
+// ─────────────────────────────────────────────
+// EMPLOYER STATUS (suspension tracking)
+// ─────────────────────────────────────────────
+// Note: status is tracked via employers.suspendedAt column added via SQL migration
+// The employers table is extended via ALTER TABLE in the migration below.

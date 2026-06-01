@@ -321,6 +321,13 @@ export const Dashboard: React.FC<DashboardProps> = ({ onNavigate }) => {
                     <i className="fa-solid fa-school text-teal-600 text-[10px]"></i>
                     <span className="text-teal-700">Schools Portal</span>
                   </button>
+                  <button
+                    onClick={() => onNavigate("admin-dashboard")}
+                    className="w-full text-left p-2 rounded border-2 border-violet-500 bg-violet-50 hover:bg-violet-100 font-bold flex items-center gap-2 transition-all"
+                  >
+                    <i className="fa-solid fa-shield-halved text-violet-600 text-[10px]"></i>
+                    <span className="text-violet-700">Admin Dashboard</span>
+                  </button>
                 </div>
               </div>
             </div>
