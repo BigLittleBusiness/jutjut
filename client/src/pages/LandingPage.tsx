@@ -612,9 +612,11 @@ export default function LandingPage({ onSignIn }: LandingPageProps) {
         <div style={{ maxWidth: 1200, margin: "0 auto" }}>
           <Reveal>
             <div style={{ textAlign: "center", marginBottom: "3rem" }}>
-              <span style={{ background: "#eff6ff", border: "2px solid #3b82f6", borderRadius: 6, padding: "4px 14px", fontSize: 12, fontWeight: 800, color: "#1d4ed8", textTransform: "uppercase", letterSpacing: 1 }}>Pricing</span>
-              <h2 style={{ fontSize: "clamp(1.8rem, 4vw, 2.8rem)", fontWeight: 900, marginTop: "1rem", marginBottom: "0.75rem", color: "#1f2937" }}>Simple, transparent pricing</h2>
-              <p style={{ fontSize: "1.05rem", color: "#6b7280", maxWidth: 480, margin: "0 auto" }}>Free for students. Employers pay only for what they need. No lock-in contracts.</p>
+              <span style={{ background: "#eff6ff", border: "2px solid #3b82f6", borderRadius: 6, padding: "4px 14px", fontSize: 12, fontWeight: 800, color: "#1d4ed8", textTransform: "uppercase", letterSpacing: 1 }}>Employer &amp; Recruiter Pricing</span>
+              <h2 style={{ fontSize: "clamp(1.8rem, 4vw, 2.8rem)", fontWeight: 900, marginTop: "1rem", marginBottom: "0.75rem", color: "#1f2937" }}>Pricing for employers &amp; recruiters</h2>
+              <p style={{ fontSize: "1.05rem", color: "#6b7280", maxWidth: 520, margin: "0 auto" }}>
+                <strong style={{ color: "#059669" }}>Students always use JutJut for free.</strong> The plans below are for businesses and recruiters hiring on the platform. No lock-in contracts.
+              </p>
             </div>
           </Reveal>
           <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(260px, 1fr))", gap: "1.5rem", alignItems: "start" }}>
