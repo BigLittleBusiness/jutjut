@@ -112,7 +112,8 @@ async function logEmail(
   templateId: string,
   status: "sent" | "failed",
   sesMessageId?: string,
-  errorMessage?: string
+  errorMessage?: string,
+  templateData?: Record<string, string>
 ): Promise<void> {
   try {
     const db = await getDb();
@@ -121,6 +122,7 @@ async function logEmail(
       toEmail: to,
       subject,
       templateId,
+      templateData: templateData ? JSON.stringify(templateData) : null,
       status,
       sesMessageId: sesMessageId ?? null,
       errorMessage: errorMessage ?? null,
@@ -196,7 +198,7 @@ export async function sendEmail(opts: SendEmailOptions): Promise<SendEmailResult
     console.log(
       `[emailService] DEV MODE — would send "${subject}" to ${to} (template: ${templateId})`
     );
-    await logEmail(to, subject, templateId, "sent", "DEV_MODE");
+    await logEmail(to, subject, templateId, "sent", "DEV_MODE", undefined, data);
     return { success: true, messageId: "DEV_MODE" };
   }
 
@@ -222,11 +224,11 @@ export async function sendEmail(opts: SendEmailOptions): Promise<SendEmailResult
   try {
     const result = await withRetry(() => client.send(new SendEmailCommand(params)));
     const messageId = result.MessageId ?? "unknown";
-    await logEmail(to, subject, templateId, "sent", messageId);
+    await logEmail(to, subject, templateId, "sent", messageId, undefined, data);
     return { success: true, messageId };
   } catch (err) {
     const msg = err instanceof Error ? err.message : String(err);
-    await logEmail(to, subject, templateId, "failed", undefined, msg);
+    await logEmail(to, subject, templateId, "failed", undefined, msg, data);
     return { success: false, error: msg };
   }
 }

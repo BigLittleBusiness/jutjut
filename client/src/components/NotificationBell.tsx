@@ -1,6 +1,8 @@
 /**
  * NotificationBell — in-app notification bell for the Navbar.
- * Polls unread count every 60 s. Clicking opens a dropdown of recent notifications.
+ * Polls unread count every 30 s (including when the tab is in the background) so
+ * the badge updates in real-time without a page refresh.
+ * Clicking opens a dropdown of recent notifications.
  * Each notification can be marked read individually or all at once.
  */
 
@@ -38,9 +40,11 @@ export default function NotificationBell({ onNavigate }: NotificationBellProps) 
   const dropdownRef = useRef<HTMLDivElement>(null);
   const utils = trpc.useUtils();
 
-  // Unread count — refetches every 60 s
+  // Unread count — polls every 30 s; runs in the background so the badge stays
+  // current even when the user is on a different browser tab.
   const { data: countData } = trpc.notifications.unreadCount.useQuery(undefined, {
-    refetchInterval: 60_000,
+    refetchInterval: 30_000,
+    refetchIntervalInBackground: true,
   });
   const unread = (typeof countData === "number" ? countData : 0);
 

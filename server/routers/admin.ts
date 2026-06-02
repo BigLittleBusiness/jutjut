@@ -63,6 +63,8 @@ import {
   getEmailLogs,
   getEmailLogStats,
   getDistinctEmailTemplateIds,
+  getEmailLogById,
+  updateEmailLogStatus,
   createNotification,
   getNotificationsForUser,
   getUnreadNotificationCount,
@@ -649,6 +651,43 @@ export const adminRouter = router({
       })),
     stats: adminProcedure.query(async () => getEmailLogStats()),
     templateIds: adminProcedure.query(async () => getDistinctEmailTemplateIds()),
+    resend: adminProcedure
+      .input(z.object({ id: z.number().int().positive() }))
+      .mutation(async ({ input, ctx }) => {
+        const logRow = await getEmailLogById(input.id);
+        if (!logRow) throw new TRPCError({ code: "NOT_FOUND", message: "Email log not found." });
+        // Only allow retry for retryable statuses
+        const retryable: string[] = ["failed", "bounced"];
+        if (!retryable.includes(logRow.status)) {
+          throw new TRPCError({
+            code: "BAD_REQUEST",
+            message: `Cannot resend an email with status "${logRow.status}". Only failed or bounced emails can be retried.`,
+          });
+        }
+        // Restore original template data if available, otherwise use empty object
+        let storedData: Record<string, string> = {};
+        if (logRow.templateData) {
+          try {
+            storedData = JSON.parse(logRow.templateData) as Record<string, string>;
+          } catch {
+            // Malformed JSON — fall back to empty object
+          }
+        }
+        const { sendEmail } = await import("../emailService");
+        const result = await sendEmail({
+          to: logRow.toEmail,
+          templateId: logRow.templateId,
+          data: storedData,
+        });
+        if (result.success) {
+          await updateEmailLogStatus(input.id, "sent", result.messageId);
+          await log(ctx.user.id, "email_resend", "emailLog", input.id);
+          return { success: true, messageId: result.messageId };
+        } else {
+          await updateEmailLogStatus(input.id, "failed", undefined, result.error);
+          throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: result.error });
+        }
+      }),
   }),
 
   // ── 12. Email template preview ─────────────────────────────────────────
@@ -674,6 +713,26 @@ export const adminRouter = router({
       const { TEMPLATES } = await import("../renderEmail");
       return Object.keys(TEMPLATES).sort();
     }),
+    sendTest: adminProcedure
+      .input(z.object({
+        templateId: z.string().min(1).max(100),
+        sampleData: z.record(z.string(), z.string()).optional(),
+      }))
+      .mutation(async ({ input, ctx }) => {
+        const adminEmail = ctx.user.email;
+        if (!adminEmail) throw new TRPCError({ code: "BAD_REQUEST", message: "Admin account has no email address." });
+        const { sendEmail } = await import("../emailService");
+        const result = await sendEmail({
+          to: adminEmail,
+          templateId: input.templateId,
+          data: (input.sampleData ?? {}) as Record<string, string>,
+        });
+        if (result.success) {
+          return { success: true, sentTo: adminEmail };
+        } else {
+          throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: result.error });
+        }
+      }),
   }),
 });
 

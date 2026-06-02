@@ -123,6 +123,8 @@ vi.mock("./db.admin", () => ({
   getEmailLogs: vi.fn().mockResolvedValue({ rows: [], total: 0 }),
   getEmailLogStats: vi.fn().mockResolvedValue({ total: 0, sent: 0, bounced: 0, complaint: 0, delivered: 0, failed: 0 }),
   getDistinctEmailTemplateIds: vi.fn().mockResolvedValue([]),
+  getEmailLogById: vi.fn().mockResolvedValue(null),
+  updateEmailLogStatus: vi.fn().mockResolvedValue(undefined),
   createNotification: vi.fn().mockResolvedValue(undefined),
   getNotificationsForUser: vi.fn().mockResolvedValue([]),
   getUnreadNotificationCount: vi.fn().mockResolvedValue(0),
@@ -185,6 +187,8 @@ import {
   getEmailLogs,
   getEmailLogStats,
   getDistinctEmailTemplateIds,
+  getEmailLogById,
+  updateEmailLogStatus,
   createNotification,
   getNotificationsForUser,
   getUnreadNotificationCount,
@@ -829,5 +833,100 @@ describe("notifications.markAllRead", () => {
   it("rejects unauthenticated requests with UNAUTHORIZED", async () => {
     const caller = appRouter.createCaller(createPublicContext());
     await expect(caller.notifications.markAllRead()).rejects.toMatchObject({ code: "UNAUTHORIZED" });
+  });
+});
+
+// ─── 14. Email Logs — resend ──────────────────────────────────────────────────
+
+describe("admin.emailLogs.resend", () => {
+  it("resends an existing email log and returns success", async () => {
+    vi.mocked(getEmailLogById).mockResolvedValueOnce({
+      id: 7,
+      toEmail: "user@example.com",
+      templateId: "student_verify_email",
+      subject: "Verify your JutJut email address",
+      status: "failed",
+      sesMessageId: null,
+      errorMessage: "Connection timeout",
+      createdAt: new Date(),
+      updatedAt: new Date(),
+    } as any);
+    vi.mocked(updateEmailLogStatus).mockResolvedValueOnce(undefined);
+    const caller = appRouter.createCaller(createAdminContext());
+    const result = await caller.admin.emailLogs.resend({ id: 7 });
+    expect(result.success).toBe(true);
+    expect(getEmailLogById).toHaveBeenCalledWith(7);
+    // updateEmailLogStatus should be called with "sent" after successful resend
+    expect(updateEmailLogStatus).toHaveBeenCalledWith(7, "sent", expect.anything());
+  });
+
+  it("throws NOT_FOUND when the log row does not exist", async () => {
+    vi.mocked(getEmailLogById).mockResolvedValueOnce(null);
+    const caller = appRouter.createCaller(createAdminContext());
+    await expect(caller.admin.emailLogs.resend({ id: 999 })).rejects.toMatchObject({ code: "NOT_FOUND" });
+  });
+
+  it("throws BAD_REQUEST when the log has a non-retryable status (sent)", async () => {
+    vi.mocked(getEmailLogById).mockResolvedValueOnce({
+      id: 8,
+      toEmail: "user@example.com",
+      templateId: "student_verify_email",
+      subject: "Verify your JutJut email address",
+      templateData: null,
+      status: "sent",
+      sesMessageId: "msg-123",
+      errorMessage: null,
+      createdAt: new Date(),
+      updatedAt: new Date(),
+    } as any);
+    const caller = appRouter.createCaller(createAdminContext());
+    await expect(caller.admin.emailLogs.resend({ id: 8 })).rejects.toMatchObject({ code: "BAD_REQUEST" });
+  });
+
+  it("rejects non-admin with FORBIDDEN", async () => {
+    const caller = appRouter.createCaller(createUserContext());
+    await expect(caller.admin.emailLogs.resend({ id: 1 })).rejects.toMatchObject({ code: "FORBIDDEN" });
+  });
+
+  it("rejects unauthenticated with UNAUTHORIZED", async () => {
+    const caller = appRouter.createCaller(createPublicContext());
+    await expect(caller.admin.emailLogs.resend({ id: 1 })).rejects.toMatchObject({ code: "UNAUTHORIZED" });
+  });
+});
+
+// ─── 15. Email Preview — sendTest ────────────────────────────────────────────
+
+describe("admin.emailPreview.sendTest", () => {
+  it("sends a test email to the admin's own email address and returns sentTo", async () => {
+    const caller = appRouter.createCaller(createAdminContext());
+    const result = await caller.admin.emailPreview.sendTest({
+      templateId: "student_verify_email",
+      sampleData: { first_name: "Admin", verification_url: "https://example.com/verify" },
+    });
+    expect(result.success).toBe(true);
+    // sentTo should be the admin's email from the context
+    expect(result.sentTo).toBe("admin1@jutjut.com.au");
+  });
+
+  it("sends without sampleData (uses empty object as default)", async () => {
+    const caller = appRouter.createCaller(createAdminContext());
+    const result = await caller.admin.emailPreview.sendTest({
+      templateId: "student_verify_email",
+    });
+    expect(result.success).toBe(true);
+  });
+
+  it("rejects non-admin with FORBIDDEN", async () => {
+    const caller = appRouter.createCaller(createUserContext());
+    await expect(
+      caller.admin.emailPreview.sendTest({ templateId: "student_verify_email" })
+    ).rejects.toMatchObject({ code: "FORBIDDEN" });
+  });
+
+  it("rejects unauthenticated with UNAUTHORIZED", async () => {
+    const caller = appRouter.createCaller(createPublicContext());
+    await expect(
+      caller.admin.emailPreview.sendTest({ templateId: "student_verify_email" })
+    ).rejects.toMatchObject({ code: "UNAUTHORIZED" });
   });
 });

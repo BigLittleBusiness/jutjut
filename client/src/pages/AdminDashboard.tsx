@@ -1417,6 +1417,15 @@ function EmailLogsSection() {
     offset: page * PAGE_SIZE,
   });
 
+  const utils = trpc.useUtils();
+  const resend = trpc.admin.emailLogs.resend.useMutation({
+    onSuccess: (res) => {
+      toast.success(`Resent — message ID: ${res.messageId ?? "DEV_MODE"}`);
+      utils.admin.emailLogs.list.invalidate();
+    },
+    onError: (e) => toast.error(`Resend failed: ${e.message}`),
+  });
+
   const STATUS_COLOURS: Record<string, string> = {
     sent: "bg-blue-100 text-blue-700",
     delivered: "bg-green-100 text-green-700",
@@ -1516,6 +1525,7 @@ function EmailLogsSection() {
               <TableHead>Template</TableHead>
               <TableHead>Status</TableHead>
               <TableHead>SES ID</TableHead>
+              <TableHead>Action</TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
@@ -1533,10 +1543,26 @@ function EmailLogsSection() {
                 <TableCell className="font-mono text-xs text-muted-foreground truncate max-w-[120px]">
                   {row.sesMessageId ?? "—"}
                 </TableCell>
+                <TableCell>
+                  {["failed", "bounced"].includes(row.status) ? (
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      className="text-xs h-7 px-2"
+                      disabled={resend.isPending && resend.variables?.id === row.id}
+                      onClick={() => resend.mutate({ id: row.id })}
+                      title={`Resend to ${row.toEmail}`}
+                    >
+                      {resend.isPending && resend.variables?.id === row.id ? "Sending…" : "Resend"}
+                    </Button>
+                  ) : (
+                    <span className="text-xs text-muted-foreground">—</span>
+                  )}
+                </TableCell>
               </TableRow>
             ))}
             {(data?.rows ?? []).length === 0 && !isLoading && (
-              <TableRow><TableCell colSpan={6} className="text-center text-muted-foreground py-8">No email logs found.</TableCell></TableRow>
+              <TableRow><TableCell colSpan={7} className="text-center text-muted-foreground py-8">No email logs found.</TableCell></TableRow>
             )}
           </TableBody>
         </Table>
@@ -1582,6 +1608,11 @@ function EmailPreviewSection() {
     { enabled: !!selectedTemplate }
   );
 
+  const sendTest = trpc.admin.emailPreview.sendTest.useMutation({
+    onSuccess: (res) => toast.success(`Test email sent to ${res.sentTo}!`),
+    onError: (e) => toast.error(`Failed to send test: ${e.message}`),
+  });
+
   return (
     <div className="space-y-5">
       <h2 className="text-2xl font-bold">Email Template Previewer</h2>
@@ -1610,6 +1641,19 @@ function EmailPreviewSection() {
             </SelectContent>
           </Select>
         </div>
+        {selectedTemplate && (
+          <div className="space-y-1">
+            <Label className="text-xs text-muted-foreground opacity-0">Send</Label>
+            <Button
+              variant="default"
+              size="sm"
+              onClick={() => sendTest.mutate({ templateId: selectedTemplate, sampleData })}
+              disabled={sendTest.isPending}
+            >
+              {sendTest.isPending ? "Sending…" : "✉️ Send test email"}
+            </Button>
+          </div>
+        )}
       </div>
 
       {/* Sample data badge list */}

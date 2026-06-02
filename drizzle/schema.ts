@@ -623,6 +623,8 @@ export const emailLogs = mysqlTable("emailLogs", {
   toEmail: varchar("to_email", { length: 320 }).notNull(),
   subject: varchar("subject", { length: 500 }).notNull(),
   templateId: varchar("template_id", { length: 100 }).notNull(),
+  /** JSON-serialised template data payload so resend can reproduce the exact original email. */
+  templateData: text("template_data"),
   status: mysqlEnum("status", ["sent", "bounced", "complaint", "delivered", "failed"]).notNull().default("sent"),
   sesMessageId: varchar("ses_message_id", { length: 256 }),
   errorMessage: text("error_message"),

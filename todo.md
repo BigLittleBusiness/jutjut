@@ -156,3 +156,13 @@
 - [x] Vitest tests for email logs, email preview, and notifications procedures — 310 total passing across 10 test files
 - [x] Date range filters (from/to date pickers + clear button) added to Email Logs admin page
 - [x] Sample data passed through to email preview render procedure so templates render with populated values
+
+## Three Feature Enhancements (June 2026 — Session 2)
+- [x] Resend button on Email Logs admin page: admin.emailLogs.resend tRPC mutation, re-sends via emailService, updates log status, button per row with loading/success/error states
+- [x] Real-time notification bell: refetchInterval reduced to 30 s with refetchIntervalInBackground: true so badge updates without page refresh
+- [x] Send Test Email button on Email Template Preview: admin.emailPreview.sendTest tRPC mutation, sends rendered template to admin's own email address, toast feedback
+- [x] Vitest tests for resend (4 tests) and sendTest (4 tests) — 318 total passing across 10 test files
+- [x] templateData column added to emailLogs schema (ALTER TABLE applied to DB); emailService now persists JSON-serialised template data on every send
+- [x] Resend procedure updated to use stored templateData for exact replay; BAD_REQUEST guard added for non-retryable statuses (sent/delivered/complaint)
+- [x] Resend button in UI now only renders for failed/bounced rows; shows — dash for all other statuses
+- [x] BAD_REQUEST guard covered by new Vitest test — 319 total passing across 10 test files

@@ -643,3 +643,28 @@ export async function markAllNotificationsRead(userId: number) {
     .set({ read: true })
     .where(eq(inAppNotifications.userId, userId));
 }
+
+// ─── Email log helpers ────────────────────────────────────────────────────────
+
+export async function getEmailLogById(id: number) {
+  const db = await getDb();
+  if (!db) return null;
+  const { emailLogs } = await import("../drizzle/schema");
+  const rows = await db.select().from(emailLogs).where(eq(emailLogs.id, id)).limit(1);
+  return rows[0] ?? null;
+}
+
+export async function updateEmailLogStatus(
+  id: number,
+  status: "sent" | "bounced" | "complaint" | "delivered" | "failed",
+  sesMessageId?: string,
+  errorMessage?: string
+) {
+  const db = await getDb();
+  if (!db) return;
+  const { emailLogs } = await import("../drizzle/schema");
+  await db
+    .update(emailLogs)
+    .set({ status, sesMessageId: sesMessageId ?? null, errorMessage: errorMessage ?? null })
+    .where(eq(emailLogs.id, id));
+}
