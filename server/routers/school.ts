@@ -17,6 +17,7 @@ import { z } from "zod";
 import { randomUUID } from "crypto";
 import { adminProcedure, protectedProcedure, router } from "../_core/trpc";
 import { notifyOwner } from "../_core/notification";
+import { sendEmailSilent } from "../emailService";
 import {
   getSchoolByDomain,
   getSchoolById,
@@ -111,6 +112,20 @@ const schoolAdminRouter = router({
       const school = await getSchoolById(input.schoolId);
       if (!school) throw new TRPCError({ code: "NOT_FOUND", message: "School not found." });
       await approveSchool(input.schoolId);
+
+      // Notify school contact that their registration was approved
+      if (school.careersContactEmail) {
+        void sendEmailSilent({
+          to: school.careersContactEmail,
+          templateId: "school_approved",
+          data: {
+            school_name: school.name,
+            contact_name: school.careersContactName ?? "there",
+            portal_url: `${process.env.APP_BASE_URL ?? "https://jutjut.com.au"}/school-portal`,
+          },
+        });
+      }
+
       return { success: true };
     }),
 });
@@ -190,6 +205,22 @@ const schoolPlacementsRouter = router({
         ...input,
         employerToken: token,
       });
+      // Notify school that placement request was submitted
+      void sendEmailSilent({
+        to: ctx.user.email ?? "",
+        templateId: "school_placement_request_confirmation",
+        data: {
+          school_name: ctx.school.name,
+          student_id: String(input.studentId),
+          employer_id: String(input.employerId),
+          start_date: input.startDate,
+          end_date: input.endDate,
+          hours_per_week: String(input.hoursPerWeek),
+          employer_token: token,
+          portal_url: `${process.env.APP_BASE_URL ?? "https://jutjut.com.au"}/school-portal`,
+        },
+      });
+
       return { success: true, employerToken: token };
     }),
 
@@ -276,7 +307,7 @@ const schoolPlacementsRouter = router({
         comment: z.string().max(1000).optional(),
       })
     )
-    .mutation(async ({ input }) => {
+    .mutation(async ({ ctx, input }) => {
       const placement = await getPlacementByToken(input.token);
       if (!placement) throw new TRPCError({ code: "NOT_FOUND" });
       if (placement.status !== "pending_employer") {
@@ -297,6 +328,21 @@ const schoolPlacementsRouter = router({
       } else {
         await updatePlacementStatus(placement.id, "rejected", undefined, input.comment);
       }
+      // Notify school of employer decision
+      void sendEmailSilent({
+        to: ctx.user.email ?? "",
+        templateId: "school_placement_status_update",
+        data: {
+          school_name: "School",
+          student_name: "Student",
+          employer_name: "Employer",
+          placement_dates: "See portal",
+          new_status: input.decision === "approve" ? "Approved by Employer" : "Rejected",
+          status_message: input.comment ?? "",
+          portal_url: `${process.env.APP_BASE_URL ?? "https://jutjut.com.au"}/school-portal`,
+        },
+      });
+
       return { success: true };
     }),
 
@@ -323,6 +369,21 @@ const schoolPlacementsRouter = router({
         });
       }
       await signPlacementAsStudent(input.placementId, ctx.user.name ?? "Student");
+
+      // Notify student that placement is now fully signed
+      void sendEmailSilent({
+        to: ctx.user.email ?? "",
+        templateId: "placement_status_update",
+        userId: ctx.user.id,
+        data: {
+          student_name: ctx.user.name ?? "there",
+          employer_name: "Your employer",
+          status_label: "Completed",
+          status_message: "All parties have signed. Your placement is confirmed.",
+          placements_url: `${process.env.APP_BASE_URL ?? "https://jutjut.com.au"}/placements`,
+        },
+      });
+
       return { success: true };
     }),
 });

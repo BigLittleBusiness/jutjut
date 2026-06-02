@@ -7,6 +7,7 @@ import {
   getWaitlistCount,
 } from "../db";
 import { notifyOwner } from "../_core/notification";
+import { sendEmailSilent } from "../emailService";
 
 export const waitlistRouter = router({
   // Public: join the waitlist
@@ -55,6 +56,16 @@ export const waitlistRouter = router({
         title: "New JutJut Waitlist Signup",
         content: `${input.firstName ? input.firstName + " — " : ""}${input.email} (${input.role}${input.school ? ", " + input.school : ""}) joined the waitlist.`,
       }).catch(() => {/* silently ignore notification failures */});
+
+      // Send waitlist confirmation email to the new signup
+      void sendEmailSilent({
+        to: input.email,
+        templateId: "student_verify_email",
+        data: {
+          student_name: input.firstName,
+          verify_url: `${process.env.APP_BASE_URL ?? "https://jutjut.com.au"}/verify`,
+        },
+      });
 
       return {
         success: true,

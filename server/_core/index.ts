@@ -10,6 +10,8 @@ import { createContext } from "./context";
 import { serveStatic, setupVite } from "./vite";
 import { registerPinPaymentsWebhook } from "../webhooks/pinpayments";
 import { startAutoRepostCron } from "../cron/autoRepost";
+import { sesWebhookHandler } from "../sesWebhook";
+import { adminDailySummaryHandler } from "../scheduledHandlers";
 
 function isPortAvailable(port: number): Promise<boolean> {
   return new Promise(resolve => {
@@ -39,6 +41,10 @@ async function startServer() {
   registerStorageProxy(app);
   registerOAuthRoutes(app);
   registerPinPaymentsWebhook(app);
+  // AWS SES bounce/complaint/delivery notifications via SNS
+  app.post("/webhooks/aws-ses", sesWebhookHandler);
+  // Scheduled heartbeat handlers — must be before Vite/static fallthrough
+  app.post("/api/scheduled/admin-daily-summary", adminDailySummaryHandler);
   // tRPC API
   app.use(
     "/api/trpc",

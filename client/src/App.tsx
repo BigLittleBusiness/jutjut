@@ -18,6 +18,7 @@ import AdminWaitlist from "./pages/AdminWaitlist";
 import SchoolPortal from "./pages/SchoolPortal";
 import AdminDashboard from "./pages/AdminDashboard";
 import LandingPage from "./pages/LandingPage";
+import EmailPreferences from "./pages/EmailPreferences";
 
 function MainLayout() {
   const { isAuthenticated } = useApp();
@@ -87,6 +88,7 @@ function MainLayout() {
             {currentPage === "admin-waitlist" && <AdminWaitlist onNavigate={handleNavigate} />}
             {currentPage === "school-portal" && <SchoolPortal onNavigate={handleNavigate} />}
             {currentPage === "admin-dashboard" && <AdminDashboard onNavigate={handleNavigate} />}
+            {currentPage === "email-preferences" && <EmailPreferences />}
           </>
         )}
       </main>

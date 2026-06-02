@@ -31,6 +31,7 @@ import {
 import { getDb } from "../db";
 import { jobs } from "../../drizzle/schema";
 import { eq } from "drizzle-orm";
+import { sendEmailSilent } from "../emailService";
 
 // ─── Employer profile ─────────────────────────────────────────────────────────
 
@@ -224,6 +225,22 @@ const creditsRouter = router({
 
       const newBalance = await getCreditBalance(employerId);
 
+      // Send purchase receipt email
+      void sendEmailSilent({
+        to: ctx.user.email ?? "",
+        templateId: "credit_purchase_receipt",
+        userId: ctx.user.id,
+        data: {
+          employer_name: employer.businessName,
+          credits_purchased: String(pack.credits + (promo?.bonusCredits ?? 0)),
+          amount_paid: `$${(totalCents / 100).toFixed(2)}`,
+          charge_reference: charge.token,
+          new_balance: String(newBalance),
+          purchase_date: new Date().toLocaleDateString("en-AU"),
+          dashboard_url: `${process.env.APP_BASE_URL ?? "https://jutjut.com.au"}/employer`,
+        },
+      });
+
       return {
         success: true,
         chargeToken: charge.token,
@@ -316,6 +333,22 @@ const employerJobsRouter = router({
         type: "job_post",
         reference: String(jobId),
         description: `Job post: ${input.title}${input.isFeatured ? " (featured)" : ""}`,
+      });
+
+      // Send job post confirmation email
+      void sendEmailSilent({
+        to: ctx.user.email ?? "",
+        templateId: "job_post_confirmation",
+        userId: ctx.user.id,
+        data: {
+          employer_name: input.employer,
+          job_title: input.title,
+          job_type: input.type,
+          expires_date: expiresAt.toLocaleDateString("en-AU"),
+          job_url: `${process.env.APP_BASE_URL ?? "https://jutjut.com.au"}/jobs/${jobId}`,
+          dashboard_url: `${process.env.APP_BASE_URL ?? "https://jutjut.com.au"}/employer`,
+          new_balance: String(balance - 1),
+        },
       });
 
       return { jobId, expiresAt, newBalance: balance - 1 };

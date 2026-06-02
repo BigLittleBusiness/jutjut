@@ -613,3 +613,35 @@ export type InsertTransaction = typeof transactions.$inferInsert;
 // ─────────────────────────────────────────────
 // Note: status is tracked via employers.suspendedAt column added via SQL migration
 // The employers table is extended via ALTER TABLE in the migration below.
+
+// ─────────────────────────────────────────────
+// EMAIL SYSTEM
+// ─────────────────────────────────────────────
+
+export const emailLogs = mysqlTable("emailLogs", {
+  id: int("id").autoincrement().primaryKey(),
+  toEmail: varchar("to_email", { length: 320 }).notNull(),
+  subject: varchar("subject", { length: 500 }).notNull(),
+  templateId: varchar("template_id", { length: 100 }).notNull(),
+  status: mysqlEnum("status", ["sent", "bounced", "complaint", "delivered", "failed"]).notNull().default("sent"),
+  sesMessageId: varchar("ses_message_id", { length: 256 }),
+  errorMessage: text("error_message"),
+  createdAt: timestamp("created_at").notNull().defaultNow(),
+  updatedAt: timestamp("updated_at").notNull().defaultNow().onUpdateNow(),
+});
+
+export type EmailLog = typeof emailLogs.$inferSelect;
+export type InsertEmailLog = typeof emailLogs.$inferInsert;
+
+export const emailPreferences = mysqlTable("emailPreferences", {
+  id: int("id").autoincrement().primaryKey(),
+  userId: int("user_id").notNull().unique(),
+  userType: mysqlEnum("user_type", ["student", "employer", "school"]).notNull().default("student"),
+  marketingEmails: boolean("marketing_emails").notNull().default(false),
+  weeklyDigest: boolean("weekly_digest").notNull().default(false),
+  dropReminders: boolean("drop_reminders").notNull().default(false),
+  updatedAt: timestamp("updated_at").notNull().defaultNow().onUpdateNow(),
+});
+
+export type EmailPreference = typeof emailPreferences.$inferSelect;
+export type InsertEmailPreference = typeof emailPreferences.$inferInsert;

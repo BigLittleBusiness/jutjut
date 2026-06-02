@@ -62,6 +62,7 @@ import {
   getWaitlistSummary,
 } from "../db.admin";
 import { encrypt, decrypt, mask } from "../encryption";
+import { sendEmailSilent } from "../emailService";
 
 // ─── Admin middleware ─────────────────────────────────────────────────────────
 
@@ -129,22 +130,62 @@ export const adminRouter = router({
         }))
         .mutation(async ({ input }) => {
           await createSchoolRequest(input);
+
+          // Auto-reply to the submitter
+          void sendEmailSilent({
+            to: input.contactEmail,
+            templateId: "school_request_autoreply",
+            data: {
+              contact_name: input.contactName,
+              school_name: input.schoolName,
+              submitted_date: new Date().toLocaleDateString("en-AU"),
+            },
+          });
+
           return { ok: true };
         }),
 
       approve: adminProcedure
         .input(z.object({ id: z.number().int(), adminNote: z.string().optional() }))
         .mutation(async ({ ctx, input }) => {
+          const req = await getSchoolRequestById(input.id);
           await updateSchoolRequestStatus(input.id, "approved", input.adminNote);
           await log(ctx.user.id, "approve_school_request", "schoolRequest", input.id);
+
+          if (req?.contactEmail) {
+            void sendEmailSilent({
+              to: req.contactEmail,
+              templateId: "school_approved",
+              data: {
+                school_name: req.schoolName,
+                contact_name: req.contactName,
+                portal_url: `${process.env.APP_BASE_URL ?? "https://jutjut.com.au"}/school-portal`,
+              },
+            });
+          }
+
           return { ok: true };
         }),
 
       reject: adminProcedure
         .input(z.object({ id: z.number().int(), adminNote: z.string().optional() }))
         .mutation(async ({ ctx, input }) => {
+          const req = await getSchoolRequestById(input.id);
           await updateSchoolRequestStatus(input.id, "rejected", input.adminNote);
           await log(ctx.user.id, "reject_school_request", "schoolRequest", input.id);
+
+          if (req?.contactEmail) {
+            void sendEmailSilent({
+              to: req.contactEmail,
+              templateId: "school_rejected",
+              data: {
+                school_name: req.schoolName,
+                contact_name: req.contactName,
+                admin_note: input.adminNote ?? "",
+              },
+            });
+          }
+
           return { ok: true };
         }),
     }),

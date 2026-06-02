@@ -131,3 +131,20 @@
 - [x] Admin Dashboard button added to Dashboard quick links (violet accent)
 - [x] Route registered in App.tsx (admin-dashboard)
 - [x] 45 Vitest tests for all admin procedures — 262 total passing across 9 test files
+
+## Email & Notification System (AWS SES)
+- [ ] Add email_logs and email_preferences tables to DB schema and push migration
+- [ ] Install @aws-sdk/client-ses package
+- [ ] Build renderEmail template engine (HTML + plain-text, {{placeholder}} substitution)
+- [ ] Create all 35 HTML + plain-text email templates
+- [ ] Build server/emailService.ts (SES client, retry logic, logging, List-Unsubscribe header)
+- [ ] Build SNS webhook handler POST /webhooks/aws-ses (signature verification, status updates, complaint suppression)
+- [ ] Build email preferences tRPC router (get, update, unsubscribeAll)
+- [ ] Build EmailPreferences frontend page at /email-preferences
+- [ ] Wire email triggers into employer router (job post, application notification, credits, auto-repost)
+- [ ] Wire email triggers into school router (request autoreply, approved/rejected, placement events)
+- [ ] Wire email triggers into admin router (new school request, new drop, daily summary)
+- [ ] Wire email triggers into waitlist router (confirmation email)
+- [ ] Add daily admin summary cron job
+- [ ] Write Vitest tests for emailService and email preferences router
+- [ ] Write AWS SES setup guide and .env.example additions
