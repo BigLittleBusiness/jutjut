@@ -120,6 +120,14 @@ vi.mock("./db.admin", () => ({
   adminAdjustCredits: vi.fn().mockResolvedValue(undefined),
   listEmployersWithTokens: vi.fn().mockResolvedValue([]),
   clearEmployerPaymentToken: vi.fn().mockResolvedValue(undefined),
+  getEmailLogs: vi.fn().mockResolvedValue({ rows: [], total: 0 }),
+  getEmailLogStats: vi.fn().mockResolvedValue({ total: 0, sent: 0, bounced: 0, complaint: 0, delivered: 0, failed: 0 }),
+  getDistinctEmailTemplateIds: vi.fn().mockResolvedValue([]),
+  createNotification: vi.fn().mockResolvedValue(undefined),
+  getNotificationsForUser: vi.fn().mockResolvedValue([]),
+  getUnreadNotificationCount: vi.fn().mockResolvedValue(0),
+  markNotificationRead: vi.fn().mockResolvedValue(undefined),
+  markAllNotificationsRead: vi.fn().mockResolvedValue(undefined),
 }));
 
 vi.mock("./db", async (importOriginal) => {
@@ -174,6 +182,14 @@ import {
   getAdminLogs,
   adminSuspendUser,
   adminReinstateUser,
+  getEmailLogs,
+  getEmailLogStats,
+  getDistinctEmailTemplateIds,
+  createNotification,
+  getNotificationsForUser,
+  getUnreadNotificationCount,
+  markNotificationRead,
+  markAllNotificationsRead,
 } from "./db.admin";
 
 // ─── 1. Overview ──────────────────────────────────────────────────────────────
@@ -611,5 +627,207 @@ describe("admin.logs.list", () => {
     const caller = appRouter.createCaller(createAdminContext());
     await caller.admin.logs.list({ action: "create_school", limit: 50 });
     expect(getAdminLogs).toHaveBeenCalledWith(expect.objectContaining({ action: "create_school", limit: 50 }));
+  });
+});
+
+// ─── 11. Email logs ───────────────────────────────────────────────────────────
+
+describe("admin.emailLogs.list", () => {
+  it("returns paginated email logs for admin", async () => {
+    vi.mocked(getEmailLogs).mockResolvedValueOnce({
+      rows: [
+        {
+          id: 1,
+          toEmail: "student@example.com",
+          templateId: "student_verify_email",
+          status: "delivered",
+          createdAt: new Date(),
+          subject: "Verify your email",
+          messageId: "msg-001",
+          errorMessage: null,
+          retryCount: 0,
+        } as any,
+      ],
+      total: 1,
+    });
+    const caller = appRouter.createCaller(createAdminContext());
+    const result = await caller.admin.emailLogs.list({});
+    expect(result.total).toBe(1);
+    expect(result.rows).toHaveLength(1);
+    expect(result.rows[0].toEmail).toBe("student@example.com");
+  });
+
+  it("rejects non-admin with FORBIDDEN", async () => {
+    const caller = appRouter.createCaller(createUserContext());
+    await expect(caller.admin.emailLogs.list({})).rejects.toMatchObject({ code: "FORBIDDEN" });
+  });
+
+  it("rejects unauthenticated requests with UNAUTHORIZED", async () => {
+    const caller = appRouter.createCaller(createPublicContext());
+    await expect(caller.admin.emailLogs.list({})).rejects.toMatchObject({ code: "UNAUTHORIZED" });
+  });
+
+  it("passes search and status filters to the DB helper", async () => {
+    vi.mocked(getEmailLogs).mockResolvedValueOnce({ rows: [], total: 0 });
+    const caller = appRouter.createCaller(createAdminContext());
+    await caller.admin.emailLogs.list({ search: "alice", status: "bounced", limit: 10, offset: 0 });
+    expect(getEmailLogs).toHaveBeenCalledWith(
+      expect.objectContaining({ search: "alice", status: "bounced", limit: 10, offset: 0 })
+    );
+  });
+
+  it("passes templateId filter to the DB helper", async () => {
+    vi.mocked(getEmailLogs).mockResolvedValueOnce({ rows: [], total: 0 });
+    const caller = appRouter.createCaller(createAdminContext());
+    await caller.admin.emailLogs.list({ templateId: "school_approved" });
+    expect(getEmailLogs).toHaveBeenCalledWith(
+      expect.objectContaining({ templateId: "school_approved" })
+    );
+  });
+});
+
+describe("admin.emailLogs.stats", () => {
+  it("returns email delivery stats for admin", async () => {
+    vi.mocked(getEmailLogStats).mockResolvedValueOnce({
+      sent: 50,
+      delivered: 45,
+      bounced: 3,
+      complaint: 1,
+      failed: 1,
+    });
+    const caller = appRouter.createCaller(createAdminContext());
+    const result = await caller.admin.emailLogs.stats();
+    expect(result.sent).toBe(50);
+    expect(result.delivered).toBe(45);
+    expect(result.bounced).toBe(3);
+  });
+
+  it("rejects non-admin with FORBIDDEN", async () => {
+    const caller = appRouter.createCaller(createUserContext());
+    await expect(caller.admin.emailLogs.stats()).rejects.toMatchObject({ code: "FORBIDDEN" });
+  });
+});
+
+// ─── 12. Email template preview ───────────────────────────────────────────────
+
+describe("admin.emailPreview.render", () => {
+  it("renders a known template and returns html, text, subject", async () => {
+    const caller = appRouter.createCaller(createAdminContext());
+    const result = await caller.admin.emailPreview.render({ templateId: "student_verify_email", format: "html" });
+    expect(result.templateId).toBe("student_verify_email");
+    expect(typeof result.html).toBe("string");
+    expect(typeof result.text).toBe("string");
+    expect(typeof result.subject).toBe("string");
+    expect(result.html.length).toBeGreaterThan(0);
+  });
+
+  it("throws for an unknown template id", async () => {
+    const caller = appRouter.createCaller(createAdminContext());
+    await expect(
+      caller.admin.emailPreview.render({ templateId: "non_existent_template_xyz", format: "html" })
+    ).rejects.toThrow();
+  });
+
+  it("rejects non-admin with FORBIDDEN", async () => {
+    const caller = appRouter.createCaller(createUserContext());
+    await expect(
+      caller.admin.emailPreview.render({ templateId: "student_verify_email", format: "html" })
+    ).rejects.toMatchObject({ code: "FORBIDDEN" });
+  });
+});
+
+describe("admin.emailPreview.listTemplates", () => {
+  it("returns sorted list of template ids for admin", async () => {
+    const caller = appRouter.createCaller(createAdminContext());
+    const result = await caller.admin.emailPreview.listTemplates();
+    expect(Array.isArray(result)).toBe(true);
+    expect(result.length).toBeGreaterThan(0);
+    // Should be sorted alphabetically
+    const sorted = [...result].sort();
+    expect(result).toEqual(sorted);
+  });
+
+  it("rejects non-admin with FORBIDDEN", async () => {
+    const caller = appRouter.createCaller(createUserContext());
+    await expect(caller.admin.emailPreview.listTemplates()).rejects.toMatchObject({ code: "FORBIDDEN" });
+  });
+});
+
+// ─── 13. In-app notifications ─────────────────────────────────────────────────
+
+describe("notifications.list", () => {
+  it("returns notifications for authenticated user", async () => {
+    vi.mocked(getNotificationsForUser).mockResolvedValueOnce([
+      {
+        id: 1,
+        userId: 99,
+        type: "job_post",
+        title: "Job posted",
+        body: "Your job listing is live.",
+        link: "/jobs/1",
+        readAt: null,
+        createdAt: new Date(),
+      } as any,
+    ]);
+    const caller = appRouter.createCaller(createUserContext());
+    const result = await caller.notifications.list({ limit: 30 });
+    expect(result).toHaveLength(1);
+    expect(result[0].title).toBe("Job posted");
+  });
+
+  it("rejects unauthenticated requests with UNAUTHORIZED", async () => {
+    const caller = appRouter.createCaller(createPublicContext());
+    await expect(caller.notifications.list({ limit: 30 })).rejects.toMatchObject({ code: "UNAUTHORIZED" });
+  });
+
+  it("passes limit to the DB helper", async () => {
+    vi.mocked(getNotificationsForUser).mockResolvedValueOnce([]);
+    const caller = appRouter.createCaller(createUserContext());
+    await caller.notifications.list({ limit: 10 });
+    expect(getNotificationsForUser).toHaveBeenCalledWith(99, 10);
+  });
+});
+
+describe("notifications.unreadCount", () => {
+  it("returns unread count for authenticated user", async () => {
+    vi.mocked(getUnreadNotificationCount).mockResolvedValueOnce(5);
+    const caller = appRouter.createCaller(createUserContext());
+    const result = await caller.notifications.unreadCount();
+    expect(result).toBe(5);
+  });
+
+  it("rejects unauthenticated requests with UNAUTHORIZED", async () => {
+    const caller = appRouter.createCaller(createPublicContext());
+    await expect(caller.notifications.unreadCount()).rejects.toMatchObject({ code: "UNAUTHORIZED" });
+  });
+});
+
+describe("notifications.markRead", () => {
+  it("marks a notification as read and returns ok", async () => {
+    vi.mocked(markNotificationRead).mockResolvedValueOnce(undefined);
+    const caller = appRouter.createCaller(createUserContext());
+    const result = await caller.notifications.markRead({ id: 42 });
+    expect(result.ok).toBe(true);
+    expect(markNotificationRead).toHaveBeenCalledWith(42, 99);
+  });
+
+  it("rejects unauthenticated requests with UNAUTHORIZED", async () => {
+    const caller = appRouter.createCaller(createPublicContext());
+    await expect(caller.notifications.markRead({ id: 1 })).rejects.toMatchObject({ code: "UNAUTHORIZED" });
+  });
+});
+
+describe("notifications.markAllRead", () => {
+  it("marks all notifications as read for the user and returns ok", async () => {
+    vi.mocked(markAllNotificationsRead).mockResolvedValueOnce(undefined);
+    const caller = appRouter.createCaller(createUserContext());
+    const result = await caller.notifications.markAllRead();
+    expect(result.ok).toBe(true);
+    expect(markAllNotificationsRead).toHaveBeenCalledWith(99);
+  });
+
+  it("rejects unauthenticated requests with UNAUTHORIZED", async () => {
+    const caller = appRouter.createCaller(createPublicContext());
+    await expect(caller.notifications.markAllRead()).rejects.toMatchObject({ code: "UNAUTHORIZED" });
   });
 });

@@ -645,3 +645,17 @@ export const emailPreferences = mysqlTable("emailPreferences", {
 
 export type EmailPreference = typeof emailPreferences.$inferSelect;
 export type InsertEmailPreference = typeof emailPreferences.$inferInsert;
+
+export const inAppNotifications = mysqlTable("inAppNotifications", {
+  id: int("id").autoincrement().primaryKey(),
+  userId: int("user_id").notNull(),
+  type: varchar("type", { length: 100 }).notNull(), // e.g. "job_post_confirmed", "school_approved"
+  title: varchar("title", { length: 255 }).notNull(),
+  body: text("body").notNull(),
+  link: varchar("link", { length: 500 }), // optional deep-link
+  read: boolean("read").notNull().default(false),
+  createdAt: timestamp("created_at").notNull().defaultNow(),
+});
+
+export type InAppNotification = typeof inAppNotifications.$inferSelect;
+export type InsertInAppNotification = typeof inAppNotifications.$inferInsert;

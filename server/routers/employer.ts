@@ -32,6 +32,7 @@ import { getDb } from "../db";
 import { jobs } from "../../drizzle/schema";
 import { eq } from "drizzle-orm";
 import { sendEmailSilent } from "../emailService";
+import { createNotification } from "../db.admin";
 
 // ─── Employer profile ─────────────────────────────────────────────────────────
 
@@ -241,6 +242,14 @@ const creditsRouter = router({
         },
       });
 
+      // In-app notification: credit purchase confirmed
+      void createNotification({
+        userId: ctx.user.id,
+        type: "credit_purchase",
+        title: `Credits added: ${pack.credits + (promo?.bonusCredits ?? 0)} credits`,
+        body: `Payment of $${(totalCents / 100).toFixed(2)} confirmed. New balance: ${newBalance} credits.`,
+        link: "/employer",
+      });
       return {
         success: true,
         chargeToken: charge.token,
@@ -351,6 +360,14 @@ const employerJobsRouter = router({
         },
       });
 
+      // In-app notification: job post confirmed
+      void createNotification({
+        userId: ctx.user.id,
+        type: "job_post",
+        title: `Job posted: ${input.title}`,
+        body: `Your listing is live and expires ${expiresAt.toLocaleDateString("en-AU")}. Credits remaining: ${balance - 1}.`,
+        link: "/employer",
+      });
       return { jobId, expiresAt, newBalance: balance - 1 };
     }),
 

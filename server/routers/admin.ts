@@ -60,6 +60,14 @@ import {
   listEmployersWithTokens,
   clearEmployerPaymentToken,
   getWaitlistSummary,
+  getEmailLogs,
+  getEmailLogStats,
+  getDistinctEmailTemplateIds,
+  createNotification,
+  getNotificationsForUser,
+  getUnreadNotificationCount,
+  markNotificationRead,
+  markAllNotificationsRead,
 } from "../db.admin";
 import { encrypt, decrypt, mask } from "../encryption";
 import { sendEmailSilent } from "../emailService";
@@ -163,7 +171,14 @@ export const adminRouter = router({
               },
             });
           }
-
+          // In-app notification to the admin who approved
+          void createNotification({
+            userId: ctx.user.id,
+            type: "school_approved",
+            title: `School approved: ${req?.schoolName ?? "Unknown"}`,
+            body: `Approval email sent to ${req?.contactEmail ?? "contact"}.`,
+            link: "/admin-dashboard",
+          });
           return { ok: true };
         }),
 
@@ -185,7 +200,14 @@ export const adminRouter = router({
               },
             });
           }
-
+          // In-app notification to the admin who rejected
+          void createNotification({
+            userId: ctx.user.id,
+            type: "school_rejected",
+            title: `School request rejected: ${req?.schoolName ?? "Unknown"}`,
+            body: input.adminNote ? `Reason: ${input.adminNote}` : "No reason provided.",
+            link: "/admin-dashboard",
+          });
           return { ok: true };
         }),
     }),
@@ -602,4 +624,75 @@ export const adminRouter = router({
         });
       }),
   }),
+
+  // ── 11. Email logs ─────────────────────────────────────────────────────────
+
+  emailLogs: router({
+    list: adminProcedure
+      .input(z.object({
+        search: z.string().optional(),
+        status: z.enum(["sent", "bounced", "complaint", "delivered", "failed"]).optional(),
+        templateId: z.string().optional(),
+        from: z.string().optional(),
+        to: z.string().optional(),
+        limit: z.number().int().max(200).default(50),
+        offset: z.number().int().default(0),
+      }))
+      .query(async ({ input }) => getEmailLogs({
+        search: input.search,
+        status: input.status,
+        templateId: input.templateId,
+        from: input.from ? new Date(input.from) : undefined,
+        to: input.to ? new Date(input.to) : undefined,
+        limit: input.limit,
+        offset: input.offset,
+      })),
+    stats: adminProcedure.query(async () => getEmailLogStats()),
+    templateIds: adminProcedure.query(async () => getDistinctEmailTemplateIds()),
+  }),
+
+  // ── 12. Email template preview ─────────────────────────────────────────
+
+  emailPreview: router({
+    render: adminProcedure
+      .input(z.object({
+        templateId: z.string().min(1).max(100),
+        format: z.enum(["html", "text"]).default("html"),
+        sampleData: z.record(z.string(), z.string()).optional(),
+      }))
+      .query(async ({ input }) => {
+        const { renderEmail } = await import("../renderEmail");
+        const result = renderEmail(input.templateId, (input.sampleData ?? {}) as Record<string, string>);
+        return {
+          templateId: input.templateId,
+          html: result.html,
+          text: result.text,
+          subject: result.subject,
+        };
+      }),
+    listTemplates: adminProcedure.query(async () => {
+      const { TEMPLATES } = await import("../renderEmail");
+      return Object.keys(TEMPLATES).sort();
+    }),
+  }),
+});
+
+// ─── Notifications router (for all authenticated users) ──────────────────────
+export const notificationsRouter = router({
+  list: protectedProcedure
+    .input(z.object({ limit: z.number().int().max(50).default(30) }))
+    .query(async ({ ctx, input }) => getNotificationsForUser(ctx.user.id, input.limit)),
+  unreadCount: protectedProcedure
+    .query(async ({ ctx }) => getUnreadNotificationCount(ctx.user.id)),
+  markRead: protectedProcedure
+    .input(z.object({ id: z.number().int() }))
+    .mutation(async ({ ctx, input }) => {
+      await markNotificationRead(input.id, ctx.user.id);
+      return { ok: true };
+    }),
+  markAllRead: protectedProcedure
+    .mutation(async ({ ctx }) => {
+      await markAllNotificationsRead(ctx.user.id);
+      return { ok: true };
+    }),
 });

@@ -49,7 +49,9 @@ type Section =
   | "payments"
   | "admins"
   | "search"
-  | "logs";
+  | "logs"
+  | "emailLogs"
+  | "emailPreview";
 
 const NAV: { id: Section; label: string; icon: string }[] = [
   { id: "overview", label: "Overview", icon: "📊" },
@@ -62,6 +64,8 @@ const NAV: { id: Section; label: string; icon: string }[] = [
   { id: "admins", label: "Admin Management", icon: "🔑" },
   { id: "search", label: "Global Search", icon: "🔍" },
   { id: "logs", label: "System Logs", icon: "📋" },
+  { id: "emailLogs", label: "Email Logs", icon: "📨" },
+  { id: "emailPreview", label: "Email Previewer", icon: "🖼️" },
 ];
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
@@ -1390,6 +1394,275 @@ function LogsSection() {
   );
 }
 
+// ─── Email logs section ──────────────────────────────────────────────────────
+
+function EmailLogsSection() {
+  const [search, setSearch] = useState("");
+  const [status, setStatus] = useState<string>("all");
+  const [templateId, setTemplateId] = useState<string>("all");
+  const [fromDate, setFromDate] = useState<string>("");
+  const [toDate, setToDate] = useState<string>("");
+  const [page, setPage] = useState(0);
+  const PAGE_SIZE = 50;
+
+  const { data: stats } = trpc.admin.emailLogs.stats.useQuery();
+  const { data: templateIds } = trpc.admin.emailLogs.templateIds.useQuery();
+  const { data, isLoading } = trpc.admin.emailLogs.list.useQuery({
+    search: search || undefined,
+    status: (status !== "all" ? status : undefined) as any,
+    templateId: templateId !== "all" ? templateId : undefined,
+    from: fromDate || undefined,
+    to: toDate || undefined,
+    limit: PAGE_SIZE,
+    offset: page * PAGE_SIZE,
+  });
+
+  const STATUS_COLOURS: Record<string, string> = {
+    sent: "bg-blue-100 text-blue-700",
+    delivered: "bg-green-100 text-green-700",
+    bounced: "bg-red-100 text-red-700",
+    complaint: "bg-orange-100 text-orange-700",
+    failed: "bg-gray-100 text-gray-700",
+  };
+
+  return (
+    <div className="space-y-5">
+      <h2 className="text-2xl font-bold">Email Logs</h2>
+
+      {/* Stats row */}
+      {stats && (
+        <div className="grid grid-cols-2 sm:grid-cols-5 gap-3">
+          {Object.entries(stats as Record<string, number>).map(([key, val]) => (
+            <Card key={key}>
+              <CardContent className="pt-4 pb-3 text-center">
+                <p className="text-2xl font-bold">{val}</p>
+                <p className="text-xs text-muted-foreground capitalize">{key}</p>
+              </CardContent>
+            </Card>
+          ))}
+        </div>
+      )}
+
+      {/* Filters */}
+      <div className="flex flex-wrap gap-3 items-end">
+        <div className="space-y-1">
+          <Label className="text-xs text-muted-foreground">Search</Label>
+          <Input
+            placeholder="Email address or subject…"
+            value={search}
+            onChange={e => { setSearch(e.target.value); setPage(0); }}
+            className="max-w-xs"
+          />
+        </div>
+        <div className="space-y-1">
+          <Label className="text-xs text-muted-foreground">Status</Label>
+          <Select value={status} onValueChange={v => { setStatus(v); setPage(0); }}>
+            <SelectTrigger className="w-40"><SelectValue placeholder="Status" /></SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">All statuses</SelectItem>
+              {["sent", "delivered", "bounced", "complaint", "failed"].map(s => (
+                <SelectItem key={s} value={s}>{s.charAt(0).toUpperCase() + s.slice(1)}</SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        </div>
+        <div className="space-y-1">
+          <Label className="text-xs text-muted-foreground">Template</Label>
+          <Select value={templateId} onValueChange={v => { setTemplateId(v); setPage(0); }}>
+            <SelectTrigger className="w-52"><SelectValue placeholder="Template" /></SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">All templates</SelectItem>
+              {(templateIds ?? []).map((t: string) => (
+                <SelectItem key={t} value={t}>{t}</SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        </div>
+        <div className="space-y-1">
+          <Label className="text-xs text-muted-foreground">From date</Label>
+          <Input
+            type="date"
+            value={fromDate}
+            onChange={e => { setFromDate(e.target.value); setPage(0); }}
+            className="w-36"
+          />
+        </div>
+        <div className="space-y-1">
+          <Label className="text-xs text-muted-foreground">To date</Label>
+          <Input
+            type="date"
+            value={toDate}
+            onChange={e => { setToDate(e.target.value); setPage(0); }}
+            className="w-36"
+          />
+        </div>
+        {(fromDate || toDate || search || status !== "all" || templateId !== "all") && (
+          <div className="space-y-1">
+            <Label className="text-xs text-muted-foreground opacity-0">Clear</Label>
+            <Button variant="outline" size="sm" onClick={() => { setSearch(""); setStatus("all"); setTemplateId("all"); setFromDate(""); setToDate(""); setPage(0); }}>Clear filters</Button>
+          </div>
+        )}
+      </div>
+
+      {/* Table */}
+      {isLoading && <p className="text-muted-foreground">Loading…</p>}
+      <div className="overflow-x-auto">
+        <Table>
+          <TableHeader>
+            <TableRow>
+              <TableHead>Time</TableHead>
+              <TableHead>To</TableHead>
+              <TableHead>Subject</TableHead>
+              <TableHead>Template</TableHead>
+              <TableHead>Status</TableHead>
+              <TableHead>SES ID</TableHead>
+            </TableRow>
+          </TableHeader>
+          <TableBody>
+            {(data?.rows ?? []).map((row: any) => (
+              <TableRow key={row.id}>
+                <TableCell className="text-xs whitespace-nowrap">{fmt(row.sentAt ?? row.createdAt)}</TableCell>
+                <TableCell className="text-sm">{row.toEmail}</TableCell>
+                <TableCell className="text-sm max-w-xs truncate">{row.subject ?? "—"}</TableCell>
+                <TableCell className="font-mono text-xs">{row.templateId ?? "—"}</TableCell>
+                <TableCell>
+                  <span className={`px-2 py-0.5 rounded-full text-xs font-medium ${STATUS_COLOURS[row.status] ?? "bg-gray-100 text-gray-600"}`}>
+                    {row.status}
+                  </span>
+                </TableCell>
+                <TableCell className="font-mono text-xs text-muted-foreground truncate max-w-[120px]">
+                  {row.sesMessageId ?? "—"}
+                </TableCell>
+              </TableRow>
+            ))}
+            {(data?.rows ?? []).length === 0 && !isLoading && (
+              <TableRow><TableCell colSpan={6} className="text-center text-muted-foreground py-8">No email logs found.</TableCell></TableRow>
+            )}
+          </TableBody>
+        </Table>
+      </div>
+
+      {/* Pagination */}
+      <div className="flex items-center gap-3">
+        <Button variant="outline" size="sm" onClick={() => setPage(p => Math.max(0, p - 1))} disabled={page === 0}>← Prev</Button>
+        <span className="text-sm text-muted-foreground">Page {page + 1}</span>
+        <Button variant="outline" size="sm" onClick={() => setPage(p => p + 1)} disabled={(data?.rows ?? []).length < PAGE_SIZE}>Next →</Button>
+      </div>
+    </div>
+  );
+}
+
+// ─── Email template preview section ───────────────────────────────────────────
+
+const SAMPLE_DATA: Record<string, Record<string, string>> = {
+  job_post_confirmation: { employer_name: "Acme Corp", job_title: "Barista", job_type: "Part-time", expires_date: "30 Jun 2026", job_url: "#", dashboard_url: "#", new_balance: "4" },
+  credit_purchase_receipt: { employer_name: "Acme Corp", pack_name: "Starter Pack", credits: "5", amount: "$49.00", charge_token: "ch_test_abc123", new_balance: "5", dashboard_url: "#" },
+  application_received: { employer_name: "Acme Corp", job_title: "Barista", applicant_name: "Alex Smith", applicant_email: "alex@example.com", application_url: "#", dashboard_url: "#" },
+  waitlist_confirmation: { first_name: "Alex", role: "student", school: "Riverside High", platform_url: "#" },
+  school_request_autoreply: { contact_name: "Ms Johnson", school_name: "Riverside High", portal_url: "#" },
+  school_approved: { school_name: "Riverside High", contact_name: "Ms Johnson", portal_url: "#", dashboard_url: "#" },
+  school_rejected: { school_name: "Riverside High", contact_name: "Ms Johnson", reason: "Duplicate registration detected.", support_url: "#" },
+  school_placement_request_confirmation: { school_name: "Riverside High", student_name: "Alex Smith", employer_name: "Acme Corp", start_date: "1 Jul 2026", end_date: "31 Jul 2026", hours_per_week: "15", portal_url: "#" },
+  school_placement_status_update: { school_name: "Riverside High", student_name: "Alex Smith", employer_name: "Acme Corp", status: "Approved", portal_url: "#" },
+  admin_daily_summary: { date: "2 Jun 2026", pending_schools: "3", pending_drops: "1", flagged_jobs: "0", low_credit_employers: "2", new_waitlist: "14", new_users_7d: "42", dashboard_url: "#" },
+  admin_ses_error: { error_message: "Bounce rate exceeded threshold", timestamp: "2 Jun 2026 07:00", details: "5 bounces in last 24h", dashboard_url: "#" },
+};
+
+function EmailPreviewSection() {
+  const [selectedTemplate, setSelectedTemplate] = useState<string>("");
+  const [format, setFormat] = useState<"html" | "text">("html");
+
+  const { data: templateList } = trpc.admin.emailPreview.listTemplates.useQuery();
+
+  const sampleData: Record<string, string> = selectedTemplate ? (SAMPLE_DATA[selectedTemplate] ?? {}) : {};
+  const sampleKeys = Object.keys(sampleData);
+
+  const { data: preview, isLoading } = trpc.admin.emailPreview.render.useQuery(
+    { templateId: selectedTemplate, format, sampleData },
+    { enabled: !!selectedTemplate }
+  );
+
+  return (
+    <div className="space-y-5">
+      <h2 className="text-2xl font-bold">Email Template Previewer</h2>
+      <p className="text-muted-foreground text-sm">Select a template to see a live preview rendered with sample data. Unreplaced placeholders appear as <code className="bg-muted px-1 rounded">&#123;&#123;variable&#125;&#125;</code>.</p>
+
+      {/* Controls */}
+      <div className="flex flex-wrap gap-3 items-end">
+        <div className="space-y-1">
+          <Label>Template</Label>
+          <Select value={selectedTemplate} onValueChange={setSelectedTemplate}>
+            <SelectTrigger className="w-72"><SelectValue placeholder="Choose a template…" /></SelectTrigger>
+            <SelectContent>
+              {(templateList ?? []).map((t: string) => (
+                <SelectItem key={t} value={t}>{t}</SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        </div>
+        <div className="space-y-1">
+          <Label>Format</Label>
+          <Select value={format} onValueChange={v => setFormat(v as "html" | "text")}>
+            <SelectTrigger className="w-32"><SelectValue /></SelectTrigger>
+            <SelectContent>
+              <SelectItem value="html">HTML</SelectItem>
+              <SelectItem value="text">Plain text</SelectItem>
+            </SelectContent>
+          </Select>
+        </div>
+      </div>
+
+      {/* Sample data badge list */}
+      {sampleKeys.length > 0 && (
+        <div className="space-y-1">
+          <p className="text-xs text-muted-foreground font-medium uppercase tracking-wide">Sample data used for this template</p>
+          <div className="flex flex-wrap gap-2">
+            {sampleKeys.map(k => (
+              <span key={k} className="bg-muted text-muted-foreground text-xs px-2 py-0.5 rounded font-mono">
+                {k}: <span className="text-foreground">{sampleData[k]}</span>
+              </span>
+            ))}
+          </div>
+        </div>
+      )}
+
+      {/* Preview */}
+      {isLoading && <p className="text-muted-foreground">Rendering…</p>}
+      {preview && (
+        <div className="space-y-3">
+          <div className="flex items-center gap-2">
+            <span className="text-sm font-medium text-muted-foreground">Subject:</span>
+            <span className="text-sm font-semibold">{preview.subject}</span>
+          </div>
+          {format === "html" ? (
+            <div className="border rounded-lg overflow-hidden">
+              <div className="bg-muted px-4 py-2 text-xs text-muted-foreground font-medium border-b">HTML Preview</div>
+              <iframe
+                srcDoc={preview.html}
+                className="w-full"
+                style={{ height: "600px", border: "none" }}
+                title={`Preview: ${preview.templateId}`}
+                sandbox="allow-same-origin"
+              />
+            </div>
+          ) : (
+            <div className="border rounded-lg overflow-hidden">
+              <div className="bg-muted px-4 py-2 text-xs text-muted-foreground font-medium border-b">Plain Text Preview</div>
+              <pre className="p-4 text-sm whitespace-pre-wrap font-mono bg-background">{preview.text}</pre>
+            </div>
+          )}
+        </div>
+      )}
+      {!selectedTemplate && (
+        <div className="text-center py-16 text-muted-foreground">
+          <p className="text-4xl mb-3">🖼️</p>
+          <p>Select a template above to see a preview.</p>
+        </div>
+      )}
+    </div>
+  );
+}
+
 // ─── Main AdminDashboard component ────────────────────────────────────────────
 
 interface AdminDashboardProps {
@@ -1467,6 +1740,8 @@ export default function AdminDashboard({ onNavigate }: AdminDashboardProps) {
         {section === "admins" && <AdminsSection currentUserId={user.id} />}
         {section === "search" && <SearchSection />}
         {section === "logs" && <LogsSection />}
+        {section === "emailLogs" && <EmailLogsSection />}
+        {section === "emailPreview" && <EmailPreviewSection />}
       </main>
     </div>
   );

@@ -18,6 +18,7 @@ import { randomUUID } from "crypto";
 import { adminProcedure, protectedProcedure, router } from "../_core/trpc";
 import { notifyOwner } from "../_core/notification";
 import { sendEmailSilent } from "../emailService";
+import { createNotification } from "../db.admin";
 import {
   getSchoolByDomain,
   getSchoolById,
@@ -221,9 +222,16 @@ const schoolPlacementsRouter = router({
         },
       });
 
+            // In-app notification to school staff: placement request submitted
+      void createNotification({
+        userId: ctx.user.id,
+        type: "placement",
+        title: "Placement request submitted",
+        body: `Placement for student #${input.studentId} with employer #${input.employerId} is awaiting employer approval.`,
+        link: "/school-portal",
+      });
       return { success: true, employerToken: token };
     }),
-
   /** List all placements for this school, with optional filters. */
   list: requireSchoolAccess
     .input(

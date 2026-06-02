@@ -3,7 +3,7 @@ import { getSessionCookieOptions } from "./_core/cookies";
 import { systemRouter } from "./_core/systemRouter";
 import { publicProcedure, router } from "./_core/trpc";
 import { employerRouter } from "./routers/employer";
-import { adminRouter } from "./routers/admin";
+import { adminRouter, notificationsRouter } from "./routers/admin";
 import { waitlistRouter } from "./routers/waitlist";
 import { schoolRouter } from "./routers/school";
 import { emailPreferencesRouter } from "./routers/emailPreferences";
@@ -29,6 +29,7 @@ export const appRouter = router({
   email: router({
     preferences: emailPreferencesRouter,
   }),
+  notifications: notificationsRouter,
 });
 
 export type AppRouter = typeof appRouter;

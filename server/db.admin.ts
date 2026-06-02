@@ -532,3 +532,114 @@ export async function getWaitlistSummary() {
   const [{ total }] = await db.select({ total: count() }).from(waitlistSignups);
   return { total };
 }
+
+// ─── Email Logs ───────────────────────────────────────────────────────────────
+
+export async function getEmailLogs(opts: {
+  search?: string;
+  status?: string;
+  templateId?: string;
+  from?: Date;
+  to?: Date;
+  limit?: number;
+  offset?: number;
+}) {
+  const db = await getDb();
+  if (!db) return { rows: [], total: 0 };
+  const { emailLogs } = await import("../drizzle/schema");
+
+  const conditions: any[] = [];
+  if (opts.search) conditions.push(like(emailLogs.toEmail, `%${opts.search}%`));
+  if (opts.status) conditions.push(eq(emailLogs.status, opts.status as any));
+  if (opts.templateId) conditions.push(eq(emailLogs.templateId, opts.templateId));
+  if (opts.from) conditions.push(gte(emailLogs.createdAt, opts.from));
+  if (opts.to) conditions.push(lte(emailLogs.createdAt, opts.to));
+
+  const where = conditions.length > 0 ? and(...conditions) : undefined;
+  const limit = opts.limit ?? 50;
+  const offset = opts.offset ?? 0;
+
+  const [rows, countResult] = await Promise.all([
+    db.select().from(emailLogs).where(where).orderBy(desc(emailLogs.createdAt)).limit(limit).offset(offset),
+    db.select({ total: count() }).from(emailLogs).where(where),
+  ]);
+
+  return { rows, total: Number(countResult[0]?.total ?? 0) };
+}
+
+export async function getEmailLogStats() {
+  const db = await getDb();
+  if (!db) return { sent: 0, delivered: 0, bounced: 0, complaint: 0, failed: 0 };
+  const { emailLogs } = await import("../drizzle/schema");
+
+  const result = await db.select({
+    status: emailLogs.status,
+    cnt: count(),
+  }).from(emailLogs).groupBy(emailLogs.status);
+
+  const stats = { sent: 0, delivered: 0, bounced: 0, complaint: 0, failed: 0 };
+  for (const row of result) {
+    stats[row.status as keyof typeof stats] = Number(row.cnt);
+  }
+  return stats;
+}
+
+export async function getDistinctEmailTemplateIds(): Promise<string[]> {
+  const db = await getDb();
+  if (!db) return [];
+  const { emailLogs } = await import("../drizzle/schema");
+  const rows = await db.selectDistinct({ templateId: emailLogs.templateId }).from(emailLogs);
+  return rows.map((r) => r.templateId).sort();
+}
+
+// ─── In-App Notifications ─────────────────────────────────────────────────────
+
+export async function createNotification(data: {
+  userId: number;
+  type: string;
+  title: string;
+  body: string;
+  link?: string;
+}) {
+  const db = await getDb();
+  if (!db) return;
+  const { inAppNotifications } = await import("../drizzle/schema");
+  await db.insert(inAppNotifications).values(data);
+}
+
+export async function getNotificationsForUser(userId: number, limit = 30) {
+  const db = await getDb();
+  if (!db) return [];
+  const { inAppNotifications } = await import("../drizzle/schema");
+  return db.select().from(inAppNotifications)
+    .where(eq(inAppNotifications.userId, userId))
+    .orderBy(desc(inAppNotifications.createdAt))
+    .limit(limit);
+}
+
+export async function getUnreadNotificationCount(userId: number): Promise<number> {
+  const db = await getDb();
+  if (!db) return 0;
+  const { inAppNotifications } = await import("../drizzle/schema");
+  const [{ cnt }] = await db.select({ cnt: count() }).from(inAppNotifications)
+    .where(and(eq(inAppNotifications.userId, userId), eq(inAppNotifications.read, false)));
+  return Number(cnt);
+}
+
+export async function markNotificationRead(id: number, userId: number) {
+  const db = await getDb();
+  if (!db) return;
+  const { inAppNotifications } = await import("../drizzle/schema");
+  await db.update(inAppNotifications)
+    .set({ read: true })
+    .where(and(eq(inAppNotifications.id, id), eq(inAppNotifications.userId, userId)));
+}
+
+export async function markAllNotificationsRead(userId: number) {
+  const db = await getDb();
+  if (!db) return;
+  const { inAppNotifications } = await import("../drizzle/schema");
+  await db.update(inAppNotifications)
+    .set({ read: true })
+    .where(eq(inAppNotifications.userId, userId));
+}

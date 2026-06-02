@@ -1,5 +1,6 @@
 import React, { useState } from "react";
 import { useApp } from "@/contexts/AppContext";
+import NotificationBell from "@/components/NotificationBell";
 import { useTheme } from "@/contexts/ThemeContext";
 import { Link, useLocation } from "wouter";
 import { motion, AnimatePresence } from "framer-motion";
@@ -173,6 +174,8 @@ export const Navbar: React.FC<NavbarProps> = ({ onNavigate, currentPage }) => {
 
           {isAuthenticated ? (
             <div className="flex items-center gap-3">
+              {/* Notification Bell */}
+              <NotificationBell onNavigate={onNavigate} />
               {/* Profile Dropdown */}
               <div className="relative hidden sm:block">
                 <button
