@@ -12,6 +12,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Shield, Eye, MapPin, GraduationCap, Info } from "lucide-react";
+import EmployerProfilePreview from "@/components/EmployerProfilePreview";
 
 const YEAR_LEVELS = [
   "Year 7", "Year 8", "Year 9", "Year 10", "Year 11", "Year 12",
@@ -84,14 +85,17 @@ export default function PrivacySettings() {
   return (
     <div className="container max-w-2xl py-10 space-y-6">
       {/* Header */}
-      <div className="flex items-center gap-3">
-        <div className="p-2 rounded-lg bg-primary/10">
-          <Shield className="h-5 w-5 text-primary" />
+      <div className="flex items-start justify-between gap-4">
+        <div className="flex items-center gap-3">
+          <div className="p-2 rounded-lg bg-primary/10">
+            <Shield className="h-5 w-5 text-primary" />
+          </div>
+          <div>
+            <h1 className="text-2xl font-bold text-foreground">Privacy Settings</h1>
+            <p className="text-sm text-muted-foreground">Control what information is shared with employers and businesses.</p>
+          </div>
         </div>
-        <div>
-          <h1 className="text-2xl font-bold text-foreground">Privacy Settings</h1>
-          <p className="text-sm text-muted-foreground">Control what information is shared with employers and businesses.</p>
-        </div>
+        <EmployerProfilePreview />
       </div>
 
       {/* Contact Sharing */}

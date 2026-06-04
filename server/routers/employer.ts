@@ -36,6 +36,7 @@ import { jobs, users } from "../../drizzle/schema";
 import { eq } from "drizzle-orm";
 import { sendEmailSilent } from "../emailService";
 import { createNotification } from "../db.admin";
+import { getStudentKitForSchool } from "../db.school";
 
 // ─── Employer profile ─────────────────────────────────────────────────────────
 
@@ -437,6 +438,59 @@ const privacyRouter = router({
       await updateUserPrivacy(ctx.user.id, input);
       return { success: true };
     }),
+
+  /**
+   * Returns the student's own profile exactly as an employer would see it.
+   * Respects the current shareContactWithEmployers flag so the student
+   * can verify what is and isn't visible before applying.
+   */
+  previewProfile: protectedProcedure.query(async ({ ctx }) => {
+    const kit = await getStudentKitForSchool(ctx.user.id);
+    if (!kit) throw new TRPCError({ code: "NOT_FOUND", message: "Profile not found." });
+
+    const shareContact = kit.user.shareContactWithEmployers ?? false;
+
+    return {
+      shareContact,
+      // Identity — only visible to employers when shareContact is true
+      name: shareContact ? (kit.user.name ?? null) : null,
+      email: shareContact ? (kit.user.email ?? null) : null,
+      // Profile enrichment — visible in anonymised analytics only
+      yearLevel: kit.user.yearLevel ?? null,
+      postcode: kit.user.postcode ?? null,
+      // Kit — always visible to employers
+      credentials: kit.credentials.map((c) => ({
+        id: c.id,
+        title: c.title,
+        issuer: c.issuer,
+        issuedAt: c.issuedAt,
+        type: c.type,
+      })),
+      vouches: kit.vouches.map((v) => ({
+        id: v.id,
+        voucherName: v.voucherName,
+        voucherTitle: v.voucherTitle ?? null,
+        voucherOrg: v.voucherOrg ?? null,
+        message: v.message ?? null,
+        status: v.status,
+        createdAt: v.createdAt,
+      })),
+      reportCards: kit.reportCards.map((r) => ({
+        id: r.id,
+        aiGrade: r.aiGrade ?? null,
+        aiGpa: r.aiGpa ?? null,
+        verified: r.verified,
+        createdAt: r.createdAt,
+      })),
+      applications: kit.applications.map((a) => ({
+        id: a.id,
+        jobTitle: a.jobTitle,
+        employer: a.employer,
+        status: a.status,
+        createdAt: a.createdAt,
+      })),
+    };
+  }),
 });
 
 // ─── Compose employer router ──────────────────────────────────────────────────

@@ -342,3 +342,104 @@ describe("business.drops.analytics", () => {
       .rejects.toMatchObject({ code: "UNAUTHORIZED" });
   });
 });
+
+// ─── employer.privacy.previewProfile ─────────────────────────────────────────
+
+vi.mock("./db.school", () => ({
+  getStudentKitForSchool: vi.fn(),
+}));
+
+import { getStudentKitForSchool } from "./db.school";
+
+const MOCK_KIT = {
+  user: {
+    id: 10,
+    name: "Alice Smith",
+    email: "alice@example.com",
+    shareContactWithEmployers: true,
+    yearLevel: "Year 12",
+    postcode: "4000",
+  },
+  credentials: [
+    { id: 1, title: "Barista Certificate", issuer: "TAFE QLD", issuedAt: new Date("2025-01-01"), type: "certificate" as const },
+  ],
+  vouches: [
+    {
+      id: 1,
+      studentUserId: 10,
+      voucherName: "Jane Manager",
+      voucherTitle: "Shift Supervisor",
+      voucherOrg: "Cafe Central",
+      message: "Alice is a reliable and enthusiastic worker.",
+      status: "verified" as const,
+      createdAt: new Date("2025-06-01"),
+    },
+  ],
+  reportCards: [
+    { id: 1, userId: 10, fileUrl: "https://s3/rc.pdf", fileKey: "rc.pdf", aiGrade: "B+", aiGpa: "5.5", aiRawOutput: null, verified: true, createdAt: new Date() },
+  ],
+  applications: [
+    { id: 1, status: "applied" as const, createdAt: new Date("2026-05-01"), jobTitle: "Barista", employer: "Cafe Central" },
+  ],
+};
+
+describe("employer.privacy.previewProfile", () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+  });
+
+  it("returns full employer-view profile with contact details when shareContact is true", async () => {
+    vi.mocked(getStudentKitForSchool).mockResolvedValueOnce(MOCK_KIT as never);
+    const caller = appRouter.createCaller(createUserContext(10));
+    const result = await caller.employer.privacy.previewProfile();
+
+    expect(result.shareContact).toBe(true);
+    expect(result.name).toBe("Alice Smith");
+    expect(result.email).toBe("alice@example.com");
+    expect(result.yearLevel).toBe("Year 12");
+    expect(result.postcode).toBe("4000");
+    expect(result.credentials).toHaveLength(1);
+    expect(result.credentials[0].title).toBe("Barista Certificate");
+    expect(result.vouches).toHaveLength(1);
+    expect(result.vouches[0].voucherName).toBe("Jane Manager");
+    expect(result.reportCards).toHaveLength(1);
+    expect(result.reportCards[0].aiGrade).toBe("B+");
+    expect(result.applications).toHaveLength(1);
+    expect(result.applications[0].jobTitle).toBe("Barista");
+  });
+
+  it("hides name and email when shareContact is false", async () => {
+    const privateKit = {
+      ...MOCK_KIT,
+      user: { ...MOCK_KIT.user, shareContactWithEmployers: false },
+    };
+    vi.mocked(getStudentKitForSchool).mockResolvedValueOnce(privateKit as never);
+    const caller = appRouter.createCaller(createUserContext(10));
+    const result = await caller.employer.privacy.previewProfile();
+
+    expect(result.shareContact).toBe(false);
+    expect(result.name).toBeNull();
+    expect(result.email).toBeNull();
+    // Kit data still visible
+    expect(result.credentials).toHaveLength(1);
+    expect(result.vouches).toHaveLength(1);
+  });
+
+  it("throws NOT_FOUND when the student has no profile", async () => {
+    vi.mocked(getStudentKitForSchool).mockResolvedValueOnce(null);
+    const caller = appRouter.createCaller(createUserContext(10));
+    await expect(caller.employer.privacy.previewProfile())
+      .rejects.toMatchObject({ code: "NOT_FOUND" });
+  });
+
+  it("requires authentication", async () => {
+    const publicCtx: TrpcContext = {
+      user: null,
+      req: makeReq(),
+      res: {} as TrpcContext["res"],
+    };
+    const caller = appRouter.createCaller(publicCtx);
+    await expect(caller.employer.privacy.previewProfile())
+      .rejects.toMatchObject({ code: "UNAUTHORIZED" });
+  });
+});

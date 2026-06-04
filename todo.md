@@ -207,3 +207,14 @@
 - [x] analytics.test.ts: 11 tests covering analyticsDetail (3), applyForJob (3), privacy.update (2), business.drops.analytics (3)
 - [x] 330 total tests passing across 11 test files — zero TypeScript errors
 - [x] Checkpoint saved and pushed to GitHub
+
+## Preview Profile Feature (June 2026 — Session 4)
+- [ ] Backend: employer.profile.previewStudentProfile tRPC procedure — returns employer-view of the calling student's data (name, school, year level, skills/credentials, vouches, applications, privacy settings)
+- [ ] Frontend: PreviewProfile modal on PrivacySettings page — shows exactly what employers see, with clear "visible / hidden" indicators per field based on current privacy settings
+- [ ] Vitest tests for previewStudentProfile procedure
+
+## Preview Profile Feature (June 2026)
+- [x] employer.privacy.previewProfile tRPC procedure — returns employer-view of student's own profile, respecting shareContactWithEmployers flag
+- [x] EmployerProfilePreview modal component — Dialog with Identity, Credentials, Vouches, Report Cards, Application History sections; visibility badges on each field
+- [x] Preview Profile button added to Privacy Settings page header
+- [x] Vitest tests: 4 tests (contact visible, contact hidden, NOT_FOUND, UNAUTHORIZED) — 334 total passing across 11 test files
