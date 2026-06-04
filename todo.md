@@ -166,3 +166,44 @@
 - [x] Resend procedure updated to use stored templateData for exact replay; BAD_REQUEST guard added for non-retryable statuses (sent/delivered/complaint)
 - [x] Resend button in UI now only renders for failed/bounced rows; shows — dash for all other statuses
 - [x] BAD_REQUEST guard covered by new Vitest test — 319 total passing across 10 test files
+
+## Comprehensive Analytics Dashboards (June 2026 — Session 3)
+
+### Part 1: DB Schema & Privacy
+- [x] users table: add shareContactWithEmployers (boolean, default false), yearLevel (varchar), postcode (varchar)
+- [x] jobApplications table: add contactSharedAtApplication (boolean) — snapshot of opt-in at time of apply
+- [x] drops table: add sponsorshipFee (int, cents) and impressions (int, default 0) columns
+- [x] New dropViews table: id, dropId, userId, viewedAt, ipAddress
+- [x] Migration 0003 generated and applied to database
+
+### Part 2: Hirer Analytics Backend
+- [x] db.ts: getJobAnalyticsDetail(jobId, employerUserId) — views, applies, hires (from placements), conversionRate, avgSkillCount, timeToFirstApplication, applicant list (with privacy), schoolBreakdown, applicationsOverTime
+- [x] employer.ts router: jobs.analyticsDetail procedure (protected, employer-only, own jobs only)
+- [x] employer.ts router: jobs.applyForJob procedure — records contactSharedAtApplication snapshot
+- [x] employer.ts router: privacy.update procedure — shareContactWithEmployers, yearLevel, postcode
+
+### Part 3: Drop Business Analytics Backend
+- [x] db.ts: recordDropView(dropId, userId?, ipAddress?) — inserts into dropViews, increments drops.impressions
+- [x] db.ts: getDropAnalyticsDetail(dropId, businessUserId) — impressions, claims, claimRate, costPerImpression, costPerClaim, bySchool, byYearLevel, byPostcode, claimsOverTime
+- [x] businessRouter created: drops.list, drops.create, drops.recordView, drops.analytics, drops.analyticsSummary
+- [x] businessRouter registered in main routers.ts as trpc.business.*
+
+### Part 4: Privacy Consent Frontend
+- [x] PrivacySettings page: shareContactWithEmployers toggle, yearLevel selector, postcode input
+- [x] Privacy Settings link added to Navbar user dropdown
+- [x] Route registered in App.tsx
+
+### Part 5: Hirer Analytics Frontend
+- [x] EmployerDashboard: JobAnalyticsTable replaced with enhanced version showing hired count and conversion rate
+- [x] Clickable row expands detail panel: KPI cards, applicant table (contact-share indicator), school breakdown bar chart, applications-over-time line chart
+- [x] Charts built with inline SVG + Tailwind (no external charting library needed)
+
+### Part 6: Drop Business Analytics Frontend
+- [x] BusinessDashboard page: summary table with impressions/claims/claim-rate/cost-per-claim
+- [x] Expandable detail panel: KPI cards, claims-over-time line chart, by-school bar chart, by-year-level bar chart, by-postcode inline bar
+- [x] Drop Analytics link added to Navbar user dropdown; route registered in App.tsx
+
+### Part 7: Tests & Delivery
+- [x] analytics.test.ts: 11 tests covering analyticsDetail (3), applyForJob (3), privacy.update (2), business.drops.analytics (3)
+- [x] 330 total tests passing across 11 test files — zero TypeScript errors
+- [x] Checkpoint saved and pushed to GitHub

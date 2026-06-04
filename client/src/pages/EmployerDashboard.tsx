@@ -20,7 +20,8 @@ import { Switch } from "@/components/ui/switch";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
 import { toast } from "sonner";
-import { Coins, Plus, BarChart2, Briefcase, Star, RefreshCw, CreditCard, Tag, Info } from "lucide-react";
+import { Coins, Plus, BarChart2, Briefcase, Star, RefreshCw, CreditCard, Tag, Info, ChevronDown, ChevronRight, Users, Eye, TrendingUp, Clock, Mail, ShieldOff } from "lucide-react";
+import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, LineChart, Line, CartesianGrid } from "recharts";
 
 // ─── Credit balance card ──────────────────────────────────────────────────────
 
@@ -419,10 +420,168 @@ function PostJobModal({ open, onClose }: { open: boolean; onClose: () => void })
   );
 }
 
+// ─── Job Analytics Detail Panel ───────────────────────────────────────────────
+
+function JobAnalyticsDetailPanel({ jobId, onClose }: { jobId: number; onClose: () => void }) {
+  const { data, isLoading } = trpc.employer.jobs.analyticsDetail.useQuery({ jobId });
+
+  if (isLoading) {
+    return (
+      <div className="p-5 space-y-3 border border-border rounded-xl bg-card/50">
+        {[1, 2, 3].map(i => <div key={i} className="h-5 bg-muted animate-pulse rounded" />)}
+      </div>
+    );
+  }
+  if (!data) return null;
+
+  const { job, applicants, schoolBreakdown, applicationsOverTime } = data;
+
+  return (
+    <div className="border border-primary/30 rounded-xl bg-primary/5 p-5 space-y-5">
+      {/* Header */}
+      <div className="flex items-start justify-between">
+        <div>
+          <h3 className="font-bold text-base">{job.title}</h3>
+          <p className="text-xs text-muted-foreground mt-0.5">Detailed analytics — click row again to collapse</p>
+        </div>
+        <button onClick={onClose} className="text-muted-foreground hover:text-foreground transition-colors p-1">
+          <ChevronDown className="w-4 h-4" />
+        </button>
+      </div>
+
+      {/* KPI Row */}
+      <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+        {[
+          { label: "Views", value: job.views, icon: <Eye className="w-3.5 h-3.5" /> },
+          { label: "Applies", value: job.applies, icon: <Users className="w-3.5 h-3.5" /> },
+          { label: "Hires", value: job.hires, icon: <TrendingUp className="w-3.5 h-3.5" /> },
+          { label: "Conversion", value: `${job.conversionRate}%`, icon: <BarChart2 className="w-3.5 h-3.5" /> },
+        ].map(kpi => (
+          <div key={kpi.label} className="bg-background rounded-lg p-3 border border-border">
+            <div className="flex items-center gap-1.5 text-muted-foreground mb-1">
+              {kpi.icon}
+              <span className="text-xs">{kpi.label}</span>
+            </div>
+            <p className="text-xl font-bold tabular-nums">{kpi.value}</p>
+          </div>
+        ))}
+      </div>
+
+      {/* Extra metrics */}
+      <div className="flex flex-wrap gap-4 text-xs text-muted-foreground">
+        {job.timeToFirstApplicationHours !== null && (
+          <span className="flex items-center gap-1">
+            <Clock className="w-3 h-3" />
+            First application in {job.timeToFirstApplicationHours}h
+          </span>
+        )}
+        <span className="flex items-center gap-1">
+          <Star className="w-3 h-3" />
+          Avg {job.avgApplicantSkillCount} verified skills per applicant
+        </span>
+      </div>
+
+      {/* Charts row */}
+      {(applicationsOverTime.length > 0 || schoolBreakdown.length > 0) && (
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+          {applicationsOverTime.length > 0 && (
+            <div>
+              <p className="text-xs font-semibold mb-2 text-muted-foreground uppercase tracking-wider">Applications Over Time</p>
+              <ResponsiveContainer width="100%" height={140}>
+                <LineChart data={applicationsOverTime} margin={{ top: 4, right: 8, left: -20, bottom: 0 }}>
+                  <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" />
+                  <XAxis dataKey="date" tick={{ fontSize: 10 }} tickFormatter={(d: string) => d.slice(5)} />
+                  <YAxis tick={{ fontSize: 10 }} allowDecimals={false} />
+                  <Tooltip
+                    contentStyle={{ fontSize: 11, background: "hsl(var(--card))", border: "1px solid hsl(var(--border))" }}
+                    formatter={(v: number) => [v, "Applications"]}
+                  />
+                  <Line type="monotone" dataKey="count" stroke="hsl(var(--primary))" strokeWidth={2} dot={false} />
+                </LineChart>
+              </ResponsiveContainer>
+            </div>
+          )}
+          {schoolBreakdown.length > 0 && (
+            <div>
+              <p className="text-xs font-semibold mb-2 text-muted-foreground uppercase tracking-wider">Applicants by School</p>
+              <ResponsiveContainer width="100%" height={140}>
+                <BarChart data={schoolBreakdown.slice(0, 6)} layout="vertical" margin={{ top: 0, right: 8, left: 0, bottom: 0 }}>
+                  <XAxis type="number" tick={{ fontSize: 10 }} allowDecimals={false} />
+                  <YAxis type="category" dataKey="schoolName" tick={{ fontSize: 9 }} width={90} />
+                  <Tooltip
+                    contentStyle={{ fontSize: 11, background: "hsl(var(--card))", border: "1px solid hsl(var(--border))" }}
+                    formatter={(v: number) => [v, "Applicants"]}
+                  />
+                  <Bar dataKey="count" fill="hsl(var(--primary))" radius={[0, 3, 3, 0]} />
+                </BarChart>
+              </ResponsiveContainer>
+            </div>
+          )}
+        </div>
+      )}
+
+      {/* Applicant table */}
+      {applicants.length > 0 && (
+        <div>
+          <p className="text-xs font-semibold mb-2 text-muted-foreground uppercase tracking-wider">Applicants ({applicants.length})</p>
+          <div className="overflow-x-auto">
+            <table className="w-full text-xs">
+              <thead>
+                <tr className="border-b border-border text-muted-foreground">
+                  <th className="text-left py-1.5 pr-3 font-medium">Applicant</th>
+                  <th className="text-left py-1.5 px-3 font-medium">Contact</th>
+                  <th className="text-right py-1.5 px-3 font-medium">Skills</th>
+                  <th className="text-right py-1.5 px-3 font-medium">Status</th>
+                  <th className="text-right py-1.5 pl-3 font-medium">Applied</th>
+                </tr>
+              </thead>
+              <tbody>
+                {applicants.map((a, i) => (
+                  <tr key={i} className="border-b border-border/40 hover:bg-muted/20 transition-colors">
+                    <td className="py-2 pr-3 font-medium">
+                      {a.name ?? (
+                        <span className="flex items-center gap-1 text-muted-foreground">
+                          <ShieldOff className="w-3 h-3" /> Anonymous
+                        </span>
+                      )}
+                    </td>
+                    <td className="py-2 px-3 text-muted-foreground">
+                      {a.email ? (
+                        <a href={`mailto:${a.email}`} className="flex items-center gap-1 hover:text-primary transition-colors">
+                          <Mail className="w-3 h-3" />{a.email}
+                        </a>
+                      ) : (
+                        <span className="flex items-center gap-1"><ShieldOff className="w-3 h-3" /> Hidden</span>
+                      )}
+                    </td>
+                    <td className="py-2 px-3 text-right tabular-nums">{a.verifiedSkillCount}</td>
+                    <td className="py-2 px-3 text-right">
+                      <Badge variant={a.status === "shortlisted" ? "default" : "secondary"} className="text-[10px]">
+                        {a.status ?? "applied"}
+                      </Badge>
+                    </td>
+                    <td className="py-2 pl-3 text-right text-muted-foreground">
+                      {new Date(a.appliedAt).toLocaleDateString("en-AU")}
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </div>
+      )}
+      {applicants.length === 0 && (
+        <p className="text-sm text-muted-foreground text-center py-4">No applications yet.</p>
+      )}
+    </div>
+  );
+}
+
 // ─── Job Analytics Table ──────────────────────────────────────────────────────
 
 function JobAnalyticsTable() {
   const { data: analytics, isLoading } = trpc.employer.jobs.analytics.useQuery();
+  const [selectedJobId, setSelectedJobId] = useState<number | null>(null);
 
   if (isLoading) {
     return <div className="text-sm text-muted-foreground">Loading analytics...</div>;
@@ -438,43 +597,67 @@ function JobAnalyticsTable() {
   }
 
   return (
-    <div className="overflow-x-auto">
-      <table className="w-full text-sm">
-        <thead>
-          <tr className="border-b border-border text-muted-foreground">
-            <th className="text-left py-2 pr-4 font-medium">Job Title</th>
-            <th className="text-right py-2 px-3 font-medium">Views</th>
-            <th className="text-right py-2 px-3 font-medium">Applies</th>
-            <th className="text-right py-2 px-3 font-medium">Status</th>
-            <th className="text-right py-2 pl-3 font-medium">Expires</th>
-          </tr>
-        </thead>
-        <tbody>
-          {analytics.map(job => (
-            <tr key={job.jobId} className="border-b border-border/50 hover:bg-muted/30 transition-colors">
-              <td className="py-2.5 pr-4 font-medium">
-                {job.title}
-                {job.isFeatured && (
-                  <Badge variant="secondary" className="ml-2 text-xs">
-                    <Star className="w-2.5 h-2.5 mr-1" />
-                    Featured
-                  </Badge>
-                )}
-              </td>
-              <td className="text-right py-2.5 px-3 tabular-nums">{job.viewCount}</td>
-              <td className="text-right py-2.5 px-3 tabular-nums">{job.applyCount}</td>
-              <td className="text-right py-2.5 px-3">
-                <Badge variant={job.isActive ? "default" : "secondary"}>
-                  {job.isActive ? "Active" : "Expired"}
-                </Badge>
-              </td>
-              <td className="text-right py-2.5 pl-3 text-muted-foreground">
-                {job.expiresAt ? new Date(job.expiresAt).toLocaleDateString("en-AU") : "—"}
-              </td>
+    <div className="space-y-3">
+      <div className="overflow-x-auto">
+        <table className="w-full text-sm">
+          <thead>
+            <tr className="border-b border-border text-muted-foreground">
+              <th className="text-left py-2 pr-4 font-medium">Job Title</th>
+              <th className="text-right py-2 px-3 font-medium">Views</th>
+              <th className="text-right py-2 px-3 font-medium">Applies</th>
+              <th className="text-right py-2 px-3 font-medium">Status</th>
+              <th className="text-right py-2 pl-3 font-medium">Expires</th>
             </tr>
-          ))}
-        </tbody>
-      </table>
+          </thead>
+          <tbody>
+            {analytics.map(job => {
+              const isExpanded = selectedJobId === job.jobId;
+              return (
+                <tr
+                  key={job.jobId}
+                  className={`border-b border-border/50 cursor-pointer transition-colors ${
+                    isExpanded ? "bg-primary/5" : "hover:bg-muted/30"
+                  }`}
+                  onClick={() => setSelectedJobId(isExpanded ? null : job.jobId)}
+                >
+                  <td className="py-2.5 pr-4 font-medium">
+                    <span className="flex items-center gap-1.5">
+                      {isExpanded
+                        ? <ChevronDown className="w-3.5 h-3.5 text-primary shrink-0" />
+                        : <ChevronRight className="w-3.5 h-3.5 text-muted-foreground shrink-0" />
+                      }
+                      {job.title}
+                      {job.isFeatured && (
+                        <Badge variant="secondary" className="ml-1 text-xs">
+                          <Star className="w-2.5 h-2.5 mr-1" />Featured
+                        </Badge>
+                      )}
+                    </span>
+                  </td>
+                  <td className="text-right py-2.5 px-3 tabular-nums">{job.viewCount}</td>
+                  <td className="text-right py-2.5 px-3 tabular-nums">{job.applyCount}</td>
+                  <td className="text-right py-2.5 px-3">
+                    <Badge variant={job.isActive ? "default" : "secondary"}>
+                      {job.isActive ? "Active" : "Expired"}
+                    </Badge>
+                  </td>
+                  <td className="text-right py-2.5 pl-3 text-muted-foreground">
+                    {job.expiresAt ? new Date(job.expiresAt).toLocaleDateString("en-AU") : "—"}
+                  </td>
+                </tr>
+              );
+            })}
+          </tbody>
+        </table>
+      </div>
+      {/* Detail panel */}
+      {selectedJobId !== null && (
+        <JobAnalyticsDetailPanel
+          jobId={selectedJobId}
+          onClose={() => setSelectedJobId(null)}
+        />
+      )}
+      <p className="text-xs text-muted-foreground">Click any row to expand detailed analytics, applicants, and charts.</p>
     </div>
   );
 }

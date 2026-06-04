@@ -22,6 +22,10 @@ export const users = mysqlTable("users", {
   status: mysqlEnum("status", ["active", "suspended"]).default("active").notNull(),
   suspendedAt: timestamp("suspendedAt"),
   suspendedReason: text("suspendedReason"),
+  // Privacy & analytics fields
+  shareContactWithEmployers: boolean("shareContactWithEmployers").default(false).notNull(),
+  yearLevel: varchar("yearLevel", { length: 64 }), // e.g. "Year 10", "Year 11", "Year 12", "University"
+  postcode: varchar("postcode", { length: 10 }),
   createdAt: timestamp("createdAt").defaultNow().notNull(),
   updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
   lastSignedIn: timestamp("lastSignedIn").defaultNow().notNull(),
@@ -176,6 +180,8 @@ export const jobApplications = mysqlTable("jobApplications", {
   userId: int("userId").notNull(),
   coverLetter: text("coverLetter"),
   status: mysqlEnum("status", ["applied", "viewed", "shortlisted", "rejected"]).default("applied").notNull(),
+  /** Snapshot of student's shareContactWithEmployers at time of application — for historical accuracy */
+  contactSharedAtApplication: boolean("contactSharedAtApplication").default(false).notNull(),
   createdAt: timestamp("createdAt").defaultNow().notNull(),
   updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
 });
@@ -198,12 +204,31 @@ export const drops = mysqlTable("drops", {
   status: mysqlEnum("status", ["draft", "active", "expired"]).default("draft").notNull(),
   claimCount: int("claimCount").default(0).notNull(),
   maxClaims: int("maxClaims"),
+  /** Sponsorship fee in cents (AUD) — set by admin when approving the drop */
+  sponsorshipFee: int("sponsorshipFee").default(0).notNull(),
+  /** Denormalised unique view count — incremented by recordDropView */
+  impressions: int("impressions").default(0).notNull(),
   createdAt: timestamp("createdAt").defaultNow().notNull(),
   updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
 });
 
 export type Drop = typeof drops.$inferSelect;
 export type InsertDrop = typeof drops.$inferInsert;
+
+// ─────────────────────────────────────────────
+// DROP VIEWS (for analytics — privacy-safe)
+// ─────────────────────────────────────────────
+
+export const dropViews = mysqlTable("dropViews", {
+  id: int("id").autoincrement().primaryKey(),
+  dropId: int("dropId").notNull(),
+  studentId: int("studentId"),      // nullable — null for anonymous/non-logged-in
+  sessionId: varchar("sessionId", { length: 128 }), // for anonymous viewers
+  viewedAt: timestamp("viewedAt").defaultNow().notNull(),
+});
+
+export type DropView = typeof dropViews.$inferSelect;
+export type InsertDropView = typeof dropViews.$inferInsert;
 
 export const dropClaims = mysqlTable("dropClaims", {
   id: int("id").autoincrement().primaryKey(),

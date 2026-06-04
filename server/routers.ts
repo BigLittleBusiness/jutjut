@@ -7,6 +7,7 @@ import { adminRouter, notificationsRouter } from "./routers/admin";
 import { waitlistRouter } from "./routers/waitlist";
 import { schoolRouter } from "./routers/school";
 import { emailPreferencesRouter } from "./routers/emailPreferences";
+import { businessRouter } from "./routers/business";
 
 export const appRouter = router({
     // if you need to use socket.io, read and register route in server/_core/index.ts, all api should start with '/api/' so that the gateway can route correctly
@@ -30,6 +31,7 @@ export const appRouter = router({
     preferences: emailPreferencesRouter,
   }),
   notifications: notificationsRouter,
+  business: businessRouter,
 });
 
 export type AppRouter = typeof appRouter;

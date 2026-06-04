@@ -101,10 +101,18 @@ import {
   promoRedemptions,
   jobs,
   jobViews,
+  jobApplications,
+  placements,
+  credentials,
+  schoolStudents,
+  schools,
+  dropViews,
+  drops,
+  dropClaims,
   waitlistSignups,
   WaitlistSignup,
 } from "../drizzle/schema";
-import { and, lte, desc, sql } from "drizzle-orm";
+import { and, lte, desc, sql, count, avg, isNotNull, inArray } from "drizzle-orm";
 
 export async function getEmployerByUserId(userId: number) {
   const db = await getDb();
@@ -418,4 +426,315 @@ export async function getWaitlistCount(): Promise<number> {
     .select({ id: waitlistSignups.id })
     .from(waitlistSignups);
   return rows.length;
+}
+
+// ─── Job Applications ─────────────────────────────────────────────────────────
+
+export async function applyToJob(params: {
+  jobId: number;
+  userId: number;
+  coverLetter?: string | null;
+  contactSharedAtApplication: boolean;
+}): Promise<{ success: boolean; alreadyApplied: boolean }> {
+  const db = await getDb();
+  if (!db) throw new Error("Database not available");
+  // Check for duplicate application
+  const existing = await db
+    .select({ id: jobApplications.id })
+    .from(jobApplications)
+    .where(and(eq(jobApplications.jobId, params.jobId), eq(jobApplications.userId, params.userId)))
+    .limit(1);
+  if (existing.length > 0) return { success: false, alreadyApplied: true };
+  await db.insert(jobApplications).values({
+    jobId: params.jobId,
+    userId: params.userId,
+    coverLetter: params.coverLetter ?? null,
+    contactSharedAtApplication: params.contactSharedAtApplication,
+    status: "applied",
+    createdAt: new Date(),
+    updatedAt: new Date(),
+  });
+  // Increment apply count on job
+  await db.update(jobs).set({ applyCount: sql`apply_count + 1` }).where(eq(jobs.id, params.jobId));
+  return { success: true, alreadyApplied: false };
+}
+
+// ─── Hirer Analytics Detail ───────────────────────────────────────────────────
+
+export async function getJobAnalyticsDetail(jobId: number, employerUserId: number) {
+  const db = await getDb();
+  if (!db) return null;
+
+  // Verify ownership
+  const job = await getJobById(jobId);
+  if (!job || job.postedByUserId !== employerUserId) return null;
+
+  // Fetch all applications for this job
+  const apps = await db
+    .select({
+      id: jobApplications.id,
+      userId: jobApplications.userId,
+      coverLetter: jobApplications.coverLetter,
+      status: jobApplications.status,
+      contactShared: jobApplications.contactSharedAtApplication,
+      appliedAt: jobApplications.createdAt,
+    })
+    .from(jobApplications)
+    .where(eq(jobApplications.jobId, jobId))
+    .orderBy(desc(jobApplications.createdAt));
+
+  // Fetch user details for applicants
+  const userIds = apps.map(a => a.userId);
+  const userRows = userIds.length > 0
+    ? await db.select({ id: users.id, name: users.name, email: users.email }).from(users).where(inArray(users.id, userIds))
+    : [];
+  const userMap = new Map(userRows.map(u => [u.id, u]));
+
+  // Fetch credential counts per applicant
+  const credRows = userIds.length > 0
+    ? await db
+        .select({ userId: credentials.userId, cnt: count(credentials.id) })
+        .from(credentials)
+        .where(inArray(credentials.userId, userIds))
+        .groupBy(credentials.userId)
+    : [];
+  const credMap = new Map(credRows.map(r => [r.userId, r.cnt]));
+
+  // Fetch hire count (placements linked to this job with completed or approved status)
+  const hireRows = await db
+    .select({ id: placements.id })
+    .from(placements)
+    .where(and(eq(placements.jobId, jobId), inArray(placements.status, ["completed", "approved_by_school"])));
+  const hireCount = hireRows.length;
+
+  // Build applicant list with privacy rules
+  const applicants = apps.map(a => {
+    const u = userMap.get(a.userId);
+    return {
+      studentId: a.contactShared ? a.userId : null,
+      name: a.contactShared ? (u?.name ?? null) : null,
+      email: a.contactShared ? (u?.email ?? null) : null,
+      verifiedSkillCount: credMap.get(a.userId) ?? 0,
+      appliedAt: a.appliedAt,
+      contactShared: a.contactShared,
+      status: a.status,
+    };
+  });
+
+  // School breakdown — join applicant users to schoolStudents → schools
+  const schoolRows = userIds.length > 0
+    ? await db
+        .select({ schoolName: schools.name, userId: schoolStudents.studentId })
+        .from(schoolStudents)
+        .innerJoin(schools, eq(schools.id, schoolStudents.schoolId))
+        .where(inArray(schoolStudents.studentId, userIds))
+    : [];
+  const schoolMap = new Map(schoolRows.map(r => [r.userId, r.schoolName]));
+  const schoolCounts: Record<string, number> = {};
+  for (const a of apps) {
+    const sn = schoolMap.get(a.userId) ?? "Other";
+    schoolCounts[sn] = (schoolCounts[sn] ?? 0) + 1;
+  }
+  const schoolBreakdown = Object.entries(schoolCounts)
+    .sort((a, b) => b[1] - a[1])
+    .map(([schoolName, count]) => ({ schoolName, count }));
+
+  // Applications over time (by day)
+  const dayMap: Record<string, number> = {};
+  for (const a of apps) {
+    const day = a.appliedAt.toISOString().slice(0, 10);
+    dayMap[day] = (dayMap[day] ?? 0) + 1;
+  }
+  const applicationsOverTime = Object.entries(dayMap)
+    .sort(([a], [b]) => a.localeCompare(b))
+    .map(([date, count]) => ({ date, count }));
+
+  // Derived metrics
+  const conversionRate = job.viewCount > 0 ? (apps.length / job.viewCount) * 100 : 0;
+  const avgApplicantSkillCount = apps.length > 0
+    ? apps.reduce((sum, a) => sum + (credMap.get(a.userId) ?? 0), 0) / apps.length
+    : 0;
+  const firstApp = apps.length > 0 ? apps[apps.length - 1] : null; // oldest first
+  const timeToFirstApplicationHours = firstApp
+    ? (firstApp.appliedAt.getTime() - job.createdAt.getTime()) / (1000 * 60 * 60)
+    : null;
+
+  return {
+    job: {
+      id: job.id,
+      title: job.title,
+      views: job.viewCount,
+      applies: apps.length,
+      hires: hireCount,
+      conversionRate: Math.round(conversionRate * 100) / 100,
+      avgApplicantSkillCount: Math.round(avgApplicantSkillCount * 10) / 10,
+      timeToFirstApplicationHours: timeToFirstApplicationHours !== null
+        ? Math.round(timeToFirstApplicationHours * 10) / 10
+        : null,
+    },
+    applicants,
+    schoolBreakdown,
+    applicationsOverTime,
+  };
+}
+
+// ─── Drop Views & Analytics ───────────────────────────────────────────────────
+
+export async function recordDropView(params: {
+  dropId: number;
+  studentId?: number | null;
+  sessionId?: string | null;
+}) {
+  const db = await getDb();
+  if (!db) return;
+  // Deduplicate: skip if already viewed by this student or session
+  if (params.studentId) {
+    const existing = await db
+      .select({ id: dropViews.id })
+      .from(dropViews)
+      .where(and(eq(dropViews.dropId, params.dropId), eq(dropViews.studentId, params.studentId)))
+      .limit(1);
+    if (existing.length > 0) return;
+  } else if (params.sessionId) {
+    const existing = await db
+      .select({ id: dropViews.id })
+      .from(dropViews)
+      .where(and(eq(dropViews.dropId, params.dropId), eq(dropViews.sessionId, params.sessionId)))
+      .limit(1);
+    if (existing.length > 0) return;
+  }
+  await db.insert(dropViews).values({
+    dropId: params.dropId,
+    studentId: params.studentId ?? null,
+    sessionId: params.sessionId ?? null,
+    viewedAt: new Date(),
+  });
+  // Increment denormalised impressions counter
+  await db.update(drops).set({ impressions: sql`impressions + 1` }).where(eq(drops.id, params.dropId));
+}
+
+export async function getDropAnalyticsDetail(dropId: number, businessUserId: number) {
+  const db = await getDb();
+  if (!db) return null;
+
+  // Verify ownership
+  const dropRows = await db.select().from(drops).where(eq(drops.id, dropId)).limit(1);
+  const drop = dropRows[0] ?? null;
+  if (!drop || drop.businessId !== businessUserId) return null;
+
+  // Claims
+  const claimRows = await db
+    .select({ userId: dropClaims.userId, claimedAt: dropClaims.claimedAt })
+    .from(dropClaims)
+    .where(eq(dropClaims.dropId, dropId))
+    .orderBy(desc(dropClaims.claimedAt));
+  const claimCount = claimRows.length;
+
+  // Metrics
+  const impressions = drop.impressions;
+  const claimRate = impressions > 0 ? (claimCount / impressions) * 100 : 0;
+  const sponsorshipFee = drop.sponsorshipFee; // cents
+  const costPerImpression = impressions > 0 ? sponsorshipFee / 100 / impressions : 0;
+  const costPerClaim = claimCount > 0 ? sponsorshipFee / 100 / claimCount : 0;
+
+  // Fetch claimant user data for breakdowns (no PII — only yearLevel, postcode, schoolId)
+  const claimantIds = claimRows.map(c => c.userId);
+  const claimantUsers = claimantIds.length > 0
+    ? await db
+        .select({ id: users.id, yearLevel: users.yearLevel, postcode: users.postcode })
+        .from(users)
+        .where(inArray(users.id, claimantIds))
+    : [];
+  const claimantMap = new Map(claimantUsers.map(u => [u.id, u]));
+
+  // School breakdown for claimants
+  const claimantSchoolRows = claimantIds.length > 0
+    ? await db
+        .select({ schoolName: schools.name, userId: schoolStudents.studentId })
+        .from(schoolStudents)
+        .innerJoin(schools, eq(schools.id, schoolStudents.schoolId))
+        .where(inArray(schoolStudents.studentId, claimantIds))
+    : [];
+  const claimantSchoolMap = new Map(claimantSchoolRows.map(r => [r.userId, r.schoolName]));
+
+  // By school
+  const bySchoolCounts: Record<string, number> = {};
+  for (const c of claimRows) {
+    const sn = claimantSchoolMap.get(c.userId) ?? "Other";
+    bySchoolCounts[sn] = (bySchoolCounts[sn] ?? 0) + 1;
+  }
+  const bySchool = Object.entries(bySchoolCounts)
+    .sort((a, b) => b[1] - a[1])
+    .map(([school_name, count]) => ({ school_name, count }));
+
+  // By year level
+  const byYearCounts: Record<string, number> = {};
+  for (const c of claimRows) {
+    const u = claimantMap.get(c.userId);
+    const yr = u?.yearLevel ?? "Not specified";
+    byYearCounts[yr] = (byYearCounts[yr] ?? 0) + 1;
+  }
+  const byYearLevel = Object.entries(byYearCounts)
+    .sort((a, b) => b[1] - a[1])
+    .map(([year, count]) => ({ year, count }));
+
+  // By postcode
+  const byPostcodeCounts: Record<string, number> = {};
+  for (const c of claimRows) {
+    const u = claimantMap.get(c.userId);
+    if (u?.postcode) {
+      byPostcodeCounts[u.postcode] = (byPostcodeCounts[u.postcode] ?? 0) + 1;
+    }
+  }
+  const byPostcode = Object.entries(byPostcodeCounts)
+    .sort((a, b) => b[1] - a[1])
+    .map(([postcode, count]) => ({ postcode, count }));
+
+  // Claims over time (by date + hour)
+  const claimsOverTime: { date: string; hour: number; count: number }[] = [];
+  const hourMap: Record<string, number> = {};
+  for (const c of claimRows) {
+    const d = c.claimedAt.toISOString().slice(0, 10);
+    const h = c.claimedAt.getUTCHours();
+    const key = `${d}:${h}`;
+    hourMap[key] = (hourMap[key] ?? 0) + 1;
+  }
+  for (const [key, cnt] of Object.entries(hourMap).sort(([a], [b]) => a.localeCompare(b))) {
+    const [date, hourStr] = key.split(":");
+    claimsOverTime.push({ date, hour: parseInt(hourStr, 10), count: cnt });
+  }
+
+  return {
+    drop: {
+      id: drop.id,
+      offer_title: drop.title,
+      scheduled_date: drop.scheduledDate?.toISOString().slice(0, 10) ?? null,
+      sponsorship_fee: sponsorshipFee,
+      impressions,
+      claims: claimCount,
+    },
+    metrics: {
+      claim_rate: Math.round(claimRate * 100) / 100,
+      cost_per_impression: Math.round(costPerImpression * 100) / 100,
+      cost_per_claim: Math.round(costPerClaim * 100) / 100,
+    },
+    breakdowns: {
+      by_school: bySchool,
+      by_year_level: byYearLevel,
+      by_postcode: byPostcode,
+      claims_over_time: claimsOverTime,
+    },
+  };
+}
+
+// ─── User privacy settings ────────────────────────────────────────────────────
+
+export async function updateUserPrivacy(userId: number, params: {
+  shareContactWithEmployers?: boolean;
+  yearLevel?: string | null;
+  postcode?: string | null;
+}) {
+  const db = await getDb();
+  if (!db) throw new Error("Database not available");
+  await db.update(users).set({ ...params, updatedAt: new Date() }).where(eq(users.id, userId));
 }

@@ -220,15 +220,30 @@ export const Navbar: React.FC<NavbarProps> = ({ onNavigate, currentPage }) => {
                           <span>My Profile</span>
                         </button>
 
-                        {/* Settings */}
+                        {/* Privacy Settings */}
                         <button
-                          onClick={() => { handleNavClick("settings"); setIsProfileOpen(false); }}
+                          onClick={() => { handleNavClick("privacy-settings"); setIsProfileOpen(false); }}
                           className="w-full px-3 py-2 rounded-lg font-bold flex items-center gap-2.5 transition-all text-left hover:bg-accent text-muted-foreground hover:text-foreground"
                         >
-                          <i className="fa-solid fa-gear w-4 text-center text-primary"></i>
-                          <span>Settings</span>
+                          <i className="fa-solid fa-shield-halved w-4 text-center text-primary"></i>
+                          <span>Privacy Settings</span>
                         </button>
-
+                                                {/* Email Preferences */}
+                        <button
+                          onClick={() => { handleNavClick("email-preferences"); setIsProfileOpen(false); }}
+                          className="w-full px-3 py-2 rounded-lg font-bold flex items-center gap-2.5 transition-all text-left hover:bg-accent text-muted-foreground hover:text-foreground"
+                        >
+                          <i className="fa-solid fa-envelope w-4 text-center text-primary"></i>
+                          <span>Email Preferences</span>
+                        </button>
+                        {/* Business Dashboard */}
+                        <button
+                          onClick={() => { handleNavClick("business-dashboard"); setIsProfileOpen(false); }}
+                          className="w-full px-3 py-2 rounded-lg font-bold flex items-center gap-2.5 transition-all text-left hover:bg-accent text-muted-foreground hover:text-foreground"
+                        >
+                          <i className="fa-solid fa-chart-bar w-4 text-center text-primary"></i>
+                          <span>Drop Analytics</span>
+                        </button>
                         {/* Divider */}
                         <div className="border-t border-border my-0.5" />
 

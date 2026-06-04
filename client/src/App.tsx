@@ -19,6 +19,8 @@ import SchoolPortal from "./pages/SchoolPortal";
 import AdminDashboard from "./pages/AdminDashboard";
 import LandingPage from "./pages/LandingPage";
 import EmailPreferences from "./pages/EmailPreferences";
+import PrivacySettings from "./pages/PrivacySettings";
+import BusinessDashboard from "./pages/BusinessDashboard";
 
 function MainLayout() {
   const { isAuthenticated } = useApp();
@@ -89,6 +91,8 @@ function MainLayout() {
             {currentPage === "school-portal" && <SchoolPortal onNavigate={handleNavigate} />}
             {currentPage === "admin-dashboard" && <AdminDashboard onNavigate={handleNavigate} />}
             {currentPage === "email-preferences" && <EmailPreferences />}
+            {currentPage === "privacy-settings" && <PrivacySettings />}
+            {currentPage === "business-dashboard" && <BusinessDashboard />}
           </>
         )}
       </main>

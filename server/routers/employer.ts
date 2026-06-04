@@ -18,7 +18,11 @@ import {
   getJobsByPostedUser,
   getJobById,
   getJobAnalyticsForUser,
+  getJobAnalyticsDetail,
+  applyToJob,
   recordJobView,
+  updateUserPrivacy,
+  getDb,
 } from "../db";
 import {
   createCharge,
@@ -28,8 +32,7 @@ import {
   CREDIT_PACKS,
   type CreditPackId,
 } from "../pinpayments";
-import { getDb } from "../db";
-import { jobs } from "../../drizzle/schema";
+import { jobs, users } from "../../drizzle/schema";
 import { eq } from "drizzle-orm";
 import { sendEmailSilent } from "../emailService";
 import { createNotification } from "../db.admin";
@@ -381,6 +384,59 @@ const employerJobsRouter = router({
   analytics: protectedProcedure.query(async ({ ctx }) => {
     return getJobAnalyticsForUser(ctx.user.id);
   }),
+
+  analyticsDetail: protectedProcedure
+    .input(z.object({ jobId: z.number() }))
+    .query(async ({ ctx, input }) => {
+      const detail = await getJobAnalyticsDetail(input.jobId, ctx.user.id);
+      if (!detail) throw new TRPCError({ code: "NOT_FOUND", message: "Job not found or access denied." });
+      return detail;
+    }),
+
+  applyForJob: protectedProcedure
+    .input(z.object({
+      jobId: z.number(),
+      coverLetter: z.string().optional(),
+    }))
+    .mutation(async ({ ctx, input }) => {
+      const db = await getDb();
+      if (!db) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: "Database unavailable." });
+      const userRows = await db.select({ shareContactWithEmployers: users.shareContactWithEmployers }).from(users).where(eq(users.id, ctx.user.id)).limit(1);
+      const contactShared = userRows[0]?.shareContactWithEmployers ?? false;
+      const result = await applyToJob({
+        jobId: input.jobId,
+        userId: ctx.user.id,
+        coverLetter: input.coverLetter ?? null,
+        contactSharedAtApplication: contactShared,
+      });
+      if (result.alreadyApplied) throw new TRPCError({ code: "CONFLICT", message: "You have already applied to this job." });
+      return { success: true };
+    }),
+});
+
+// ─── Privacy settings ─────────────────────────────────────────────────────────
+
+const privacyRouter = router({
+  get: protectedProcedure.query(async ({ ctx }) => {
+    const db = await getDb();
+    if (!db) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: "Database unavailable." });
+    const rows = await db.select({
+      shareContactWithEmployers: users.shareContactWithEmployers,
+      yearLevel: users.yearLevel,
+      postcode: users.postcode,
+    }).from(users).where(eq(users.id, ctx.user.id)).limit(1);
+    return rows[0] ?? { shareContactWithEmployers: false, yearLevel: null, postcode: null };
+  }),
+  update: protectedProcedure
+    .input(z.object({
+      shareContactWithEmployers: z.boolean().optional(),
+      yearLevel: z.string().max(64).nullable().optional(),
+      postcode: z.string().max(10).nullable().optional(),
+    }))
+    .mutation(async ({ ctx, input }) => {
+      await updateUserPrivacy(ctx.user.id, input);
+      return { success: true };
+    }),
 });
 
 // ─── Compose employer router ──────────────────────────────────────────────────
@@ -389,4 +445,5 @@ export const employerRouter = router({
   profile: employerProfileRouter,
   credits: creditsRouter,
   jobs: employerJobsRouter,
+  privacy: privacyRouter,
 });
