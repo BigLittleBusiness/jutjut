@@ -443,3 +443,45 @@ describe("employer.privacy.previewProfile", () => {
       .rejects.toMatchObject({ code: "UNAUTHORIZED" });
   });
 });
+
+// ─── employer.privacy.update — toggle from preview modal ─────────────────────
+
+describe("employer.privacy.update — live toggle from preview modal", () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+  });
+
+  it("enables contact sharing when toggled on", async () => {
+    const { updateUserPrivacy } = await import("./db");
+    vi.mocked(updateUserPrivacy).mockResolvedValueOnce(undefined);
+    const caller = appRouter.createCaller(createUserContext(10));
+    const result = await caller.employer.privacy.update({ shareContactWithEmployers: true });
+    expect(result.success).toBe(true);
+    expect(vi.mocked(updateUserPrivacy)).toHaveBeenCalledWith(10, {
+      shareContactWithEmployers: true,
+    });
+  });
+
+  it("disables contact sharing when toggled off", async () => {
+    const { updateUserPrivacy } = await import("./db");
+    vi.mocked(updateUserPrivacy).mockResolvedValueOnce(undefined);
+    const caller = appRouter.createCaller(createUserContext(10));
+    const result = await caller.employer.privacy.update({ shareContactWithEmployers: false });
+    expect(result.success).toBe(true);
+    expect(vi.mocked(updateUserPrivacy)).toHaveBeenCalledWith(10, {
+      shareContactWithEmployers: false,
+    });
+  });
+
+  it("requires authentication for the toggle mutation", async () => {
+    const publicCtx: TrpcContext = {
+      user: null,
+      req: makeReq(),
+      res: {} as TrpcContext["res"],
+    };
+    const caller = appRouter.createCaller(publicCtx);
+    await expect(
+      caller.employer.privacy.update({ shareContactWithEmployers: true })
+    ).rejects.toMatchObject({ code: "UNAUTHORIZED" });
+  });
+});

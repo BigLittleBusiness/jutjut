@@ -218,3 +218,10 @@
 - [x] EmployerProfilePreview modal component — Dialog with Identity, Credentials, Vouches, Report Cards, Application History sections; visibility badges on each field
 - [x] Preview Profile button added to Privacy Settings page header
 - [x] Vitest tests: 4 tests (contact visible, contact hidden, NOT_FOUND, UNAUTHORIZED) — 334 total passing across 11 test files
+
+## Preview Modal Enhancements (June 2026)
+- [x] Live contact-sharing toggle inside the preview modal — Switch component wired to employer.privacy.update mutation; invalidates previewProfile query on success so the preview re-renders instantly without closing the modal
+- [x] Explanatory tooltips on every Hidden badge — VisibilityBadge now accepts a `reason` prop; each hidden field carries a specific plain-English explanation of why it is not visible (name hidden: contact sharing off; email hidden: contact sharing off; yearLevel not provided; postcode not provided)
+- [x] HelpCircle icon added to hidden badges to signal that a tooltip is available
+- [x] Amber callout updated to reference the in-modal toggle instead of the settings page
+- [x] Vitest tests: 3 new tests (toggle on, toggle off, UNAUTHORIZED) — 337 total passing across 11 test files
