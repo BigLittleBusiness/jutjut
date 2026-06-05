@@ -225,3 +225,26 @@
 - [x] HelpCircle icon added to hidden badges to signal that a tooltip is available
 - [x] Amber callout updated to reference the in-modal toggle instead of the settings page
 - [x] Vitest tests: 3 new tests (toggle on, toggle off, UNAUTHORIZED) — 337 total passing across 11 test files
+
+## AWS Deployment Optimisation (June 2026 — Session 5)
+
+### Security
+- [x] SQL injection in sesWebhook.ts suppressEmail() — replace raw string interpolation with parameterised Drizzle query
+- [x] CORS not configured — all origins accepted in production; add cors middleware with ALLOWED_ORIGINS env var
+- [x] No rate limiting on any endpoint — add express-rate-limit on /api/trpc and /webhooks
+- [x] ENCRYPTION_KEY not validated in env.ts startup check
+- [x] Missing helmet HTTP security headers
+
+### Database
+- [x] DB connection uses plain string URL — add SSL: true and connection pool settings for RDS
+- [x] getDb() silently returns null — add assertDb() helper to fail fast instead of silent null-checks
+
+### Server / Reliability
+- [x] No structured logging — replace bare console.log/warn with structured JSON logger (pino)
+- [x] No graceful shutdown handler (SIGTERM/SIGINT) — ECS tasks will be force-killed mid-request
+- [x] Body-size limit not set — large payloads can crash the server
+- [x] autoRepost cron uses [MOCK EMAIL] console.log instead of real emailService calls
+
+### Build / Performance
+- [x] Vite build has no code-splitting config — add manualChunks for vendor/react/trpc bundles
+- [x] No gzip/brotli compression middleware on Express server

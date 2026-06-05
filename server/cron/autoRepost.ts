@@ -15,27 +15,52 @@ import {
   adjustCredits,
 } from "../db";
 import { createCharge } from "../pinpayments";
-import { jobs } from "../../drizzle/schema";
+import { jobs, users } from "../../drizzle/schema";
 import { eq } from "drizzle-orm";
+import { sendEmailSilent } from "../emailService";
+import { logger } from "../_core/logger";
 
 async function processAutoReposts() {
-  console.log("[AutoRepost] Running auto-repost check...");
+  logger.info("[AutoRepost] Running auto-repost check...");
   const candidates = await getAutoRepostCandidates();
 
   if (candidates.length === 0) {
-    console.log("[AutoRepost] No candidates found.");
+    logger.info("[AutoRepost] No candidates found.");
     return;
   }
 
-  console.log(`[AutoRepost] Processing ${candidates.length} candidate(s).`);
+  logger.info({ count: candidates.length }, `[AutoRepost] Processing ${candidates.length} candidate(s).`);
 
   for (const job of candidates) {
     try {
       await processOneJob(job);
     } catch (err) {
-      console.error(`[AutoRepost] Failed to process job ${job.id}:`, err);
+      logger.error({ err, jobId: job.id }, `[AutoRepost] Failed to process job ${job.id}`);
     }
   }
+}
+
+/** Fetch the user's email from the DB for notification purposes. */
+async function getEmployerEmail(userId: number): Promise<string | null> {
+  const db = await getDb();
+  if (!db) return null;
+  const rows = await db
+    .select({ email: users.email, name: users.name })
+    .from(users)
+    .where(eq(users.id, userId))
+    .limit(1);
+  return rows[0]?.email ?? null;
+}
+
+async function getEmployerName(userId: number): Promise<string> {
+  const db = await getDb();
+  if (!db) return "Employer";
+  const rows = await db
+    .select({ name: users.name })
+    .from(users)
+    .where(eq(users.id, userId))
+    .limit(1);
+  return rows[0]?.name ?? "Employer";
 }
 
 async function processOneJob(job: {
@@ -57,23 +82,46 @@ async function processOneJob(job: {
 
   const employer = await getEmployerByUserId(job.postedByUserId);
   if (!employer) {
-    console.warn(`[AutoRepost] No employer profile for userId ${job.postedByUserId}, disabling auto-repost on job ${job.id}`);
+    logger.warn(
+      { userId: job.postedByUserId, jobId: job.id },
+      `[AutoRepost] No employer profile for userId ${job.postedByUserId}, disabling auto-repost on job ${job.id}`
+    );
     await disableAutoRepost(job.id);
     return;
   }
 
   const balance = await getCreditBalance(employer.id);
+  const employerEmail = await getEmployerEmail(job.postedByUserId);
+  const employerName = await getEmployerName(job.postedByUserId);
+  const dashboardUrl = "https://jutjut.com.au/employer/dashboard";
 
   if (balance >= 1) {
     // Deduct credit and repost
     await repostJob(job, employer.id, "credit");
+
+    // Send success notification email
+    if (employerEmail) {
+      const newBalance = balance - 1;
+      const nextRepostDate = new Date(Date.now() + 31 * 24 * 60 * 60 * 1000);
+      await sendEmailSilent({
+        to: employerEmail,
+        templateId: "autorepost_success",
+        data: {
+          employer_name: employerName,
+          job_title: job.title,
+          remaining_balance: String(newBalance),
+          next_repost_date: nextRepostDate.toLocaleDateString("en-AU"),
+          job_url: dashboardUrl,
+        },
+      });
+    }
   } else if (employer.paymentToken) {
     // Attempt to charge stored payment token for 1 credit ($15 AUD)
     try {
       const charge = await createCharge({
         amount: 15_00, // $15.00 AUD in cents
         description: `JutJut auto-repost: ${job.title}`,
-        email: "noreply@jutjut.com.au",
+        email: employerEmail ?? "noreply@jutjut.com.au",
         ipAddress: "0.0.0.0",
         customerToken: employer.paymentToken,
         metadata: {
@@ -93,21 +141,78 @@ async function processOneJob(job: {
           description: `Auto-repost charge for job: ${job.title}`,
         });
         await repostJob(job, employer.id, "auto_repost_charge");
+
+        // Send success notification email
+        if (employerEmail) {
+          const nextRepostDate = new Date(Date.now() + 31 * 24 * 60 * 60 * 1000);
+          await sendEmailSilent({
+            to: employerEmail,
+            templateId: "autorepost_success",
+            data: {
+              employer_name: employerName,
+              job_title: job.title,
+              remaining_balance: "0",
+              next_repost_date: nextRepostDate.toLocaleDateString("en-AU"),
+              job_url: dashboardUrl,
+            },
+          });
+        }
       } else {
-        console.warn(`[AutoRepost] Charge failed for job ${job.id}: ${charge.status_message}`);
+        logger.warn(
+          { jobId: job.id, statusMessage: charge.status_message },
+          `[AutoRepost] Charge failed for job ${job.id}: ${charge.status_message}`
+        );
         await disableAutoRepost(job.id);
-        // Mock email notification
-        console.log(`[AutoRepost] [MOCK EMAIL] To employer (userId ${job.postedByUserId}): Auto-repost for "${job.title}" failed — insufficient credits and payment declined. Please top up your credits.`);
+
+        // Send failure notification email
+        if (employerEmail) {
+          await sendEmailSilent({
+            to: employerEmail,
+            templateId: "autorepost_declined",
+            data: {
+              employer_name: employerName,
+              job_title: job.title,
+              failure_reason: "your payment was declined",
+              dashboard_url: dashboardUrl,
+            },
+          });
+        }
       }
     } catch (err) {
-      console.error(`[AutoRepost] Charge error for job ${job.id}:`, err);
+      logger.error({ err, jobId: job.id }, `[AutoRepost] Charge error for job ${job.id}`);
       await disableAutoRepost(job.id);
-      console.log(`[AutoRepost] [MOCK EMAIL] To employer (userId ${job.postedByUserId}): Auto-repost for "${job.title}" failed due to a payment error. Please top up your credits.`);
+
+      // Send failure notification email
+      if (employerEmail) {
+        await sendEmailSilent({
+          to: employerEmail,
+          templateId: "autorepost_declined",
+          data: {
+            employer_name: employerName,
+            job_title: job.title,
+            failure_reason: "a payment processing error occurred",
+            dashboard_url: dashboardUrl,
+          },
+        });
+      }
     }
   } else {
     // No credits, no payment token
     await disableAutoRepost(job.id);
-    console.log(`[AutoRepost] [MOCK EMAIL] To employer (userId ${job.postedByUserId}): Auto-repost for "${job.title}" was disabled — no credits and no saved payment method.`);
+
+    // Send failure notification email
+    if (employerEmail) {
+      await sendEmailSilent({
+        to: employerEmail,
+        templateId: "autorepost_declined",
+        data: {
+          employer_name: employerName,
+          job_title: job.title,
+          failure_reason: "you have no credits and no saved payment method",
+          dashboard_url: dashboardUrl,
+        },
+      });
+    }
   }
 }
 
@@ -169,7 +274,7 @@ async function repostJob(
   // Disable auto-repost on the original expired job
   await db.update(jobs).set({ autoRepostEnabled: false, isActive: false }).where(eq(jobs.id, job.id));
 
-  console.log(`[AutoRepost] Successfully reposted job ${job.id} as new listing.`);
+  logger.info({ jobId: job.id }, `[AutoRepost] Successfully reposted job ${job.id} as new listing.`);
 }
 
 async function disableAutoRepost(jobId: number) {
@@ -185,9 +290,9 @@ async function disableAutoRepost(jobId: number) {
 export function startAutoRepostCron() {
   // "0 16 * * *" = 16:00 UTC daily (02:00 AEST)
   cron.schedule("0 16 * * *", () => {
-    processAutoReposts().catch(err =>
-      console.error("[AutoRepost] Unhandled error:", err)
+    processAutoReposts().catch((err) =>
+      logger.error({ err }, "[AutoRepost] Unhandled error")
     );
   });
-  console.log("[AutoRepost] Cron job scheduled (daily at 02:00 AEST).");
+  logger.info("[AutoRepost] Cron job scheduled (daily at 02:00 AEST).");
 }

@@ -37,6 +37,7 @@ import { eq } from "drizzle-orm";
 import { sendEmailSilent } from "../emailService";
 import { createNotification } from "../db.admin";
 import { getStudentKitForSchool } from "../db.school";
+import { logger } from "../_core/logger";
 
 // ─── Employer profile ─────────────────────────────────────────────────────────
 
@@ -162,7 +163,7 @@ const creditsRouter = router({
           if (refreshed) employer = refreshed;
         } catch (err) {
           // Non-fatal: fall back to one-time card token
-          console.warn("[PinPayments] Could not create customer:", err);
+          logger.warn({ err }, "[PinPayments] Could not create customer");
         }
       }
 

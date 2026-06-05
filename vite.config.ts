@@ -167,6 +167,32 @@ export default defineConfig({
   build: {
     outDir: path.resolve(import.meta.dirname, "dist/public"),
     emptyOutDir: true,
+    chunkSizeWarningLimit: 600,
+    rollupOptions: {
+      output: {
+        manualChunks(id) {
+          // React core — loaded first, cached longest
+          if (id.includes("node_modules/react/") || id.includes("node_modules/react-dom/")) {
+            return "vendor-react";
+          }
+          // tRPC + TanStack Query — changes with API updates
+          if (
+            id.includes("node_modules/@trpc/") ||
+            id.includes("node_modules/@tanstack/")
+          ) {
+            return "vendor-trpc";
+          }
+          // Radix UI + shadcn/ui components — large but stable
+          if (id.includes("node_modules/@radix-ui/")) {
+            return "vendor-ui";
+          }
+          // All other node_modules into a general vendor chunk
+          if (id.includes("node_modules/")) {
+            return "vendor";
+          }
+        },
+      },
+    },
   },
   server: {
     host: true,

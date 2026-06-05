@@ -10,6 +10,7 @@
 
 import type { Express, Request, Response } from "express";
 import { ENV } from "../_core/env";
+import { logger } from "../_core/logger";
 import { verifyWebhookSignature } from "../pinpayments";
 import { adjustCredits, getPromoCode, incrementPromoCodeUsage, recordPromoRedemption } from "../db";
 
@@ -44,12 +45,12 @@ export function registerPinPaymentsWebhook(app: Express) {
       if (ENV.pinPaymentsWebhookSecret && signature) {
         const valid = verifyWebhookSignature(rawBody, signature, ENV.pinPaymentsWebhookSecret);
         if (!valid) {
-          console.warn("[Webhook] Invalid PinPayments signature");
+          logger.warn("[Webhook] Invalid PinPayments signature");
           res.status(401).json({ error: "Invalid signature" });
           return;
         }
       } else if (ENV.pinPaymentsWebhookSecret && !signature) {
-        console.warn("[Webhook] Missing PinPayments signature header");
+        logger.warn("[Webhook] Missing PinPayments signature header");
         res.status(401).json({ error: "Missing signature" });
         return;
       }
@@ -63,7 +64,7 @@ export function registerPinPaymentsWebhook(app: Express) {
       }
 
       const eventType = payload.event?.type;
-      console.log(`[Webhook] PinPayments event: ${eventType}`);
+      logger.info({ eventType }, `[Webhook] PinPayments event: ${eventType}`);
 
       if (eventType === "charge.succeeded") {
         await handleChargeSucceeded(payload.data);
@@ -83,7 +84,7 @@ async function handleChargeSucceeded(data: PinWebhookPayload["data"]) {
   const userId = meta.user_id ? parseInt(meta.user_id, 10) : null;
 
   if (!employerId || !creditPackSize) {
-    console.warn("[Webhook] charge.succeeded missing employer_id or credit_pack_size in metadata");
+    logger.warn({ meta }, "[Webhook] charge.succeeded missing employer_id or credit_pack_size in metadata");
     return;
   }
 
@@ -96,7 +97,7 @@ async function handleChargeSucceeded(data: PinWebhookPayload["data"]) {
     description: `Webhook: charge.succeeded — ${data.description}`,
   });
 
-  console.log(`[Webhook] Added ${creditPackSize} credit(s) to employer ${employerId} (charge ${data.token})`);
+  logger.info({ creditPackSize, employerId, chargeToken: data.token }, `[Webhook] Added ${creditPackSize} credit(s) to employer ${employerId}`);
 
   // Handle promo code bonus credits
   if (promoCode) {
@@ -110,7 +111,7 @@ async function handleChargeSucceeded(data: PinWebhookPayload["data"]) {
         description: `Webhook: bonus credits from promo ${promo.code}`,
       });
       await incrementPromoCodeUsage(promo.id);
-      console.log(`[Webhook] Added ${promo.bonusCredits} bonus credit(s) from promo ${promo.code}`);
+      logger.info({ bonusCredits: promo.bonusCredits, promoCode: promo.code }, `[Webhook] Added ${promo.bonusCredits} bonus credit(s) from promo ${promo.code}`);
     } else if (promo) {
       await incrementPromoCodeUsage(promo.id);
     }

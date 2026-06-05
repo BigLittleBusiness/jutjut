@@ -19,6 +19,7 @@ import { renderEmail } from "./renderEmail.js";
 import { getDb } from "./db.js";
 import { emailLogs, emailPreferences } from "../drizzle/schema.js";
 import { eq } from "drizzle-orm";
+import { logger } from "./_core/logger.js";
 
 // ─── SES client ───────────────────────────────────────────────────────────────
 
@@ -195,7 +196,8 @@ export async function sendEmail(opts: SendEmailOptions): Promise<SendEmailResult
 
   // Dev mode — log but don't send
   if (!client) {
-    console.log(
+    logger.info(
+      { templateId, to },
       `[emailService] DEV MODE — would send "${subject}" to ${to} (template: ${templateId})`
     );
     await logEmail(to, subject, templateId, "sent", "DEV_MODE", undefined, data);
@@ -240,11 +242,12 @@ export async function sendEmailSilent(opts: SendEmailOptions): Promise<void> {
   try {
     const result = await sendEmail(opts);
     if (!result.success && !result.skipped) {
-      console.error(
+      logger.error(
+        { templateId: opts.templateId, to: opts.to, error: result.error },
         `[emailService] Failed to send ${opts.templateId} to ${opts.to}: ${result.error}`
       );
     }
   } catch (err) {
-    console.error(`[emailService] Unexpected error:`, err);
+    logger.error({ err }, "[emailService] Unexpected error");
   }
 }

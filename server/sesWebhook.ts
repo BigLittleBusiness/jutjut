@@ -14,8 +14,9 @@
 
 import type { Request, Response } from "express";
 import { getDb } from "./db.js";
-import { emailLogs, emailPreferences } from "../drizzle/schema.js";
+import { emailLogs, emailPreferences, users } from "../drizzle/schema.js";
 import { eq } from "drizzle-orm";
+import { logger } from "./_core/logger.js";
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -48,7 +49,7 @@ export async function sesWebhookHandler(
     // Auto-confirm SNS subscription
     if (body.Type === "SubscriptionConfirmation" && body.SubscribeURL) {
       await fetch(body.SubscribeURL);
-      console.log("[sesWebhook] SNS subscription confirmed");
+      logger.info({ event: "sns_subscription_confirmed" }, "[sesWebhook] SNS subscription confirmed");
       res.status(200).send("OK");
       return;
     }
@@ -71,7 +72,7 @@ export async function sesWebhookHandler(
         for (const email of emails) {
           await suppressEmail(db, email, "bounced", messageId);
         }
-        console.log(`[sesWebhook] Bounce recorded for: ${emails.join(", ")}`);
+        logger.info({ event: "ses_bounce", emails }, `[sesWebhook] Bounce recorded for: ${emails.join(", ")}`);
         break;
       }
 
@@ -83,9 +84,7 @@ export async function sesWebhookHandler(
         for (const email of emails) {
           await suppressEmail(db, email, "complaint", messageId);
         }
-        console.log(
-          `[sesWebhook] Complaint recorded for: ${emails.join(", ")}`
-        );
+        logger.info({ event: "ses_complaint", emails }, `[sesWebhook] Complaint recorded for: ${emails.join(", ")}`);
         break;
       }
 
@@ -102,7 +101,7 @@ export async function sesWebhookHandler(
 
     res.status(200).send("OK");
   } catch (err) {
-    console.error("[sesWebhook] Error processing SNS notification:", err);
+    logger.error({ err }, "[sesWebhook] Error processing SNS notification");
     // Always return 200 to SNS to prevent retry storms
     res.status(200).send("OK");
   }
@@ -126,13 +125,13 @@ async function suppressEmail(
       .where(eq(emailLogs.sesMessageId, messageId));
   }
 
-  // Find user by email and suppress all marketing emails
-  // We join through the users table — emailPreferences.userId → users.id
-  // Using a raw query approach since we don't have a direct email→prefs join
+  // Find user by email using a parameterised Drizzle query (no string interpolation)
   try {
-    const rows = await db.execute(
-      `SELECT id FROM users WHERE email = '${email.replace(/'/g, "''")}' LIMIT 1`
-    ) as unknown as Array<{ id: number }>;
+    const rows = await db
+      .select({ id: users.id })
+      .from(users)
+      .where(eq(users.email, email))
+      .limit(1);
     const user = rows[0];
 
     if (user?.id) {

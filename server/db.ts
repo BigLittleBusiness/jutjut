@@ -1,21 +1,67 @@
 import { eq } from "drizzle-orm";
+import mysql from "mysql2/promise";
 import { drizzle } from "drizzle-orm/mysql2";
+import { TRPCError } from "@trpc/server";
 import { InsertUser, users } from "../drizzle/schema";
 import { ENV } from './_core/env';
+import { logger } from './_core/logger';
 
-let _db: ReturnType<typeof drizzle> | null = null;
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+let _db: any | null = null;
+let _pool: mysql.Pool | null = null;
 
 // Lazily create the drizzle instance so local tooling can run without a DB.
 export async function getDb() {
   if (!_db && process.env.DATABASE_URL) {
     try {
-      _db = drizzle(process.env.DATABASE_URL);
+      _pool = mysql.createPool({
+        uri: process.env.DATABASE_URL,
+        // Connection pool settings for AWS RDS
+        connectionLimit: 10,
+        queueLimit: 0,
+        waitForConnections: true,
+        connectTimeout: 10_000,
+        // SSL for RDS (required in production; skipped in dev/TiDB Cloud which uses its own TLS)
+        ...(ENV.isProduction
+          ? { ssl: { rejectUnauthorized: true } }
+          : {}),
+      });
+      _db = drizzle(_pool);
     } catch (error) {
-      console.warn("[Database] Failed to connect:", error);
+      logger.warn({ err: error }, "[Database] Failed to connect");
       _db = null;
+      _pool = null;
     }
   }
-  return _db;
+  return _db as ReturnType<typeof drizzle> | null;
+}
+
+/**
+ * assertDb — returns the DB instance or throws a typed TRPCError.
+ * Use this in tRPC procedures instead of silent `if (!db) return` guards.
+ */
+export async function assertDb() {
+  const db = await getDb();
+  if (!db) {
+    throw new TRPCError({
+      code: "INTERNAL_SERVER_ERROR",
+      message: "Database connection unavailable",
+    });
+  }
+  return db;
+}
+
+/**
+ * closeDb — drains the connection pool gracefully.
+ * Called during SIGTERM/SIGINT shutdown.
+ */
+export async function closeDb(): Promise<void> {
+  if (_pool) {
+    await _pool.end();
+    _pool = null;
+    _db = null;
+    logger.info("[Database] Connection pool closed");
+  }
 }
 
 export async function upsertUser(user: InsertUser): Promise<void> {
@@ -25,7 +71,7 @@ export async function upsertUser(user: InsertUser): Promise<void> {
 
   const db = await getDb();
   if (!db) {
-    console.warn("[Database] Cannot upsert user: database not available");
+      logger.warn("[Database] Cannot upsert user: database not available");
     return;
   }
 
@@ -72,7 +118,7 @@ export async function upsertUser(user: InsertUser): Promise<void> {
       set: updateSet,
     });
   } catch (error) {
-    console.error("[Database] Failed to upsert user:", error);
+    logger.error({ err: error }, "[Database] Failed to upsert user");
     throw error;
   }
 }
@@ -80,7 +126,7 @@ export async function upsertUser(user: InsertUser): Promise<void> {
 export async function getUserByOpenId(openId: string) {
   const db = await getDb();
   if (!db) {
-    console.warn("[Database] Cannot get user: database not available");
+    logger.warn("[Database] Cannot get user: database not available");
     return undefined;
   }
 
