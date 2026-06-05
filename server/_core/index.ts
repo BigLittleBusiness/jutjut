@@ -63,6 +63,11 @@ async function startServer() {
   const app = express();
   const server = createServer(app);
 
+  // ── Trust proxy (Cloud Run / ECS ALB sit behind a load balancer) ────────────
+  // Must be set before rate limiters so express-rate-limit reads the real client IP
+  // from X-Forwarded-For rather than the load balancer IP.
+  app.set("trust proxy", 1);
+
   // ── Security headers (Helmet) ──────────────────────────────────────────────
   app.use(
     helmet({
