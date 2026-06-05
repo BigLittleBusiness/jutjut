@@ -95,6 +95,18 @@ async function startServer() {
   // ── gzip/brotli compression ────────────────────────────────────────────────
   app.use(compression());
 
+
+  // ── Health check (Cloud Run startup/liveness probe) ─────────────────────────
+  // Registered before rate limiters so probes are never throttled.
+  // Returns 200 with a JSON body; Cloud Run considers any 2xx a healthy instance.
+  app.get("/health", (_req, res) => {
+    res.status(200).json({
+      status: "ok",
+      uptime: Math.floor(process.uptime()),
+      timestamp: new Date().toISOString(),
+    });
+  });
+
   // ── Storage proxy (must come before rate limiters) ─────────────────────────
   registerStorageProxy(app);
 
