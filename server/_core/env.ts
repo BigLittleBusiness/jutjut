@@ -5,12 +5,16 @@ import { logger } from "./logger.js";
 
 const REQUIRED: Array<{ key: string; minLength?: number; description: string }> = [
   { key: "VITE_APP_ID", description: "Manus OAuth application ID" },
-  { key: "JWT_SECRET", minLength: 32, description: "Session cookie signing secret (≥32 chars)" },
   { key: "DATABASE_URL", description: "MySQL/TiDB connection string" },
   { key: "OAUTH_SERVER_URL", description: "Manus OAuth backend base URL" },
   { key: "BUILT_IN_FORGE_API_URL", description: "Manus built-in API base URL" },
   { key: "BUILT_IN_FORGE_API_KEY", description: "Manus built-in API bearer token" },
   { key: "ENCRYPTION_KEY", minLength: 32, description: "AES-256-GCM encryption key for gateway credentials (≥32 chars)" },
+];
+
+// Warn-only checks: log a warning but never abort startup.
+const WARN_ONLY: Array<{ key: string; minLength?: number; description: string }> = [
+  { key: "JWT_SECRET", minLength: 32, description: "Session cookie signing secret (≥32 chars recommended)" },
 ];
 
 let startupErrors = 0;
@@ -25,6 +29,18 @@ for (const { key, minLength, description } of REQUIRED) {
       `[env] Env var ${key} is too short (${val.length} < ${minLength})`
     );
     startupErrors++;
+  }
+}
+
+for (const { key, minLength, description } of WARN_ONLY) {
+  const val = process.env[key];
+  if (!val) {
+    logger.warn({ envVar: key }, `[env] Env var ${key} not set — ${description}`);
+  } else if (minLength && val.length < minLength) {
+    logger.warn(
+      { envVar: key, length: val.length, recommended: minLength },
+      `[env] Env var ${key} is shorter than recommended (${val.length} < ${minLength})`
+    );
   }
 }
 
