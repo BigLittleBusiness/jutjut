@@ -71,11 +71,33 @@ async function startServer() {
   app.set("trust proxy", 1);
 
   // ── Security headers (Helmet) ──────────────────────────────────────────────
+  // CSP notes:
+  // - In dev: CSP is disabled entirely so Vite HMR works without restrictions.
+  // - In production: we use a permissive script-src that allows 'unsafe-inline'
+  //   because the Manus hosting platform injects an inline <script> runtime block
+  //   (window.__MANUS_HOST_DEV__ = ...) that cannot be nonce-tagged. Without
+  //   'unsafe-inline', the entire React bundle fails to execute, causing a blank page.
+  //   When deploying to a self-hosted environment (AWS/GCP) without the Manus
+  //   runtime, replace 'unsafe-inline' with a nonce-based CSP for stronger security.
   app.use(
     helmet({
-      // Allow inline scripts/styles needed by Vite HMR in dev
       contentSecurityPolicy: ENV.isProduction
-        ? undefined
+        ? {
+            directives: {
+              defaultSrc: ["'self'"],
+              scriptSrc: ["'self'", "'unsafe-inline'", "'unsafe-eval'"],
+              scriptSrcAttr: ["'none'"],
+              styleSrc: ["'self'", "https:", "'unsafe-inline'"],
+              imgSrc: ["'self'", "data:", "https:"],
+              fontSrc: ["'self'", "https:", "data:"],
+              connectSrc: ["'self'", "https:"],
+              frameSrc: ["'none'"],
+              objectSrc: ["'none'"],
+              baseUri: ["'self'"],
+              formAction: ["'self'"],
+              upgradeInsecureRequests: [],
+            },
+          }
         : false,
     })
   );
