@@ -150,6 +150,7 @@ import {
   jobApplications,
   placements,
   credentials,
+  vouches,
   schoolStudents,
   schools,
   dropViews,
@@ -783,4 +784,186 @@ export async function updateUserPrivacy(userId: number, params: {
   const db = await getDb();
   if (!db) throw new Error("Database not available");
   await db.update(users).set({ ...params, updatedAt: new Date() }).where(eq(users.id, userId));
+}
+
+// ─── Alumni email transition helpers ─────────────────────────────────────────
+
+export async function getAlumniStatus(userId: number) {
+  const db = await getDb();
+  if (!db) return null;
+  const [row] = await db
+    .select({
+      id: users.id,
+      name: users.name,
+      email: users.email,
+      personalEmail: users.personalEmail,
+      alumniEmailVerified: users.alumniEmailVerified,
+      showAlumniBadge: users.showAlumniBadge,
+      graduationDate: users.graduationDate,
+    })
+    .from(users)
+    .where(eq(users.id, userId))
+    .limit(1);
+  return row ?? null;
+}
+
+export async function requestAlumniEmailChange(
+  userId: number,
+  personalEmail: string,
+  token: string,
+  expiry: Date
+) {
+  const db = await getDb();
+  if (!db) throw new Error("Database not available");
+  await db
+    .update(users)
+    .set({
+      personalEmail,
+      alumniEmailToken: token,
+      alumniEmailTokenExpiry: expiry,
+      alumniEmailVerified: false,
+      updatedAt: new Date(),
+    })
+    .where(eq(users.id, userId));
+}
+
+export async function verifyAlumniEmailToken(token: string) {
+  const db = await getDb();
+  if (!db) return null;
+  const [row] = await db
+    .select()
+    .from(users)
+    .where(eq(users.alumniEmailToken, token))
+    .limit(1);
+  if (!row) return null;
+  if (!row.alumniEmailTokenExpiry || row.alumniEmailTokenExpiry < new Date()) return null;
+  // Mark as verified and clear the token
+  await db
+    .update(users)
+    .set({
+      alumniEmailVerified: true,
+      alumniEmailToken: null,
+      alumniEmailTokenExpiry: null,
+      updatedAt: new Date(),
+    })
+    .where(eq(users.id, row.id));
+  return row;
+}
+
+export async function updateAlumniSettings(
+  userId: number,
+  params: {
+    showAlumniBadge?: boolean;
+    graduationDate?: string | null;
+  }
+) {
+  const db = await getDb();
+  if (!db) throw new Error("Database not available");
+  await db
+    .update(users)
+    .set({
+      ...(params.showAlumniBadge !== undefined ? { showAlumniBadge: params.showAlumniBadge } : {}),
+      ...(params.graduationDate !== undefined ? { graduationDate: params.graduationDate ? new Date(params.graduationDate) : null } : {}),
+      updatedAt: new Date(),
+    })
+    .where(eq(users.id, userId));
+}
+
+/**
+ * Return students with a graduation date within the given date window
+ * who have not yet verified a personal email.
+ */
+export async function getUsersWithUpcomingGraduation(from: Date, to: Date) {
+  const db = await getDb();
+  if (!db) return [];
+  const rows = await db
+    .select({
+      id: users.id,
+      name: users.name,
+      email: users.email,
+      graduationDate: users.graduationDate,
+      alumniEmailVerified: users.alumniEmailVerified,
+    })
+    .from(users)
+    .where(
+      and(
+        sql`DATE(${users.graduationDate}) >= ${from.toISOString().slice(0, 10)}`,
+        sql`DATE(${users.graduationDate}) <= ${to.toISOString().slice(0, 10)}`,
+        eq(users.alumniEmailVerified, false)
+      )
+    );
+  return rows;
+}
+
+// ─── Badge counts ─────────────────────────────────────────────────────────────
+
+export async function getBadgeCounts(userId: number) {
+  const db = await getDb();
+  if (!db) return { credentials: 0, vouches: 0, alumni: false, total: 0 };
+
+  const [credCount] = await db
+    .select({ count: count() })
+    .from(credentials)
+    .where(eq(credentials.userId, userId));
+
+  const [vouchCount] = await db
+    .select({ count: count() })
+    .from(vouches)
+    .where(eq(vouches.studentUserId, userId));
+
+  const [userRow] = await db
+    .select({ alumniEmailVerified: users.alumniEmailVerified })
+    .from(users)
+    .where(eq(users.id, userId))
+    .limit(1);
+
+  const credentialCount = credCount?.count ?? 0;
+  const vouchCount2 = vouchCount?.count ?? 0;
+  const isAlumni = userRow?.alumniEmailVerified ?? false;
+
+  return {
+    credentials: credentialCount,
+    vouches: vouchCount2,
+    alumni: isAlumni,
+    total: credentialCount + vouchCount2 + (isAlumni ? 1 : 0),
+  };
+}
+
+// ─── Student credentials and vouches (for badge modal) ───────────────────────
+
+export async function getStudentCredentials(userId: number) {
+  const db = await getDb();
+  if (!db) return [];
+  return db
+    .select({
+      id: credentials.id,
+      title: credentials.title,
+      issuer: credentials.issuer,
+      type: credentials.type,
+      issuedAt: credentials.issuedAt,
+      verifierName: credentials.verifierName,
+      verifierRole: credentials.verifierRole,
+      verificationDate: credentials.verificationDate,
+    })
+    .from(credentials)
+    .where(eq(credentials.userId, userId))
+    .orderBy(desc(credentials.issuedAt));
+}
+
+export async function getStudentVouches(userId: number) {
+  const db = await getDb();
+  if (!db) return [];
+  return db
+    .select({
+      id: vouches.id,
+      voucherName: vouches.voucherName,
+      voucherTitle: vouches.voucherTitle,
+      voucherOrg: vouches.voucherOrg,
+      message: vouches.message,
+      status: vouches.status,
+      createdAt: vouches.createdAt,
+    })
+    .from(vouches)
+    .where(eq(vouches.studentUserId, userId))
+    .orderBy(desc(vouches.createdAt));
 }

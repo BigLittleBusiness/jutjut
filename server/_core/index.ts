@@ -16,9 +16,11 @@ import { registerPinPaymentsWebhook } from "../webhooks/pinpayments.js";
 import { startAutoRepostCron } from "../cron/autoRepost.js";
 import { sesWebhookHandler } from "../sesWebhook.js";
 import { adminDailySummaryHandler } from "../scheduledHandlers.js";
+import { preGraduationReminderHandler } from "../cron/preGraduationReminder.js";
+import { verifyAlumniEmailToken, closeDb } from "../db.js";
+import { sendEmailSilent } from "../emailService.js";
 import { ENV } from "./env.js";
 import { logger } from "./logger.js";
-import { closeDb } from "../db.js";
 
 // ─── Port helpers ─────────────────────────────────────────────────────────────
 
@@ -118,8 +120,46 @@ async function startServer() {
   registerPinPaymentsWebhook(app);
   app.post("/webhooks/aws-ses", sesWebhookHandler);
 
+  // ── Alumni email verification (GET /api/verify-alumni-email?token=...) ──────
+  // Best-practice pattern: server validates token, then redirects browser to
+  // a frontend result page. Token never enters React state.
+  app.get("/api/verify-alumni-email", async (req, res) => {
+    const token = typeof req.query.token === "string" ? req.query.token : "";
+    const baseUrl = process.env.APP_BASE_URL ?? "https://jutjut.com.au";
+
+    if (!token) {
+      return res.redirect(`${baseUrl}/settings?verify=invalid`);
+    }
+
+    try {
+      const user = await verifyAlumniEmailToken(token);
+      if (!user) {
+        return res.redirect(`${baseUrl}/settings?verify=expired`);
+      }
+
+      // Send confirmation email to the newly verified personal address
+      if (user.personalEmail) {
+        void sendEmailSilent({
+          to: user.personalEmail,
+          templateId: "alumni_email_confirmed",
+          data: {
+            student_name: user.name ?? "there",
+            personal_email: user.personalEmail,
+            dashboard_url: `${baseUrl}/dashboard`,
+          },
+        });
+      }
+
+      return res.redirect(`${baseUrl}/settings?verify=success`);
+    } catch (err) {
+      logger.error({ err }, "[verify-alumni-email] Unexpected error");
+      return res.redirect(`${baseUrl}/settings?verify=error`);
+    }
+  });
+
   // ── Scheduled heartbeat handlers ───────────────────────────────────────────
   app.post("/api/scheduled/admin-daily-summary", adminDailySummaryHandler);
+  app.post("/api/scheduled/pre-graduation-reminder", preGraduationReminderHandler);
 
   // ── tRPC API (rate-limited) ────────────────────────────────────────────────
   app.use(

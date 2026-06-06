@@ -607,6 +607,75 @@ const TEMPLATES: Record<string, Template> = {
     `, "A student has requested your skill endorsement"),
     text: `Skill endorsement request\n\nHi {{voucher_name}},\n\n{{student_name}} has requested your endorsement for: {{skill_name}}\n\nVerify: {{verify_url}}\nDecline: {{decline_url}}\n\nExpires in 7 days.`,
   },
+
+  // ── Alumni: verify personal email ──────────────────────────────────────────
+  alumni_email_verify: {
+    subject: "Verify your personal email for JutJut Alumni access",
+    html: BASE_HTML(`
+      <h1>Verify your personal email 🎓</h1>
+      <p>Hi {{student_name}},</p>
+      <p>You've requested to add your personal email address to your JutJut account so you can continue accessing your profile after graduation.</p>
+      <div class="info-box"><p>Personal email: <strong>{{personal_email}}</strong></p></div>
+      <p>Click the button below to verify this address. The link expires in <strong>24 hours</strong>.</p>
+      <a href="{{verify_url}}" class="btn">Verify Personal Email</a>
+      <p style="font-size:13px;color:#6b7280;">If you didn't request this, you can safely ignore this email — your account won't change.</p>
+    `, "Verify your personal email to keep your JutJut profile after graduation"),
+    text: `Verify your personal email for JutJut Alumni access\n\nHi {{student_name}},\n\nVerify your personal email ({{personal_email}}) to keep access after graduation:\n{{verify_url}}\n\nThis link expires in 24 hours.`,
+  },
+
+  // ── Alumni: email verified confirmation ────────────────────────────────────
+  alumni_email_confirmed: {
+    subject: "Personal email verified — you're set for alumni access ✅",
+    html: BASE_HTML(`
+      <h1>You're all set! 🎓</h1>
+      <p>Hi {{student_name}},</p>
+      <p>Your personal email address has been verified and linked to your JutJut account.</p>
+      <div class="info-box"><p>Personal email: <strong>{{personal_email}}</strong></p></div>
+      <p>After graduation, you can continue using JutJut with this email address. Your entire kit — credentials, vouches, and report cards — will remain accessible.</p>
+      <p>Your <strong>Alumni Badge</strong> is now active on your profile, showing employers you are a verified JutJut graduate.</p>
+      <a href="{{dashboard_url}}" class="btn">View My Profile</a>
+    `, "Your personal email is verified — alumni access is ready"),
+    text: `Personal email verified!\n\nHi {{student_name}},\n\nYour personal email ({{personal_email}}) has been verified. Your Alumni Badge is now active.\n\nView your profile: {{dashboard_url}}`,
+  },
+
+  // ── Pre-graduation reminder ─────────────────────────────────────────────────
+  pre_graduation_reminder: {
+    subject: "{{reminder_window}} until graduation — update your JutJut profile",
+    html: BASE_HTML(`
+      <h1>Graduation is {{reminder_window}} away 🎓</h1>
+      <p>Hi {{student_name}},</p>
+      <p>Your graduation date is coming up on <strong>{{graduation_date}}</strong>. Before you leave school, make sure your JutJut profile is ready to impress employers.</p>
+      <div class="info-box">
+        <p><strong>Checklist before graduation:</strong></p>
+        <p>✅ Add your personal email so you keep access after graduation</p>
+        <p>✅ Upload any final certificates or credentials</p>
+        <p>✅ Request any outstanding vouches from teachers or supervisors</p>
+        <p>✅ Review your privacy settings</p>
+      </div>
+      <a href="{{settings_url}}" class="btn">Update My Profile</a>
+      <p style="font-size:13px;color:#6b7280;">You're receiving this because your graduation date is set to {{graduation_date}}. Update it in your profile settings.</p>
+    `, "Your graduation is coming up — make sure your JutJut profile is ready"),
+    text: `Graduation is {{reminder_window}} away!\n\nHi {{student_name}},\n\nYour graduation date is {{graduation_date}}. Before you leave, add your personal email and finalise your profile:\n{{settings_url}}`,
+    isMarketing: false,
+  },
+
+  // ── School: contact details updated ────────────────────────────────────────
+  school_contact_update: {
+    subject: "JutJut school contact details updated — {{school_name}}",
+    html: BASE_HTML(`
+      <h1>Contact details updated</h1>
+      <p>Hi {{new_contact_name}},</p>
+      <p>The careers contact for <strong>{{school_name}}</strong> on JutJut has been updated to your details.</p>
+      <div class="info-box">
+        <p>Name: <strong>{{new_contact_name}}</strong></p>
+        <p>Email: <strong>{{new_contact_email}}</strong></p>
+      </div>
+      <p>You will now receive all school-related notifications at this address. You can access the school portal at any time using your JutJut account.</p>
+      <a href="{{portal_url}}" class="btn">Go to School Portal</a>
+      <p style="font-size:13px;color:#6b7280;">If you believe this was made in error, please contact <a href="mailto:hello@jutjut.com.au">hello@jutjut.com.au</a> immediately.</p>
+    `, "Your JutJut school contact details have been updated"),
+    text: `School contact details updated\n\nHi {{new_contact_name}},\n\nYou are now the careers contact for {{school_name}} on JutJut.\nEmail: {{new_contact_email}}\n\nPortal: {{portal_url}}\n\nIf this was an error, contact hello@jutjut.com.au.`,
+  },
 };
 
 // ─── Render function ──────────────────────────────────────────────────────────

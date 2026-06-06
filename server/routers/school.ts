@@ -36,6 +36,7 @@ import {
   updatePlacementStatus,
   signPlacementAsStudent,
   getPlacementsForEmployer,
+  updateSchoolContact,
 } from "../db.school";
 
 // ─── Middleware: require verified school staff ─────────────────────────────────
@@ -98,6 +99,40 @@ const schoolAuthRouter = router({
         title: "New school registration",
         content: `${input.name} (${domain}) has requested access to the JutJut Schools Dashboard. Please review and approve in the admin panel.`,
       });
+      return { success: true };
+    }),
+
+  /**
+   * Update the careers contact details for the school.
+   * Only accessible to verified school staff (requireSchoolAccess).
+   * Sends a confirmation email to the new contact address.
+   */
+  updateContact: requireSchoolAccess
+    .input(
+      z.object({
+        careersContactName: z.string().min(2).max(255),
+        careersContactEmail: z.string().email().max(320),
+        phone: z.string().max(32).optional(),
+      })
+    )
+    .mutation(async ({ ctx, input }) => {
+      await updateSchoolContact(ctx.school.id, {
+        careersContactName: input.careersContactName,
+        careersContactEmail: input.careersContactEmail,
+        phone: input.phone,
+      });
+
+      void sendEmailSilent({
+        to: input.careersContactEmail,
+        templateId: "school_contact_update",
+        data: {
+          school_name: ctx.school.name,
+          new_contact_name: input.careersContactName,
+          new_contact_email: input.careersContactEmail,
+          portal_url: `${process.env.APP_BASE_URL ?? "https://jutjut.com.au"}/school-portal`,
+        },
+      });
+
       return { success: true };
     }),
 });

@@ -29,6 +29,13 @@
       "when": 1780564547575,
       "tag": "0003_unique_swordsman",
       "breakpoints": true
+    },
+    {
+      "idx": 4,
+      "version": "5",
+      "when": 1780724839022,
+      "tag": "0004_wandering_the_order",
+      "breakpoints": true
     }
   ]
 }

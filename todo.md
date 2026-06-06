@@ -248,3 +248,49 @@
 ### Build / Performance
 - [x] Vite build has no code-splitting config — add manualChunks for vendor/react/trpc bundles
 - [x] No gzip/brotli compression middleware on Express server
+
+## Alumni Email Transition & Badge System (June 2026 — Session 6)
+
+### Schema
+- [x] Add `graduationDate` (date, nullable) to `users` table
+- [x] Add `personalEmail` (varchar 255, nullable) to `users` table
+- [x] Add `alumniEmailToken` (varchar 255, nullable) to `users` table
+- [x] Add `alumniEmailTokenExpiry` (datetime, nullable) to `users` table
+- [x] Add `alumniEmailVerified` (boolean, default false) to `users` table
+- [x] Add `showAlumniBadge` (boolean, default true) to `users` table
+- [x] Add `verifierName` (varchar 255, nullable) to `credentials` table
+- [x] Add `verifierRole` (varchar 255, nullable) to `credentials` table
+- [x] Add `verificationDate` (date, nullable) to `credentials` table
+- [x] Add `evidenceUrl` (varchar 1024, nullable) to `credentials` table
+- [x] Run `pnpm db:push` to apply migrations
+
+### Email Templates
+- [x] `alumni_email_verify` — verify personal email before transition
+- [x] `alumni_email_confirmed` — confirmation after successful verification
+- [x] `pre_graduation_reminder` — weekly reminder (3mo, 1mo, 1wk before graduation)
+- [x] `school_contact_update` — notify school contact of email change
+
+### Server / API
+- [x] `GET /api/verify-alumni-email?token=...` Express endpoint (validates token, redirects to /verify-email/success or /verify-email/expired)
+- [x] `alumni.requestEmailVerify` — send verify link to personal email (blocks school domains, blocks re-verify of same address)
+- [x] `alumni.status` — return personalEmail, alumniEmailVerified, showAlumniBadge, graduationDate
+- [x] `alumni.updateSettings` — update showAlumniBadge and/or graduationDate
+- [x] `alumni.badgeCounts` — return real credential + vouch + alumni badge counts
+- [x] `alumni.myKit` — return credentials and vouches for badge modal
+- [x] `school.auth.updateContact` — update careersContactName + careersContactEmail (sends confirmation email)
+- [x] DB helpers: `requestAlumniEmailChange`, `verifyAlumniEmail`, `getAlumniStatus`, `updateAlumniSettings`, `getBadgeCounts`, `getStudentCredentials`, `getStudentVouches`, `updateSchoolContact`
+
+### Cron / Heartbeat
+- [x] Pre-graduation reminder heartbeat job (weekly Mon 01:00 UTC, checks graduation dates within 3mo/1mo/1wk windows)
+- [x] Heartbeat job registered in server/_core/index.ts (task_uid: jHV7fX2mfpoMqL8AmN9T9y)
+
+### Frontend
+- [x] PrivacySettings: alumni email section (input, send verify link, status indicator, show/hide badge toggle)
+- [x] PrivacySettings: graduation date picker
+- [x] BadgeModal component: shows credentials, vouches, alumni badge (always shown to student)
+- [x] Dashboard profile card: real badge count (credentials + vouches + alumni badge if verified), clickable to open BadgeModal
+- [x] `/verify-email/success` and `/verify-email/expired` result pages (handled by Express redirect)
+
+### Tests
+- [x] 14 Vitest tests for alumni router (status, requestEmailVerify, badgeCounts, updateSettings, myKit)
+- [x] 351 total tests passing across 12 test files — zero TypeScript errors

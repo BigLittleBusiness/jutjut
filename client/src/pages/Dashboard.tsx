@@ -1,6 +1,9 @@
 import React, { useState, useRef, useEffect } from "react";
 import { useApp } from "@/contexts/AppContext";
 import { toast } from "sonner";
+import { trpc } from "@/lib/trpc";
+import { useAuth } from "@/_core/hooks/useAuth";
+import BadgeModal from "@/components/BadgeModal";
 
 const ANON_PHRASES = [
   "🕵️ Identity hidden! Shhh... keeping it safe and secure on JutJut.",
@@ -16,6 +19,9 @@ interface DashboardProps {
 
 export const Dashboard: React.FC<DashboardProps> = ({ onNavigate }) => {
   const { conversations, activeChatId, setActiveChatId, sendMessage, userProfile, anonymousAvatarSetting, setAnonymousAvatarSetting, setSelectedKitUser } = useApp();
+  const { user } = useAuth();
+  const { data: badgeCounts } = trpc.alumni.badgeCounts.useQuery(undefined, { enabled: !!user });
+  const [showBadgeModal, setShowBadgeModal] = useState(false);
   const [showAdminSettings, setShowAdminSettings] = useState(false);
   const [activeTooltipIndex, setActiveTooltipIndex] = useState<Record<string, number>>({});
 
@@ -352,14 +358,18 @@ export const Dashboard: React.FC<DashboardProps> = ({ onNavigate }) => {
             
             <div className="w-full border-t border-border my-4 pt-4 flex justify-around text-center">
               <div>
-                <p className="text-lg font-extrabold text-primary">2</p>
+                <p className="text-lg font-extrabold text-primary">{badgeCounts?.vouches ?? 0}</p>
                 <p className="text-[10px] text-muted-foreground uppercase font-bold">Vouches</p>
               </div>
               <div className="border-l border-border h-8"></div>
-              <div>
-                <p className="text-lg font-extrabold text-secondary">3</p>
+              <button
+                className="text-center hover:opacity-75 transition-opacity cursor-pointer"
+                onClick={() => setShowBadgeModal(true)}
+                title="View all badges"
+              >
+                <p className="text-lg font-extrabold text-secondary">{badgeCounts?.total ?? 0}</p>
                 <p className="text-[10px] text-muted-foreground uppercase font-bold">Badges</p>
-              </div>
+              </button>
             </div>
 
             <button
@@ -679,6 +689,9 @@ export const Dashboard: React.FC<DashboardProps> = ({ onNavigate }) => {
           </form>
         </div>
       )}
+
+      {/* Badge Modal */}
+      <BadgeModal open={showBadgeModal} onClose={() => setShowBadgeModal(false)} />
     </div>
   );
 };

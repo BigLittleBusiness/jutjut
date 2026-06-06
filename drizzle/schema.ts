@@ -1,5 +1,6 @@
 import {
   boolean,
+  date,
   int,
   mysqlEnum,
   mysqlTable,
@@ -26,6 +27,13 @@ export const users = mysqlTable("users", {
   shareContactWithEmployers: boolean("shareContactWithEmployers").default(false).notNull(),
   yearLevel: varchar("yearLevel", { length: 64 }), // e.g. "Year 10", "Year 11", "Year 12", "University"
   postcode: varchar("postcode", { length: 10 }),
+  // Alumni transition fields
+  graduationDate: date("graduationDate"),
+  personalEmail: varchar("personalEmail", { length: 255 }),
+  alumniEmailToken: varchar("alumniEmailToken", { length: 255 }),
+  alumniEmailTokenExpiry: timestamp("alumniEmailTokenExpiry"),
+  alumniEmailVerified: boolean("alumniEmailVerified").default(false).notNull(),
+  showAlumniBadge: boolean("showAlumniBadge").default(true).notNull(),
   createdAt: timestamp("createdAt").defaultNow().notNull(),
   updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
   lastSignedIn: timestamp("lastSignedIn").defaultNow().notNull(),
@@ -291,6 +299,11 @@ export const credentials = mysqlTable("credentials", {
   fileKey: text("fileKey"),
   type: mysqlEnum("type", ["certificate", "badge", "award", "course", "other"]).default("other"),
   issuedAt: timestamp("issuedAt"),
+  // Verifier details (for human-verified credentials)
+  verifierName: varchar("verifierName", { length: 255 }),
+  verifierRole: varchar("verifierRole", { length: 255 }),
+  verificationDate: date("verificationDate"),
+  evidenceUrl: varchar("evidenceUrl", { length: 1024 }),
   createdAt: timestamp("createdAt").defaultNow().notNull(),
 });
 

@@ -390,3 +390,26 @@ export async function getPlacementsForEmployer(employerId: number) {
     .where(eq(placements.employerId, employerId))
     .orderBy(placements.createdAt);
 }
+
+// ─── School contact update ────────────────────────────────────────────────────
+
+export async function updateSchoolContact(
+  schoolId: number,
+  data: {
+    careersContactName: string;
+    careersContactEmail: string;
+    phone?: string | null;
+  }
+) {
+  const db = await getDb();
+  if (!db) throw new Error("Database not available");
+  await db
+    .update(schools)
+    .set({
+      careersContactName: data.careersContactName,
+      careersContactEmail: data.careersContactEmail,
+      phone: data.phone ?? null,
+      updatedAt: new Date(),
+    })
+    .where(eq(schools.id, schoolId));
+}
