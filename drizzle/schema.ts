@@ -1,6 +1,7 @@
 import {
   boolean,
   date,
+  datetime,
   int,
   mysqlEnum,
   mysqlTable,
@@ -277,8 +278,12 @@ export const vouches = mysqlTable("vouches", {
   voucherName: varchar("voucherName", { length: 255 }).notNull(),
   voucherTitle: varchar("voucherTitle", { length: 255 }),
   voucherOrg: varchar("voucherOrg", { length: 255 }),
+  voucherEmail: varchar("voucherEmail", { length: 255 }),
+  skillName: varchar("skillName", { length: 255 }),
   message: text("message"),
   status: mysqlEnum("status", ["pending", "verified", "rejected"]).default("pending").notNull(),
+  vouchToken: varchar("vouchToken", { length: 255 }),
+  vouchTokenExpiry: datetime("vouchTokenExpiry"),
   createdAt: timestamp("createdAt").defaultNow().notNull(),
 });
 

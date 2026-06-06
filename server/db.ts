@@ -967,3 +967,78 @@ export async function getStudentVouches(userId: number) {
     .where(eq(vouches.studentUserId, userId))
     .orderBy(desc(vouches.createdAt));
 }
+
+// ─── Vouches: full CRUD + token flow ─────────────────────────────────────────
+
+/** Insert a new vouch request row with a 7-day verification token. */
+export async function addVouch(params: {
+  studentUserId: number;
+  voucherName: string;
+  voucherTitle?: string;
+  voucherOrg?: string;
+  voucherEmail: string;
+  skillName?: string;
+  token: string;
+}) {
+  const db = await getDb();
+  if (!db) throw new Error("DB unavailable");
+  const expiry = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000);
+  const [result] = await db.insert(vouches).values({
+    studentUserId: params.studentUserId,
+    voucherName: params.voucherName,
+    voucherTitle: params.voucherTitle,
+    voucherOrg: params.voucherOrg,
+    voucherEmail: params.voucherEmail,
+    skillName: params.skillName,
+    status: "pending",
+    vouchToken: params.token,
+    vouchTokenExpiry: expiry,
+  });
+  return (result as any).insertId as number;
+}
+
+/** Validate a vouch token and mark the vouch as verified. Returns the vouch row or null. */
+export async function verifyVouchToken(token: string) {
+  const db = await getDb();
+  if (!db) return null;
+  const rows = await db
+    .select()
+    .from(vouches)
+    .where(eq(vouches.vouchToken, token));
+  const vouch = rows[0];
+  if (!vouch) return null;
+  if (vouch.status !== "pending") return null;
+  if (vouch.vouchTokenExpiry && vouch.vouchTokenExpiry < new Date()) return null;
+  await db
+    .update(vouches)
+    .set({ status: "verified", vouchToken: null, vouchTokenExpiry: null })
+    .where(eq(vouches.id, vouch.id));
+  return vouch;
+}
+
+/** Validate a vouch token and mark the vouch as rejected. Returns the vouch row or null. */
+export async function declineVouchToken(token: string) {
+  const db = await getDb();
+  if (!db) return null;
+  const rows = await db
+    .select()
+    .from(vouches)
+    .where(eq(vouches.vouchToken, token));
+  const vouch = rows[0];
+  if (!vouch) return null;
+  if (vouch.status !== "pending") return null;
+  await db
+    .update(vouches)
+    .set({ status: "rejected", vouchToken: null, vouchTokenExpiry: null })
+    .where(eq(vouches.id, vouch.id));
+  return vouch;
+}
+
+/** Delete a pending vouch (student cancels the request). */
+export async function deleteVouch(vouchId: number, studentUserId: number) {
+  const db = await getDb();
+  if (!db) throw new Error("DB unavailable");
+  await db
+    .delete(vouches)
+    .where(and(eq(vouches.id, vouchId), eq(vouches.studentUserId, studentUserId)));
+}

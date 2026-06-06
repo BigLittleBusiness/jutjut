@@ -17,7 +17,7 @@ import { startAutoRepostCron } from "../cron/autoRepost.js";
 import { sesWebhookHandler } from "../sesWebhook.js";
 import { adminDailySummaryHandler } from "../scheduledHandlers.js";
 import { preGraduationReminderHandler } from "../cron/preGraduationReminder.js";
-import { verifyAlumniEmailToken, closeDb } from "../db.js";
+import { verifyAlumniEmailToken, verifyVouchToken, declineVouchToken, closeDb } from "../db.js";
 import { sendEmailSilent } from "../emailService.js";
 import { ENV } from "./env.js";
 import { logger } from "./logger.js";
@@ -154,6 +154,41 @@ async function startServer() {
     } catch (err) {
       logger.error({ err }, "[verify-alumni-email] Unexpected error");
       return res.redirect(`${baseUrl}/settings?verify=error`);
+    }
+  });
+
+  // ── Vouch verification / decline (GET /api/verify-vouch?token=...) ──────────
+  app.get("/api/verify-vouch", async (req, res) => {
+    const token = typeof req.query.token === "string" ? req.query.token : "";
+    const baseUrl = process.env.APP_BASE_URL ?? "https://jutjut.com.au";
+
+    if (!token) return res.redirect(`${baseUrl}/kit?vouch=invalid`);
+
+    try {
+      const vouch = await verifyVouchToken(token);
+      if (!vouch) return res.redirect(`${baseUrl}/kit?vouch=expired`);
+      logger.info({ vouchId: vouch.id }, "[verify-vouch] Verified");
+      return res.redirect(`${baseUrl}/kit?vouch=verified`);
+    } catch (err) {
+      logger.error({ err }, "[verify-vouch] Unexpected error");
+      return res.redirect(`${baseUrl}/kit?vouch=error`);
+    }
+  });
+
+  app.get("/api/decline-vouch", async (req, res) => {
+    const token = typeof req.query.token === "string" ? req.query.token : "";
+    const baseUrl = process.env.APP_BASE_URL ?? "https://jutjut.com.au";
+
+    if (!token) return res.redirect(`${baseUrl}/kit?vouch=invalid`);
+
+    try {
+      const vouch = await declineVouchToken(token);
+      if (!vouch) return res.redirect(`${baseUrl}/kit?vouch=expired`);
+      logger.info({ vouchId: vouch.id }, "[decline-vouch] Declined");
+      return res.redirect(`${baseUrl}/kit?vouch=declined`);
+    } catch (err) {
+      logger.error({ err }, "[decline-vouch] Unexpected error");
+      return res.redirect(`${baseUrl}/kit?vouch=error`);
     }
   });
 

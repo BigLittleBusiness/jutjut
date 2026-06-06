@@ -294,3 +294,40 @@
 ### Tests
 - [x] 14 Vitest tests for alumni router (status, requestEmailVerify, badgeCounts, updateSettings, myKit)
 - [x] 351 total tests passing across 12 test files — zero TypeScript errors
+
+## Vouches Real Data Wiring (June 2026 — Session 7)
+
+### Schema
+- [x] Add `voucherEmail` (varchar 255, nullable) to `vouches` table
+- [x] Add `skillName` (varchar 255, nullable) to `vouches` table
+- [x] Add `vouchToken` (varchar 255, nullable) to `vouches` table
+- [x] Add `vouchTokenExpiry` (datetime, nullable) to `vouches` table
+- [x] Applied migration via SQL (drizzle-kit connectivity workaround)
+
+### DB Helpers
+- [x] `addVouch` — insert new vouch row with token and expiry
+- [x] `verifyVouchToken` — mark vouch as verified, clear token
+- [x] `declineVouchToken` — mark vouch as rejected, clear token
+- [x] `deleteVouch` — hard-delete a pending vouch (owner-only)
+- [x] `getStudentVouches` updated to include voucherEmail, skillName, status fields
+
+### Server / API
+- [x] `vouches.list` query — return all vouches for logged-in user
+- [x] `vouches.request` mutation — create vouch row, send verification_request email with verify/decline links
+- [x] `vouches.delete` mutation — cancel a pending vouch (owner-only, not verified)
+- [x] `GET /api/verify-vouch?token=...` Express endpoint — mark vouch verified, redirect to /my-kit?vouch=verified
+- [x] `GET /api/decline-vouch?token=...` Express endpoint — mark vouch declined, redirect to /my-kit?vouch=declined
+- [x] `vouches` router registered in routers.ts
+
+### Frontend (MyKit)
+- [x] MyKit.tsx Vouches section rewritten with real tRPC data
+- [x] Real-time vouch list (pending / verified / declined status badges)
+- [x] Request Vouch modal (name, email, title, org, skill — sends email via backend)
+- [x] Cancel pending vouch button
+- [x] URL-based result toast (?vouch=verified/declined/expired/invalid) on redirect back from supervisor link
+- [x] Loading skeleton while fetching vouches
+- [x] Empty state when no vouches exist
+
+### Tests
+- [x] 10 Vitest tests for vouches router (list, request, delete)
+- [x] 361 total tests passing across 13 test files — zero TypeScript errors
