@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { Toaster } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import ErrorBoundary from "./components/ErrorBoundary";
@@ -31,8 +31,28 @@ function MainLayout() {
   // Preserve deep-link destination so we can route there after login
   const [pendingDeepLink, setPendingDeepLink] = useState<string | null>(null);
 
+  const PAGE_TITLES: Record<string, string> = {
+    landing: "JutJut — Turn your proof into your future",
+    login: "Sign in — JutJut",
+    dashboard: "Dashboard — JutJut",
+    "my-kit": "My Kit — JutJut",
+    jobs: "Jobs Board — JutJut",
+    drops: "The Drop — JutJut",
+    university: "University Portal — JutJut",
+    "your-way": "YourWay — JutJut",
+    employer: "Employer Dashboard — JutJut",
+    "admin-promos": "Promo Codes — JutJut Admin",
+    "admin-waitlist": "Waitlist — JutJut Admin",
+    "school-portal": "School Portal — JutJut",
+    "admin-dashboard": "Admin Dashboard — JutJut",
+    "email-preferences": "Email Preferences — JutJut",
+    "privacy-settings": "Privacy Settings — JutJut",
+    "business-dashboard": "Business Dashboard — JutJut",
+  };
+
   const handleNavigate = (page: string) => {
     setCurrentPage(page);
+    document.title = PAGE_TITLES[page] ?? "JutJut";
   };
 
   // Listen for deep-link navigation events dispatched by the landing page iframe
@@ -59,10 +79,24 @@ function MainLayout() {
     setCurrentPage(destination);
   };
 
+  // Sync page title on mount and when currentPage changes
+  useEffect(() => {
+    document.title = PAGE_TITLES[currentPage] ?? "JutJut";
+  }, [currentPage]);
+
   // Landing page renders without the app shell (it has its own nav/footer)
   if (!isAuthenticated && currentPage === "landing") {
     return (
-      <LandingPage onSignIn={() => setCurrentPage("login")} />
+      <>
+        {/* Skip to main content — WCAG 2.4.1 */}
+        <a
+          href="#main-content"
+          className="sr-only focus:not-sr-only focus:absolute focus:top-2 focus:left-2 focus:z-[9999] focus:bg-teal-600 focus:text-white focus:px-4 focus:py-2 focus:rounded-lg focus:font-bold"
+        >
+          Skip to main content
+        </a>
+        <LandingPage onSignIn={() => handleNavigate("login")} />
+      </>
     );
   }
 
@@ -71,7 +105,15 @@ function MainLayout() {
     <div className="min-h-screen flex flex-col bg-background text-foreground transition-colors duration-200">
       <Navbar onNavigate={handleNavigate} currentPage={currentPage} />
       
-      <main className="flex-grow">
+      {/* Skip to main content — WCAG 2.4.1 */}
+      <a
+        href="#main-content"
+        className="sr-only focus:not-sr-only focus:absolute focus:top-2 focus:left-2 focus:z-[9999] focus:bg-teal-600 focus:text-white focus:px-4 focus:py-2 focus:rounded-lg focus:font-bold"
+      >
+        Skip to main content
+      </a>
+
+      <main id="main-content" className="flex-grow">
         {!isAuthenticated ? (
           <>
             {currentPage === "login" && <Login onLoginSuccess={handleLoginSuccess} />}
@@ -100,11 +142,11 @@ function MainLayout() {
       {/* Footer */}
       <footer className="border-t-2 border-border bg-card py-6 text-center text-xs text-muted-foreground font-bold uppercase tracking-wider">
         <div className="container mx-auto px-4 flex flex-col sm:flex-row justify-between items-center gap-4">
-          <p>© 2026 JutJut. Built with care for student success.</p>
+          <p>© 2026 JutJut Pty Ltd. ABN 00 000 000 000. Built with care for student success.</p>
           <div className="flex gap-4">
-            <a href="#privacy" onClick={(e) => { e.preventDefault(); alert("Demo: Privacy Policy"); }} className="hover:underline">Privacy</a>
-            <a href="#terms" onClick={(e) => { e.preventDefault(); alert("Demo: Terms of Service"); }} className="hover:underline">Terms</a>
-            <a href="#contact" onClick={(e) => { e.preventDefault(); alert("Demo: Contact Support"); }} className="hover:underline">Support</a>
+            <button onClick={() => handleNavigate("privacy-settings")} className="hover:underline bg-transparent border-none cursor-pointer text-muted-foreground font-bold text-xs uppercase tracking-wider">Privacy</button>
+            <button onClick={() => handleNavigate("privacy-settings")} className="hover:underline bg-transparent border-none cursor-pointer text-muted-foreground font-bold text-xs uppercase tracking-wider">Terms</button>
+            <button onClick={() => handleNavigate("email-preferences")} className="hover:underline bg-transparent border-none cursor-pointer text-muted-foreground font-bold text-xs uppercase tracking-wider">Support</button>
           </div>
         </div>
       </footer>

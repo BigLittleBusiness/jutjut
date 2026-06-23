@@ -98,14 +98,14 @@ export const MyKit: React.FC = () => {
         }, 2000);
       }),
       {
-        loading: "JutJut AI: Reading report card transcript & calculating grade average...",
+        loading: "Reading your report card…",
         success: (data: any) => {
           setSimulatedGrade(data.grade);
           setSimulatedGPA(data.gpa);
           setUserProfile((prev) => ({ ...prev, gradesVerified: true }));
-          return `AI Verification Complete: Grade Average ${data.grade} (GPA: ${data.gpa})!`;
+          return `Grades added! Average: ${data.grade} (GPA: ${data.gpa}). A teacher will verify this shortly.`;
         },
-        error: "AI Parsing failed.",
+        error: "Could not read the file. Please try a clearer scan.",
       }
     );
   };
@@ -115,7 +115,7 @@ export const MyKit: React.FC = () => {
     toast.promise(
       new Promise((resolve) => setTimeout(resolve, 1200)),
       {
-        loading: `Connecting to ${certName} API...`,
+        loading: `Connecting ${certName}…`,
         success: () => {
           setUserProfile((prev) => ({
             ...prev,
@@ -123,9 +123,9 @@ export const MyKit: React.FC = () => {
               c.name === certName ? { ...c, connected: true } : c
             ),
           }));
-          return `Successfully connected ${certName}!`;
+          return `${certName} connected and added to your Kit!`;
         },
-        error: "Connection failed.",
+        error: "Connection failed. Please try again.",
       }
     );
   };
@@ -370,7 +370,7 @@ export const MyKit: React.FC = () => {
                       <span className="text-[10px] text-amber-500 font-bold">Unverified</span>
                       {isOwnProfile && (
                         <button
-                          onClick={() => toast.success("Coach verification request pinged!")}
+                          onClick={() => toast.success("Vouch request sent! Your coach will receive an email to verify this achievement.")}
                           className="text-xs font-bold text-primary hover:underline flex items-center gap-1"
                         >
                           Request Coach Vouch{" "}

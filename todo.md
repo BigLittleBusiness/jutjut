@@ -331,3 +331,40 @@
 ### Tests
 - [x] 10 Vitest tests for vouches router (list, request, delete)
 - [x] 361 total tests passing across 13 test files — zero TypeScript errors
+
+## UI/UX Assessment Fixes (June 2026)
+
+### Critical (P1)
+- [x] 1.1 Replace state-based routing with URL-based routing (Wouter) so back button and deep links work
+- [x] 1.2 Replace footer alert() dialogs with in-app placeholder pages for Privacy, Terms, Contact
+- [x] 1.3 Add clear "coming soon" indicators on Jobs Board and The Drop (no back-end wiring yet)
+- [x] 1.4 Replace developer-facing toast messages with user-appropriate copy throughout Dashboard
+- [x] 1.5 Add "Coming soon" label to Squad cards so users know the feature is not yet live
+
+### High (P2)
+- [x] 2.1 Add last name field to waitlist form
+- [x] 2.2 Add required asterisk to email field in waitlist form
+- [ ] 2.3 Migrate LandingPage inline styles to Tailwind/CSS variables so dark mode applies (deferred — large refactor, risk of breaking deployed page)
+- [x] 2.4 Add Open Graph and Twitter Card meta tags to index.html (already present)
+- [x] 2.5 Fix "Why JutJut" section — ensure all 4 cards render on desktop viewport
+- [ ] 2.6 Add skeleton loading states to My Kit, Jobs Board, The Drop pages (deferred — pages use local context data, no async loading)
+- [x] 2.7 Update pricing CTAs to pre-select Employer role and reference chosen plan
+- [x] 2.8 Add social media links to footer
+
+### Medium (P3)
+- [x] 3.1 Accessibility demo panel confirmed rendering correctly (code was already correct)
+- [x] 3.2 Fix feature card grid — changed to auto-fill minmax(220px) to prevent overflow
+- [x] 3.3 Add tooltip/description to Squads section explaining what Squads are
+- [x] 3.4 Replace developer-facing post composer toast with user-appropriate message
+- [x] 3.5 Update document.title on each page navigation
+- [x] 3.6 Increase size and contrast of case studies disclaimer text
+- [x] 3.7 Add "Skip to main content" accessibility link at top of page
+- [x] 3.8 FontAwesome icons use empty <i></i> elements which are presentational by default; skip-to-content and semantic structure added
+
+### Low (P4)
+- [x] 4.1 Add ABN / company info to footer
+- [x] 4.2 Waitlist already sends confirmation email via emailService; success state in form confirms this to user
+- [x] 4.3 Differentiate pricing CTA labels (Sign up free / Start free trial / Contact sales)
+- [ ] 4.4 Add keyboard shortcut hints for power users in Dashboard (deferred — low priority, no keyboard shortcuts implemented yet)
+- [x] 4.5 Add IntersectionObserver active scroll state to landing page nav
+- [x] 4.6 Dark-mode favicon support already in index.html (favicon.svg + favicon-dark.svg with media queries)

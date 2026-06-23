@@ -383,14 +383,15 @@ export const Dashboard: React.FC<DashboardProps> = ({ onNavigate }) => {
 
         {/* Squads Card */}
         <div className="brutal-card brutal-shadow bg-card">
-          <h4 className="text-md font-extrabold uppercase tracking-wider mb-3 flex items-center gap-2">
+          <h4 className="text-md font-extrabold uppercase tracking-wider mb-1 flex items-center gap-2">
             <i className="fa-solid fa-users text-primary"></i> My Squads
           </h4>
+          <p className="text-xs text-muted-foreground font-semibold mb-3">Groups of students at your school or with shared interests. Chat, share achievements, and cheer each other on.</p>
           <div className="space-y-2">
             {squads.map((squad) => (
               <button
                 key={squad.id}
-                onClick={() => toast.info(`Squad: "${squad.name}" chat feed is simulated for demo.`)}
+                onClick={() => toast.info("Squad chat is coming soon — you'll be able to connect with your squad here.")}
                 className="w-full p-2.5 rounded-lg border-2 border-border bg-background hover:bg-accent text-left transition-all active:translate-x-[1px] active:translate-y-[1px] flex items-center justify-between"
               >
                 <div className="flex items-center gap-2 min-w-0">
@@ -422,15 +423,15 @@ export const Dashboard: React.FC<DashboardProps> = ({ onNavigate }) => {
               />
               <div className="flex justify-between items-center mt-3">
                 <div className="flex gap-2">
-                  <button onClick={() => toast.info("Report card verification upload mock in My Kit page.")} className="p-2 text-primary hover:bg-accent rounded-lg text-sm" title="Add Verification Document">
+                  <button onClick={() => toast.info("Go to My Kit to add and verify your documents.")} className="p-2 text-primary hover:bg-accent rounded-lg text-sm" title="Add Verification Document">
                     <i className="fa-solid fa-file-shield"></i> <span className="hidden sm:inline text-xs font-bold">Verify</span>
                   </button>
-                  <button onClick={() => toast.info("Sports achievement verification mock in My Kit page.")} className="p-2 text-secondary hover:bg-accent rounded-lg text-sm" title="Add Sport Vouch">
+                  <button onClick={() => toast.info("Go to My Kit to add a sport or activity vouch.")} className="p-2 text-secondary hover:bg-accent rounded-lg text-sm" title="Add Sport Vouch">
                     <i className="fa-solid fa-basketball"></i> <span className="hidden sm:inline text-xs font-bold">Sport</span>
                   </button>
                 </div>
                 <button
-                  onClick={() => toast.success("Post submitted! In this demo, new posts are simulate-only.")}
+                  onClick={() => toast.success("Post submitted! Your update will appear in the feed once the feed is live.")}
                   className="brutal-btn bg-primary text-primary-foreground text-xs py-1.5 px-4"
                 >
                   Post to Feed

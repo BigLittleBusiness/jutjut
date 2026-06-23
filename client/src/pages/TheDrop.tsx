@@ -86,6 +86,12 @@ export const TheDrop: React.FC = () => {
   return (
     <div className="container mx-auto px-4 py-6 max-w-5xl space-y-8">
       
+
+      {/* Prototype banner */}
+      <div className="flex items-center gap-3 rounded-xl border-2 border-amber-400 bg-amber-50 dark:bg-amber-950/30 px-4 py-3 text-sm font-semibold text-amber-800 dark:text-amber-300">
+        <i className="fa-solid fa-flask text-amber-500 flex-shrink-0"  aria-hidden="true"/>
+        <span><strong>Prototype preview</strong> — The drops shown here are sample data. Live business perks are coming soon.</span>
+      </div>
       {/* View Toggle */}
       <div className="flex justify-center">
         <div className="brutal-border rounded-xl p-1 bg-card flex gap-1.5 brutal-shadow">

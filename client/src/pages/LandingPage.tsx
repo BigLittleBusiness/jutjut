@@ -133,6 +133,7 @@ export default function LandingPage({ onSignIn }: LandingPageProps) {
   // Waitlist form state
   const [waitlistEmail, setWaitlistEmail] = useState("");
   const [waitlistFirstName, setWaitlistFirstName] = useState("");
+  const [waitlistLastName, setWaitlistLastName] = useState("");
   const [waitlistRole, setWaitlistRole] = useState<"student" | "employer" | "other">("student");
   const [waitlistSchool, setWaitlistSchool] = useState("");
   const [waitlistState, setWaitlistState] = useState<"idle" | "loading" | "success" | "duplicate" | "error">("idle");
@@ -144,6 +145,8 @@ export default function LandingPage({ onSignIn }: LandingPageProps) {
   const [emailError, setEmailError] = useState("");
   const [firstNameTouched, setFirstNameTouched] = useState(false);
   const [firstNameError, setFirstNameError] = useState("");
+  // Active nav section for scroll highlighting
+  const [activeSection, setActiveSection] = useState<string>("");
 
   const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/;
 
@@ -252,6 +255,23 @@ export default function LandingPage({ onSignIn }: LandingPageProps) {
     return () => window.removeEventListener("scroll", onScroll);
   }, []);
 
+  // Active nav section via IntersectionObserver
+  useEffect(() => {
+    const sectionIds = ["students", "yourway", "employers", "thedrop", "pricing"];
+    const observers: IntersectionObserver[] = [];
+    sectionIds.forEach(id => {
+      const el = document.getElementById(id);
+      if (!el) return;
+      const obs = new IntersectionObserver(
+        ([entry]) => { if (entry.isIntersecting) setActiveSection(id); },
+        { threshold: 0.3 }
+      );
+      obs.observe(el);
+      observers.push(obs);
+    });
+    return () => observers.forEach(o => o.disconnect());
+  }, []);
+
   const scrollTo = (id: string) => {
     setMobileMenuOpen(false);
     document.getElementById(id)?.scrollIntoView({ behavior: "smooth" });
@@ -281,6 +301,7 @@ export default function LandingPage({ onSignIn }: LandingPageProps) {
     waitlistMutation.mutate({
       email: waitlistEmail,
       firstName: waitlistFirstName,
+      lastName: waitlistLastName || undefined,
       role: waitlistRole,
       school: waitlistSchool || undefined,
       source: "landing_page",
@@ -319,9 +340,10 @@ export default function LandingPage({ onSignIn }: LandingPageProps) {
           {/* Desktop nav */}
           <div style={{ display: "flex", gap: 8, alignItems: "center" }} className="hidden md:flex">
             {navLinks.map(l => (
-              <button key={l.id} onClick={() => scrollTo(l.id)} style={{ background: "none", border: "none", cursor: "pointer", fontWeight: 700, fontSize: 14, color: "#374151", padding: "6px 12px", borderRadius: 6, transition: "background 0.15s" }}
-                onMouseEnter={e => (e.currentTarget.style.background = "#f3f4f6")}
-                onMouseLeave={e => (e.currentTarget.style.background = "none")}
+              <button key={l.id} onClick={() => scrollTo(l.id)}
+                style={{ background: activeSection === l.id ? "#f0fdf9" : "none", border: activeSection === l.id ? "2px solid #0d9488" : "2px solid transparent", cursor: "pointer", fontWeight: 700, fontSize: 14, color: activeSection === l.id ? "#0d9488" : "#374151", padding: "6px 12px", borderRadius: 6, transition: "all 0.15s" }}
+                onMouseEnter={e => { if (activeSection !== l.id) e.currentTarget.style.background = "#f3f4f6"; }}
+                onMouseLeave={e => { if (activeSection !== l.id) e.currentTarget.style.background = "none"; }}
               >{l.label}</button>
             ))}
           </div>
@@ -438,7 +460,7 @@ export default function LandingPage({ onSignIn }: LandingPageProps) {
               <p style={{ fontSize: "1.05rem", color: "#6b7280", maxWidth: 520, margin: "0 auto" }}>One platform for verified skills, jobs, perks, and university pathways. Built for Australian students.</p>
             </div>
           </Reveal>
-          <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(240px, 1fr))", gap: "1.5rem" }}>
+          <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(220px, 1fr))", gap: "1.5rem" }}>
             {STUDENT_FEATURES.map((f, i) => (
               <Reveal key={i} delay={i * 80}>
                 <div style={{ background: "#f9fafb", border: "2px solid #1f2937", borderRadius: 14, padding: "1.75rem", boxShadow: "4px 4px 0 #1f2937", transition: "transform 0.15s, box-shadow 0.15s", cursor: "default" }}
@@ -649,7 +671,7 @@ export default function LandingPage({ onSignIn }: LandingPageProps) {
                   <button onClick={() => scrollTo("waitlist")} style={{ width: "100%", background: plan.highlight ? "#0d9488" : "#fff", border: "2px solid " + (plan.highlight ? "#5eead4" : "#1f2937"), borderRadius: 10, padding: "12px", fontWeight: 800, fontSize: 14, color: plan.highlight ? "#fff" : "#1f2937", cursor: "pointer", boxShadow: "3px 3px 0 " + (plan.highlight ? "#5eead4" : "#1f2937"), transition: "all 0.15s" }}
                     onMouseEnter={e => { e.currentTarget.style.transform = "translate(-1px,-1px)"; }}
                     onMouseLeave={e => { e.currentTarget.style.transform = ""; }}
-                  >Get started</button>
+                  >{plan.name === "Starter" ? "Start for free" : plan.name === "Growth" ? "Start free trial" : "Contact sales"}</button>
                 </div>
               </Reveal>
             ))}
@@ -680,7 +702,7 @@ export default function LandingPage({ onSignIn }: LandingPageProps) {
           <Reveal>
             <div style={{ textAlign: "center", marginBottom: "1.5rem" }}>
               <span style={{ background: "rgba(255,255,255,0.15)", border: "2px solid rgba(255,255,255,0.4)", borderRadius: 6, padding: "4px 14px", fontSize: 12, fontWeight: 800, color: "#fff", textTransform: "uppercase", letterSpacing: 1 }}>Illustrative Case Studies</span>
-              <p style={{ color: "#ccfbf1", fontSize: 13, marginTop: "0.6rem" }}>These scenarios are based on the real problems JutJut is designed to solve — not yet live data.</p>
+              <p style={{ color: "#fff", fontSize: 15, fontWeight: 600, marginTop: "0.75rem" }}>These scenarios are based on the real problems JutJut is designed to solve — not yet live data.</p>
             </div>
           </Reveal>
           <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(280px, 1fr))", gap: "1.5rem" }}>
@@ -805,7 +827,21 @@ export default function LandingPage({ onSignIn }: LandingPageProps) {
                     >{r === "student" ? "🎓 Student" : r === "employer" ? "💼 Employer" : "👤 Other"}</button>
                   ))}
                 </div>
-                {/* Name + email row */}
+                {/* Name row: first + last */}
+                <div style={{ display: "flex", gap: 10, flexWrap: "wrap" }}>
+                  <div style={{ flex: "1 1 130px" }}>
+                    <input
+                      type="text"
+                      placeholder="Last name"
+                      value={waitlistLastName}
+                      onChange={e => setWaitlistLastName(e.target.value)}
+                      style={{ width: "100%", background: "#374151", border: "2px solid #4b5563", borderRadius: 10, padding: "13px 16px", fontSize: 14, color: "#f9fafb", outline: "none", boxSizing: "border-box" }}
+                      onFocus={e => { e.currentTarget.style.borderColor = "#0d9488"; }}
+                      onBlur={e => { e.currentTarget.style.borderColor = "#4b5563"; }}
+                    />
+                  </div>
+                </div>
+                {/* First name + email row */}
                 <div style={{ display: "flex", gap: 10, flexWrap: "wrap" }}>
                   {/* First name with inline validation */}
                   <div style={{ flex: "1 1 140px", display: "flex", flexDirection: "column", gap: 4 }}>
@@ -862,7 +898,7 @@ export default function LandingPage({ onSignIn }: LandingPageProps) {
                     <div style={{ position: "relative" }}>
                       <input
                         type="email"
-                        placeholder="your@email.com"
+                        placeholder="your@email.com *"
                         value={waitlistEmail}
                         onChange={handleEmailChange}
                         onBlur={handleEmailBlur}
@@ -960,16 +996,26 @@ export default function LandingPage({ onSignIn }: LandingPageProps) {
       {/* ── FOOTER ─────────────────────────────────────────────────────────── */}
       <footer style={{ background: "#111827", borderTop: "2px solid #374151", padding: "2.5rem 1.5rem" }}>
         <div style={{ maxWidth: 1200, margin: "0 auto", display: "flex", flexWrap: "wrap", justifyContent: "space-between", alignItems: "center", gap: "1rem" }}>
-          <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
-            <div style={{ width: 32, height: 32, background: "#0d9488", borderRadius: 8, display: "flex", alignItems: "center", justifyContent: "center", fontWeight: 900, color: "#fff", fontSize: 13, border: "2px solid #374151" }}>JJ</div>
-            <span style={{ fontWeight: 900, fontSize: 16, color: "#f9fafb" }}>jutjut</span>
-            <span style={{ fontSize: 12, color: "#6b7280" }}>© 2026 JutJut. Built with care for student success.</span>
+          <div style={{ display: "flex", flexDirection: "column", gap: 4 }}>
+            <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+              <div style={{ width: 32, height: 32, background: "#0d9488", borderRadius: 8, display: "flex", alignItems: "center", justifyContent: "center", fontWeight: 900, color: "#fff", fontSize: 13, border: "2px solid #374151" }}>JJ</div>
+              <span style={{ fontWeight: 900, fontSize: 16, color: "#f9fafb" }}>jutjut</span>
+            </div>
+            <span style={{ fontSize: 12, color: "#6b7280" }}>© 2026 JutJut Pty Ltd. ABN 00 000 000 000. Built with care for student success.</span>
           </div>
-          <div style={{ display: "flex", gap: 20, fontSize: 13, color: "#9ca3af", fontWeight: 600 }}>
-            <button onClick={onSignIn} style={{ background: "none", border: "none", cursor: "pointer", color: "#9ca3af", fontWeight: 600, fontSize: 13 }}>Sign in</button>
-            <span style={{ cursor: "pointer" }} onClick={() => alert("Privacy Policy — coming soon")}>Privacy</span>
-            <span style={{ cursor: "pointer" }} onClick={() => alert("Terms of Service — coming soon")}>Terms</span>
-            <span style={{ cursor: "pointer" }} onClick={() => alert("Contact — coming soon")}>Contact</span>
+          <div style={{ display: "flex", flexDirection: "column", gap: 8, alignItems: "flex-end" }}>
+            <div style={{ display: "flex", gap: 16, alignItems: "center" }}>
+              {/* Social media links */}
+              <a href="https://instagram.com" target="_blank" rel="noopener noreferrer" aria-label="JutJut on Instagram" style={{ color: "#9ca3af", fontSize: 18, textDecoration: "none", transition: "color 0.15s" }} onMouseEnter={e => (e.currentTarget.style.color = "#f9fafb")} onMouseLeave={e => (e.currentTarget.style.color = "#9ca3af")}>&#x1F4F8;</a>
+              <a href="https://linkedin.com" target="_blank" rel="noopener noreferrer" aria-label="JutJut on LinkedIn" style={{ color: "#9ca3af", fontSize: 18, textDecoration: "none", transition: "color 0.15s" }} onMouseEnter={e => (e.currentTarget.style.color = "#f9fafb")} onMouseLeave={e => (e.currentTarget.style.color = "#9ca3af")}>&#x1F517;</a>
+              <a href="https://tiktok.com" target="_blank" rel="noopener noreferrer" aria-label="JutJut on TikTok" style={{ color: "#9ca3af", fontSize: 18, textDecoration: "none", transition: "color 0.15s" }} onMouseEnter={e => (e.currentTarget.style.color = "#f9fafb")} onMouseLeave={e => (e.currentTarget.style.color = "#9ca3af")}>&#x1F3B5;</a>
+            </div>
+            <div style={{ display: "flex", gap: 20, fontSize: 13, color: "#9ca3af", fontWeight: 600, flexWrap: "wrap", justifyContent: "flex-end" }}>
+              <button onClick={onSignIn} style={{ background: "none", border: "none", cursor: "pointer", color: "#9ca3af", fontWeight: 600, fontSize: 13 }}>Sign in</button>
+              <button onClick={() => scrollTo("waitlist")} style={{ background: "none", border: "none", cursor: "pointer", color: "#9ca3af", fontWeight: 600, fontSize: 13 }}>Privacy</button>
+              <button onClick={() => scrollTo("waitlist")} style={{ background: "none", border: "none", cursor: "pointer", color: "#9ca3af", fontWeight: 600, fontSize: 13 }}>Terms</button>
+              <button onClick={() => scrollTo("waitlist")} style={{ background: "none", border: "none", cursor: "pointer", color: "#9ca3af", fontWeight: 600, fontSize: 13 }}>Contact</button>
+            </div>
           </div>
         </div>
       </footer>

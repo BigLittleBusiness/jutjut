@@ -472,6 +472,7 @@ export const waitlistSignups = mysqlTable("waitlistSignups", {
   id: int("id").autoincrement().primaryKey(),
   email: varchar("email", { length: 320 }).notNull().unique(),
   firstName: varchar("firstName", { length: 128 }),
+  lastName: varchar("lastName", { length: 128 }),
   role: mysqlEnum("role", ["student", "employer", "other"]).default("student").notNull(),
   school: varchar("school", { length: 255 }),
   source: varchar("source", { length: 64 }).default("landing_page").notNull(), // where they signed up from

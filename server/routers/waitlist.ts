@@ -19,6 +19,7 @@ export const waitlistRouter = router({
           .email("Please enter a valid email address")
           .max(320),
         firstName: z.string().min(1, "First name is required").max(128),
+        lastName: z.string().max(128).optional(),
         role: z.enum(["student", "employer", "other"]).default("student"),
         school: z.string().max(255).optional(),
         source: z.string().max(64).default("landing_page"),
@@ -34,6 +35,7 @@ export const waitlistRouter = router({
       const result = await addWaitlistSignup({
         email: input.email,
         firstName: input.firstName ?? null,
+        lastName: input.lastName ?? null,
         role: input.role,
         school: input.school ?? null,
         source: input.source,
@@ -54,7 +56,7 @@ export const waitlistRouter = router({
       // Notify the owner of a new waitlist signup (non-blocking)
       notifyOwner({
         title: "New JutJut Waitlist Signup",
-        content: `${input.firstName ? input.firstName + " — " : ""}${input.email} (${input.role}${input.school ? ", " + input.school : ""}) joined the waitlist.`,
+        content: `${input.firstName ? input.firstName + (input.lastName ? " " + input.lastName : "") + " — " : ""}${input.email} (${input.role}${input.school ? ", " + input.school : ""}) joined the waitlist.`,
       }).catch(() => {/* silently ignore notification failures */});
 
       // Send waitlist confirmation email to the new signup

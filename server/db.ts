@@ -425,6 +425,7 @@ export async function getPromoCodeRedemptions(promoCodeId: number) {
 export async function addWaitlistSignup(data: {
   email: string;
   firstName?: string | null;
+  lastName?: string | null;
   role?: "student" | "employer" | "other";
   school?: string | null;
   source?: string;
@@ -447,6 +448,7 @@ export async function addWaitlistSignup(data: {
   await db.insert(waitlistSignups).values({
     email: data.email.toLowerCase().trim(),
     firstName: data.firstName ?? null,
+    lastName: data.lastName ?? null,
     role: data.role ?? "student",
     school: data.school ?? null,
     source: data.source ?? "landing_page",

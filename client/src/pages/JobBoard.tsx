@@ -131,12 +131,18 @@ export const JobBoard: React.FC = () => {
   return (
     <div className="container mx-auto px-4 py-6 space-y-6">
 
+
+      {/* ── Prototype banner ─────────────────────────────────────────────── */}
+      <div className="flex items-center gap-3 rounded-xl border-2 border-amber-400 bg-amber-50 dark:bg-amber-950/30 px-4 py-3 text-sm font-semibold text-amber-800 dark:text-amber-300">
+        <i className="fa-solid fa-flask text-amber-500 flex-shrink-0"  aria-hidden="true"/>
+        <span><strong>Prototype preview</strong> — Job listings shown here are sample data. Live employer postings are coming soon.</span>
+      </div>
       {/* ── Search bar + sort ─────────────────────────────────────── */}
       <div className="brutal-card brutal-shadow bg-card space-y-4">
         <div className="flex flex-col sm:flex-row gap-3">
           {/* Search input */}
           <div className="relative flex-1">
-            <i className="fa-solid fa-magnifying-glass absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground text-sm pointer-events-none" />
+            <i className="fa-solid fa-magnifying-glass absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground text-sm pointer-events-none"  aria-hidden="true"/>
             <input
               type="text"
               value={searchQuery}
@@ -149,7 +155,7 @@ export const JobBoard: React.FC = () => {
                 onClick={() => setSearchQuery("")}
                 className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
               >
-                <i className="fa-solid fa-xmark text-sm" />
+                <i className="fa-solid fa-xmark text-sm"  aria-hidden="true"/>
               </button>
             )}
           </div>
@@ -193,7 +199,7 @@ export const JobBoard: React.FC = () => {
               onClick={clearAllFilters}
               className="inline-flex items-center gap-1 px-3 py-1 rounded-full text-xs font-bold border-2 border-destructive/50 text-destructive hover:bg-destructive/10 transition-colors ml-auto"
             >
-              <i className="fa-solid fa-xmark" /> Clear all ({activeFilterCount})
+              <i className="fa-solid fa-xmark"  aria-hidden="true"/> Clear all ({activeFilterCount})
             </button>
           )}
         </div>
@@ -219,7 +225,7 @@ export const JobBoard: React.FC = () => {
               : "text-muted-foreground hover:text-foreground"
           }`}
         >
-          <i className="fa-solid fa-bookmark text-xs" />
+          <i className="fa-solid fa-bookmark text-xs"  aria-hidden="true"/>
           Saved
           {savedJobIds.size > 0 && (
             <span className="bg-primary text-primary-foreground text-[10px] font-black px-1.5 py-0.5 rounded-full">
@@ -388,7 +394,7 @@ export const JobBoard: React.FC = () => {
                           onClick={() => toggleSaveJob(job.id)}
                           className="brutal-btn text-xs py-2 px-3 flex items-center gap-1.5 bg-amber-100 text-amber-700 border-amber-400 hover:bg-amber-200"
                         >
-                          <i className="fa-solid fa-bookmark text-sm" /> Saved
+                          <i className="fa-solid fa-bookmark text-sm"  aria-hidden="true"/> Saved
                         </button>
                         <button
                           onClick={() => handleApplyClick(job)}
