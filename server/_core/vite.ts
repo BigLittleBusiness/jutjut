@@ -3,11 +3,23 @@ import fs from "fs";
 import { type Server } from "http";
 import { nanoid } from "nanoid";
 import path from "path";
-import { createServer as createViteServer } from "vite";
-import viteConfig from "../../vite.config";
 import { logger } from "./logger";
 
 export async function setupVite(app: Express, server: Server) {
+  // Both imports are fully dynamic so esbuild leaves them as bare specifiers
+  // and they are never resolved in the production bundle (setupVite is only
+  // called when NODE_ENV === "development").
+  //
+  // We use a string concatenation trick on "vite" to prevent esbuild from
+  // statically analysing and bundling the import even with --packages=external.
+  const vitePkg = "vi" + "te";
+  const { createServer: createViteServer, defineConfig } = await import(vitePkg);
+
+  // Load vite config dynamically — same reason as above.
+  const viteConfigPath = "../../vite.con" + "fig";
+  const viteConfigModule = await import(/* @vite-ignore */ viteConfigPath);
+  const viteConfig = viteConfigModule.default ?? viteConfigModule;
+
   const serverOptions = {
     middlewareMode: true,
     hmr: { server },
