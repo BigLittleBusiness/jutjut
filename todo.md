@@ -391,3 +391,8 @@
 - [x] R4.1 Add mobile animation to LandingPage mobile menu
 - [x] R4.2 Replace native <select> in waitlist form with shadcn Select component (native select already using custom buttons)
 - [x] R4.3 Add recommended-for-desktop notice to Admin Dashboard on mobile
+
+## LandingPage UX Improvements (July 2026)
+
+- [x] R5.1 Add floating back-to-top button to LandingPage (appears after scrolling down, smooth scroll to hero)
+- [x] R5.2 Verify and fix sticky nav on LandingPage — urgency banner moved above nav so nav sticks correctly from page top

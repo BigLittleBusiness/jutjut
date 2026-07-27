@@ -129,6 +129,7 @@ export default function LandingPage({ onSignIn }: LandingPageProps) {
   const [faqOpen, setFaqOpen] = useState<number | null>(null);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [scrolled, setScrolled] = useState(false);
+  const [showBackToTop, setShowBackToTop] = useState(false);
 
   // Waitlist form state
   const [waitlistEmail, setWaitlistEmail] = useState("");
@@ -250,7 +251,11 @@ export default function LandingPage({ onSignIn }: LandingPageProps) {
   });
 
   useEffect(() => {
-    const onScroll = () => setScrolled(window.scrollY > 20);
+    const onScroll = () => {
+      const y = window.scrollY;
+      setScrolled(y > 20);
+      setShowBackToTop(y > 400);
+    };
     window.addEventListener("scroll", onScroll, { passive: true });
     return () => window.removeEventListener("scroll", onScroll);
   }, []);
@@ -320,6 +325,11 @@ export default function LandingPage({ onSignIn }: LandingPageProps) {
   return (
     <div style={{ fontFamily: "'Inter', 'Helvetica Neue', Arial, sans-serif", background: "#f9fafb", color: "#1f2937", overflowX: "hidden" }}>
 
+      {/* ── URGENCY BANNER ─────────────────────────────────────────────────── */}
+      <div style={{ background: "#1f2937", color: "#fff", textAlign: "center", padding: "10px 1rem", fontSize: 14, fontWeight: 700 }}>
+        🔥 JutJut is <span style={{ color: "#f59e0b" }}>coming soon</span> — join the waitlist and be first to know when your school goes live!
+      </div>
+
       {/* ── NAVBAR ─────────────────────────────────────────────────────────── */}
       <nav style={{
         position: "sticky", top: 0, zIndex: 100,
@@ -382,11 +392,6 @@ export default function LandingPage({ onSignIn }: LandingPageProps) {
           <button onClick={onSignIn} style={{ background: "none", border: "2px solid #1f2937", borderRadius: 8, padding: "10px", fontWeight: 800, fontSize: 14, cursor: "pointer", marginTop: 4 }}>Sign in</button>
         </div>
       </nav>
-
-      {/* ── URGENCY BANNER ─────────────────────────────────────────────────── */}
-      <div style={{ background: "#1f2937", color: "#fff", textAlign: "center", padding: "10px 1rem", fontSize: 14, fontWeight: 700 }}>
-        🔥 JutJut is <span style={{ color: "#f59e0b" }}>coming soon</span> — join the waitlist and be first to know when your school goes live!
-      </div>
 
       {/* ── HERO ───────────────────────────────────────────────────────────── */}
       <section id="hero" style={{ background: "linear-gradient(135deg, #f0fdf9 0%, #fefce8 100%)", borderBottom: "2px solid #1f2937", padding: "5rem 1.5rem" }}>
@@ -1028,6 +1033,41 @@ export default function LandingPage({ onSignIn }: LandingPageProps) {
           </div>
         </div>
       </footer>
+
+      {/* ── BACK TO TOP BUTTON ────────────────────────────────────────────── */}
+      <button
+        onClick={() => window.scrollTo({ top: 0, behavior: "smooth" })}
+        aria-label="Back to top"
+        style={{
+          position: "fixed",
+          bottom: 28,
+          right: 24,
+          zIndex: 200,
+          width: 48,
+          height: 48,
+          background: "#0d9488",
+          border: "2px solid #1f2937",
+          borderRadius: 12,
+          boxShadow: "3px 3px 0 #1f2937",
+          cursor: "pointer",
+          display: "flex",
+          alignItems: "center",
+          justifyContent: "center",
+          fontSize: 20,
+          color: "#fff",
+          fontWeight: 900,
+          opacity: showBackToTop ? 1 : 0,
+          pointerEvents: showBackToTop ? "auto" : "none",
+          transform: showBackToTop ? "translateY(0) scale(1)" : "translateY(12px) scale(0.95)",
+          transition: "opacity 0.22s cubic-bezier(0.23,1,0.32,1), transform 0.22s cubic-bezier(0.23,1,0.32,1), box-shadow 0.15s",
+        }}
+        onMouseEnter={e => { e.currentTarget.style.transform = "translateY(-2px) scale(1.04)"; e.currentTarget.style.boxShadow = "5px 5px 0 #1f2937"; }}
+        onMouseLeave={e => { e.currentTarget.style.transform = showBackToTop ? "translateY(0) scale(1)" : "translateY(12px) scale(0.95)"; e.currentTarget.style.boxShadow = "3px 3px 0 #1f2937"; }}
+        onMouseDown={e => { e.currentTarget.style.transform = "translateY(1px) scale(0.97)"; }}
+        onMouseUp={e => { e.currentTarget.style.transform = "translateY(-2px) scale(1.04)"; }}
+      >
+        ↑
+      </button>
     </div>
   );
 }
