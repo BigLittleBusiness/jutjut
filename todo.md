@@ -368,3 +368,26 @@
 - [ ] 4.4 Add keyboard shortcut hints for power users in Dashboard (deferred — low priority, no keyboard shortcuts implemented yet)
 - [x] 4.5 Add IntersectionObserver active scroll state to landing page nav
 - [x] 4.6 Dark-mode favicon support already in index.html (favicon.svg + favicon-dark.svg with media queries)
+
+## Full Review Fixes (July 2026)
+
+### P1 — Critical
+- [x] R1.1 Fix LandingPage mobile grid — remove inline gridTemplateColumns from all 4 two-column sections
+- [x] R1.2 Wire Job Board to real DB data (employer-posted jobs visible to students)
+- [x] R1.3 Add role-based post-login routing (employers → Employer Dashboard, schools → School Portal)
+
+### P2 — High
+- [x] R2.1 Wire The Drop submission to DB (AppContext only currently)
+- [x] R2.2 Add mobile nav access to Privacy Settings and Email Preferences
+- [x] R2.3 Conditionally show Drop Analytics in profile dropdown (business users only)
+- [x] R2.4 Add horizontal scroll wrappers to tables in School Portal and University Portal (already present)
+
+### P3 — Medium
+- [x] R3.1 Build Teacher/Coach portal (pending vouches, vouch history)
+- [x] R3.2 Persist Privacy Settings and Email Preferences toggles to DB
+- [x] R3.3 Wire social feed posts to DB
+
+### P4 — Low
+- [x] R4.1 Add mobile animation to LandingPage mobile menu
+- [x] R4.2 Replace native <select> in waitlist form with shadcn Select component (native select already using custom buttons)
+- [x] R4.3 Add recommended-for-desktop notice to Admin Dashboard on mobile

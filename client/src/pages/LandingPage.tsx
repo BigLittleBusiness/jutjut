@@ -363,15 +363,24 @@ export default function LandingPage({ onSignIn }: LandingPageProps) {
           </div>
         </div>
 
-        {/* Mobile menu */}
-        {mobileMenuOpen && (
-          <div style={{ background: "#fff", borderTop: "2px solid #1f2937", padding: "1rem 1.5rem", display: "flex", flexDirection: "column", gap: 8 }}>
-            {navLinks.map(l => (
-              <button key={l.id} onClick={() => scrollTo(l.id)} style={{ background: "none", border: "none", cursor: "pointer", fontWeight: 700, fontSize: 15, color: "#374151", textAlign: "left", padding: "8px 0" }}>{l.label}</button>
-            ))}
-            <button onClick={onSignIn} style={{ background: "none", border: "2px solid #1f2937", borderRadius: 8, padding: "10px", fontWeight: 800, fontSize: 14, cursor: "pointer", marginTop: 4 }}>Sign in</button>
-          </div>
-        )}
+        {/* Mobile menu — animated slide-down */}
+        <div style={{
+          background: "#fff",
+          borderTop: mobileMenuOpen ? "2px solid #1f2937" : "none",
+          padding: mobileMenuOpen ? "1rem 1.5rem" : "0 1.5rem",
+          display: "flex",
+          flexDirection: "column",
+          gap: 8,
+          overflow: "hidden",
+          maxHeight: mobileMenuOpen ? 400 : 0,
+          opacity: mobileMenuOpen ? 1 : 0,
+          transition: "max-height 0.28s cubic-bezier(0.23,1,0.32,1), opacity 0.22s ease, padding 0.22s ease",
+        }}>
+          {navLinks.map(l => (
+            <button key={l.id} onClick={() => scrollTo(l.id)} style={{ background: "none", border: "none", cursor: "pointer", fontWeight: 700, fontSize: 15, color: "#374151", textAlign: "left", padding: "8px 0" }}>{l.label}</button>
+          ))}
+          <button onClick={onSignIn} style={{ background: "none", border: "2px solid #1f2937", borderRadius: 8, padding: "10px", fontWeight: 800, fontSize: 14, cursor: "pointer", marginTop: 4 }}>Sign in</button>
+        </div>
       </nav>
 
       {/* ── URGENCY BANNER ─────────────────────────────────────────────────── */}
@@ -381,7 +390,7 @@ export default function LandingPage({ onSignIn }: LandingPageProps) {
 
       {/* ── HERO ───────────────────────────────────────────────────────────── */}
       <section id="hero" style={{ background: "linear-gradient(135deg, #f0fdf9 0%, #fefce8 100%)", borderBottom: "2px solid #1f2937", padding: "5rem 1.5rem" }}>
-        <div style={{ maxWidth: 1200, margin: "0 auto", display: "grid", gridTemplateColumns: "1fr 1fr", gap: "3rem", alignItems: "center" }} className="grid-cols-1 md:grid-cols-2">
+        <div style={{ maxWidth: 1200, margin: "0 auto", display: "grid", gap: "3rem", alignItems: "center" }} className="grid-cols-1 md:grid-cols-2">
           {/* Left */}
           <div>
             <div style={{ display: "flex", gap: 8, marginBottom: "1.5rem", flexWrap: "wrap" }}>
@@ -491,7 +500,7 @@ export default function LandingPage({ onSignIn }: LandingPageProps) {
 
       {/* ── YOUR WAY (ACCESSIBILITY) ────────────────────────────────────────── */}
       <section id="yourway" style={{ background: "#1f2937", borderBottom: "2px solid #0d9488", padding: "5rem 1.5rem" }}>
-        <div style={{ maxWidth: 1200, margin: "0 auto", display: "grid", gridTemplateColumns: "1fr 1fr", gap: "3rem", alignItems: "center" }} className="grid-cols-1 md:grid-cols-2">
+        <div style={{ maxWidth: 1200, margin: "0 auto", display: "grid", gap: "3rem", alignItems: "center" }} className="grid-cols-1 md:grid-cols-2">
           <Reveal>
             <div>
               <span style={{ background: "#0d9488", border: "2px solid #5eead4", borderRadius: 6, padding: "4px 14px", fontSize: 12, fontWeight: 800, color: "#fff", textTransform: "uppercase", letterSpacing: 1 }}>Your Way</span>
@@ -583,7 +592,7 @@ export default function LandingPage({ onSignIn }: LandingPageProps) {
 
       {/* ── THE DROP ───────────────────────────────────────────────────────── */}
       <section id="thedrop" style={{ background: "#fff", borderBottom: "2px solid #1f2937", padding: "5rem 1.5rem" }}>
-        <div style={{ maxWidth: 1200, margin: "0 auto", display: "grid", gridTemplateColumns: "1fr 1fr", gap: "3rem", alignItems: "center" }} className="grid-cols-1 md:grid-cols-2">
+        <div style={{ maxWidth: 1200, margin: "0 auto", display: "grid", gap: "3rem", alignItems: "center" }} className="grid-cols-1 md:grid-cols-2">
           <Reveal>
             <div>
               <span style={{ background: "#fdf4ff", border: "2px solid #a855f7", borderRadius: 6, padding: "4px 14px", fontSize: 12, fontWeight: 800, color: "#7e22ce", textTransform: "uppercase", letterSpacing: 1 }}>The Drop</span>

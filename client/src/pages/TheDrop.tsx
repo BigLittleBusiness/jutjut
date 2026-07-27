@@ -1,9 +1,34 @@
 import React, { useState } from "react";
 import { useApp } from "@/contexts/AppContext";
 import { toast } from "sonner";
+import { trpc } from "@/lib/trpc";
 
 export const TheDrop: React.FC = () => {
-  const { drops, claimDrop, createDrop } = useApp();
+  const { claimDrop } = useApp();
+  // Live drops from DB
+  const { data: dbDrops = [], refetch: refetchDrops } = trpc.student.drops.list.useQuery();
+  // Map DB drops to the AppContext Drop shape for the existing UI
+  const drops = dbDrops.map(d => ({
+    id: String(d.id),
+    title: d.title,
+    offer: d.description ?? "",
+    code: "",
+    countdown: d.scheduledDate
+      ? `Starts ${new Date(d.scheduledDate).toLocaleDateString("en-AU", { day: "numeric", month: "short" })}`
+      : "Live now",
+    isActive: d.status === "active",
+    date: d.scheduledDate ? new Date(d.scheduledDate).toLocaleDateString("en-AU") : "",
+    redemptionCount: d.claimCount,
+    isClaimed: false,
+  }));
+  // Drop submission mutation
+  const submitDrop = trpc.business.drops.submit.useMutation({
+    onSuccess: () => {
+      toast.success("Drop proposal submitted! Our team will review it within 48 hours.");
+      refetchDrops();
+    },
+    onError: (err) => toast.error(err.message ?? "Failed to submit drop."),
+  });
   const [viewMode, setViewMode] = useState<"student" | "business">("student");
 
   // Form states for business dashboard
@@ -64,11 +89,9 @@ export const TheDrop: React.FC = () => {
       toast.warning("Warning: Selected date is less than the required 2-week lead time. Our team will review this expedited request.");
     }
 
-    createDrop({
+    submitDrop.mutate({
       title: dropTitle,
-      offer: dropOffer,
-      code: dropCode,
-      date: dropDate
+      description: `${dropOffer}${dropCode ? ` | Code: ${dropCode}` : ""}${dropDate ? ` | Launch: ${dropDate}` : ""}`,
     });
 
     setDropTitle("");

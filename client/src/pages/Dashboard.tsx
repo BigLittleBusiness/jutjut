@@ -33,7 +33,14 @@ export const Dashboard: React.FC<DashboardProps> = ({ onNavigate }) => {
   const [newMessageText, setNewMessageText] = useState("");
   const chatEndRef = useRef<HTMLDivElement>(null);
 
-  // Social feed posts mock
+  // Social feed — real DB
+  const { data: dbPosts = [], refetch: refetchFeed } = trpc.student.feed.list.useQuery(undefined, { enabled: !!user });
+  const createPost = trpc.student.feed.create.useMutation({
+    onSuccess: () => { setPostContent(""); refetchFeed(); },
+    onError: (err) => toast.error(err.message ?? "Failed to post."),
+  });
+  const [postContent, setPostContent] = useState("");
+  // Social feed posts (sample data shown when DB is empty)
   const [posts, setPosts] = useState([
     {
       id: "p1",
@@ -419,6 +426,8 @@ export const Dashboard: React.FC<DashboardProps> = ({ onNavigate }) => {
             <div className="flex-1">
               <textarea
                 placeholder="What achievements are we verifying today? Got a tutor vouch?"
+                value={postContent}
+                onChange={(e) => setPostContent(e.target.value)}
                 className="w-full p-3 brutal-border rounded-lg bg-background text-foreground font-semibold text-sm h-20 focus:outline-none focus:ring-2 focus:ring-primary resize-none"
               />
               <div className="flex justify-between items-center mt-3">
@@ -431,10 +440,14 @@ export const Dashboard: React.FC<DashboardProps> = ({ onNavigate }) => {
                   </button>
                 </div>
                 <button
-                  onClick={() => toast.success("Post submitted! Your update will appear in the feed once the feed is live.")}
-                  className="brutal-btn bg-primary text-primary-foreground text-xs py-1.5 px-4"
+                  disabled={!postContent.trim() || createPost.isPending}
+                  onClick={() => {
+                    if (!postContent.trim()) return;
+                    createPost.mutate({ content: postContent });
+                  }}
+                  className="brutal-btn bg-primary text-primary-foreground text-xs py-1.5 px-4 disabled:opacity-50 disabled:cursor-not-allowed"
                 >
-                  Post to Feed
+                  {createPost.isPending ? "Posting…" : "Post to Feed"}
                 </button>
               </div>
             </div>

@@ -5,6 +5,7 @@ import ErrorBoundary from "./components/ErrorBoundary";
 import { ThemeProvider } from "./contexts/ThemeContext";
 import { AppProvider, useApp } from "./contexts/AppContext";
 import { Navbar } from "./components/Navbar";
+import { useUserRole } from "./hooks/useUserRole";
 import { Login } from "./pages/Login";
 import { Dashboard } from "./pages/Dashboard";
 import { MyKit } from "./pages/MyKit";
@@ -21,9 +22,11 @@ import LandingPage from "./pages/LandingPage";
 import EmailPreferences from "./pages/EmailPreferences";
 import PrivacySettings from "./pages/PrivacySettings";
 import BusinessDashboard from "./pages/BusinessDashboard";
+import TeacherPortal from "./pages/TeacherPortal";
 
 function MainLayout() {
   const { isAuthenticated } = useApp();
+  const { defaultPage, loading: roleLoading } = useUserRole();
   // Simple state-based routing for static prototype navigation
   const [currentPage, setCurrentPage] = useState<string>(() => {
     return isAuthenticated ? "dashboard" : "landing";
@@ -48,6 +51,7 @@ function MainLayout() {
     "email-preferences": "Email Preferences — JutJut",
     "privacy-settings": "Privacy Settings — JutJut",
     "business-dashboard": "Business Dashboard — JutJut",
+    "teacher-portal": "Teacher Portal — JutJut",
   };
 
   const handleNavigate = (page: string) => {
@@ -73,8 +77,8 @@ function MainLayout() {
   }, [isAuthenticated]);
 
   const handleLoginSuccess = () => {
-    // Route to the preserved deep-link destination, or fall back to dashboard
-    const destination = pendingDeepLink || "dashboard";
+    // Route to the preserved deep-link destination, or fall back to role-based default
+    const destination = pendingDeepLink || defaultPage;
     setPendingDeepLink(null);
     setCurrentPage(destination);
   };
@@ -135,6 +139,7 @@ function MainLayout() {
             {currentPage === "email-preferences" && <EmailPreferences />}
             {currentPage === "privacy-settings" && <PrivacySettings />}
             {currentPage === "business-dashboard" && <BusinessDashboard />}
+            {currentPage === "teacher-portal" && <TeacherPortal />}
           </>
         )}
       </main>

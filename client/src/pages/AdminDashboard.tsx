@@ -1732,7 +1732,15 @@ export default function AdminDashboard({ onNavigate }: AdminDashboardProps) {
   }
 
   return (
-    <div className="flex min-h-[calc(100vh-4rem)]">
+    <div className="flex flex-col min-h-[calc(100vh-4rem)]">
+      {/* Mobile desktop-recommended notice */}
+      <div className="block md:hidden bg-amber-50 border-b-2 border-amber-400 dark:bg-amber-900/20 dark:border-amber-600 px-4 py-3 flex items-start gap-3">
+        <i className="fa-solid fa-desktop text-amber-600 dark:text-amber-400 mt-0.5 shrink-0"></i>
+        <p className="text-sm font-bold text-amber-800 dark:text-amber-300">
+          Admin Dashboard is best experienced on a desktop or larger screen. Some features may be limited on mobile.
+        </p>
+      </div>
+      <div className="flex flex-1">
       {/* Sidebar */}
       <aside className={`${sidebarOpen ? "w-60" : "w-14"} transition-all duration-200 bg-card border-r-2 border-border flex flex-col shrink-0`}>
         <div className="flex items-center justify-between p-3 border-b border-border">
@@ -1787,6 +1795,7 @@ export default function AdminDashboard({ onNavigate }: AdminDashboardProps) {
         {section === "emailLogs" && <EmailLogsSection />}
         {section === "emailPreview" && <EmailPreviewSection />}
       </main>
+      </div>
     </div>
   );
 }

@@ -4,6 +4,7 @@ import NotificationBell from "@/components/NotificationBell";
 import { useTheme } from "@/contexts/ThemeContext";
 import { Link, useLocation } from "wouter";
 import { motion, AnimatePresence } from "framer-motion";
+import { useUserRole } from "@/hooks/useUserRole";
 
 interface NavbarProps {
   onNavigate: (page: string) => void;
@@ -13,6 +14,7 @@ interface NavbarProps {
 export const Navbar: React.FC<NavbarProps> = ({ onNavigate, currentPage }) => {
   const { isAuthenticated, logout, userProfile } = useApp();
   const { theme, toggleTheme } = useTheme();
+  const { isBusiness } = useUserRole();
   const [isOpen, setIsOpen] = useState(false);
 
   const primaryItems = [
@@ -236,13 +238,23 @@ export const Navbar: React.FC<NavbarProps> = ({ onNavigate, currentPage }) => {
                           <i className="fa-solid fa-envelope w-4 text-center text-primary"></i>
                           <span>Email Preferences</span>
                         </button>
-                        {/* Business Dashboard */}
+                        {/* Business Dashboard — only shown to employer/business users */}
+                        {isBusiness && (
+                          <button
+                            onClick={() => { handleNavClick("business-dashboard"); setIsProfileOpen(false); }}
+                            className="w-full px-3 py-2 rounded-lg font-bold flex items-center gap-2.5 transition-all text-left hover:bg-accent text-muted-foreground hover:text-foreground"
+                          >
+                            <i className="fa-solid fa-chart-bar w-4 text-center text-primary"></i>
+                            <span>Drop Analytics</span>
+                          </button>
+                        )}
+                        {/* Teacher Portal — accessible to all authenticated users */}
                         <button
-                          onClick={() => { handleNavClick("business-dashboard"); setIsProfileOpen(false); }}
+                          onClick={() => { handleNavClick("teacher-portal"); setIsProfileOpen(false); }}
                           className="w-full px-3 py-2 rounded-lg font-bold flex items-center gap-2.5 transition-all text-left hover:bg-accent text-muted-foreground hover:text-foreground"
                         >
-                          <i className="fa-solid fa-chart-bar w-4 text-center text-primary"></i>
-                          <span>Drop Analytics</span>
+                          <i className="fa-solid fa-chalkboard-teacher w-4 text-center text-primary"></i>
+                          <span>Teacher Portal</span>
                         </button>
                         {/* Divider */}
                         <div className="border-t border-border my-0.5" />
@@ -328,6 +340,41 @@ export const Navbar: React.FC<NavbarProps> = ({ onNavigate, currentPage }) => {
             );
           })}
 
+          {/* Account links in mobile menu */}
+          <div className="border-t border-border/60 my-1 pt-2 px-1">
+            <p className="text-[10px] font-extrabold uppercase tracking-wider text-muted-foreground">Account</p>
+          </div>
+          <button
+            onClick={() => handleNavClick("privacy-settings")}
+            className="w-full p-2.5 rounded-lg font-bold flex items-center gap-3 hover:bg-accent text-left text-muted-foreground hover:text-foreground transition-all"
+          >
+            <i className="fa-solid fa-shield-halved w-5 text-center text-primary"></i>
+            <span>Privacy Settings</span>
+          </button>
+          <button
+            onClick={() => handleNavClick("email-preferences")}
+            className="w-full p-2.5 rounded-lg font-bold flex items-center gap-3 hover:bg-accent text-left text-muted-foreground hover:text-foreground transition-all"
+          >
+            <i className="fa-solid fa-envelope w-5 text-center text-primary"></i>
+            <span>Email Preferences</span>
+          </button>
+                    {isBusiness && (
+            <button
+              onClick={() => handleNavClick("business-dashboard")}
+              className="w-full p-2.5 rounded-lg font-bold flex items-center gap-3 hover:bg-accent text-left text-muted-foreground hover:text-foreground transition-all"
+            >
+              <i className="fa-solid fa-chart-bar w-5 text-center text-primary"></i>
+              <span>Drop Analytics</span>
+            </button>
+          )}
+          {/* Teacher Portal — accessible to all authenticated users */}
+          <button
+            onClick={() => handleNavClick("teacher-portal")}
+            className="w-full p-2.5 rounded-lg font-bold flex items-center gap-3 hover:bg-accent text-left text-muted-foreground hover:text-foreground transition-all"
+          >
+            <i className="fa-solid fa-chalkboard-teacher w-5 text-center text-primary"></i>
+            <span>Teacher Portal</span>
+          </button>
           <div className="border-t border-border my-2 pt-2">
             <button
               onClick={logout}

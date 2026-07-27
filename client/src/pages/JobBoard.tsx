@@ -1,5 +1,6 @@
 import React, { useState, useMemo } from "react";
 import { useApp, Job, JobCategory } from "@/contexts/AppContext";
+import { trpc } from "@/lib/trpc";
 
 const ALL_CATEGORIES: JobCategory[] = [
   "Tutoring",
@@ -18,7 +19,28 @@ const CATEGORY_ICONS: Record<JobCategory, string> = {
 };
 
 export const JobBoard: React.FC = () => {
-  const { jobs, applyToJob, simplifyJobs, savedJobIds, toggleSaveJob } = useApp();
+  const { jobs: mockJobs, applyToJob, simplifyJobs, savedJobIds, toggleSaveJob } = useApp();
+  // Fetch live jobs from DB (employer-posted)
+  const { data: dbJobs = [] } = trpc.student.jobs.list.useQuery();
+  // Map DB jobs to the AppContext Job shape
+  const dbJobsMapped: Job[] = dbJobs.map(j => ({
+    id: String(j.id),
+    title: j.title,
+    company: j.employer,
+    logo: "",
+    location: j.distance ?? "Flexible",
+    radius: 5,
+    wage: j.wage ? parseFloat(j.wage) : 0,
+    timing: "flexible" as const,
+    noCoverLetter: j.noCoverLetter,
+    neuroFriendly: false,
+    category: "Digital & Remote" as JobCategory,
+    description: j.description ?? "",
+    simplifiedDescription: j.plainDescription ?? j.description ?? "",
+  }));
+  // DB jobs take priority; mock jobs fill in the rest
+  const dbJobIds = new Set(dbJobsMapped.map(j => j.id));
+  const jobs: Job[] = [...dbJobsMapped, ...mockJobs.filter(j => !dbJobIds.has(j.id))];
 
   // Tab: "all" | "saved"
   const [activeTab, setActiveTab] = useState<"all" | "saved">("all");
