@@ -410,3 +410,12 @@
 ## Social Share (July 2026)
 
 - [x] SS1 Add floating social share buttons to LandingPage (X/Twitter, LinkedIn, Facebook, copy link)
+
+## Stripe Gateway Integration (July 2026)
+
+- [x] STR1 Install Stripe Node.js SDK and create server/stripe.ts helper (charge, customer, webhook verify)
+- [x] STR2 Add stripeChargeId and gateway columns to transactions table; schema updated and migration applied
+- [x] STR3 Update employer purchase procedure to route through active gateway (pin or stripe)
+- [x] STR4 Update Admin Dashboard payments panel with labelled provider sections and gateway switcher UI
+- [x] STR5 Update buy-credits modal to conditionally render Stripe Elements or PinPayments token input
+- [x] STR6 Stripe webhook handler in server/stripe.ts; endpoint /api/webhooks/stripe documented in Admin Dashboard

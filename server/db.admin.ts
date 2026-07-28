@@ -455,6 +455,26 @@ export async function upsertPaymentGatewaySetting(
     .onDuplicateKeyUpdate({ set: { encryptedValue, updatedBy } });
 }
 
+// ─── Active gateway helper ───────────────────────────────────────────────────
+
+/**
+ * Returns the currently active payment gateway ("pin" or "stripe").
+ * Reads the special key "active_gateway" from paymentGatewaySettings.
+ * Defaults to "pin" if not set.
+ */
+export async function getActiveGateway(): Promise<"pin" | "stripe"> {
+  const rows = await getPaymentGatewaySettings();
+  const row = rows.find((r) => r.keyName === "active_gateway");
+  if (!row) return "pin";
+  const { decrypt } = await import("./encryption");
+  try {
+    const val = decrypt(row.encryptedValue);
+    return val === "stripe" ? "stripe" : "pin";
+  } catch {
+    return "pin";
+  }
+}
+
 // ─── Admin user management ────────────────────────────────────────────────────
 
 export async function listAdminUsers() {

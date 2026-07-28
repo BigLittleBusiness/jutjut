@@ -6,7 +6,7 @@
  * - Job list with analytics
  */
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { trpc } from "@/lib/trpc";
 import { useAuth } from "@/_core/hooks/useAuth";
 import { getLoginUrl } from "@/const";
@@ -22,6 +22,9 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } f
 import { toast } from "sonner";
 import { Coins, Plus, BarChart2, Briefcase, Star, RefreshCw, CreditCard, Tag, Info, ChevronDown, ChevronRight, Users, Eye, TrendingUp, Clock, Mail, ShieldOff } from "lucide-react";
 import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, LineChart, Line, CartesianGrid } from "recharts";
+import { loadStripe } from "@stripe/stripe-js";
+import { Elements, CardElement, useStripe, useElements } from "@stripe/react-stripe-js";
+
 
 // ─── Credit balance card ──────────────────────────────────────────────────────
 
@@ -65,6 +68,65 @@ function CreditBalanceCard({ onBuyCredits }: { onBuyCredits: () => void }) {
 
 // ─── Buy Credits Modal ────────────────────────────────────────────────────────
 
+// Stripe card element styles to match the site theme
+const STRIPE_ELEMENT_STYLE = {
+  base: {
+    fontSize: "14px",
+    color: "#1a1a1a",
+    fontFamily: "inherit",
+    "::placeholder": { color: "#9ca3af" },
+  },
+  invalid: { color: "#ef4444" },
+};
+
+// Inner form for Stripe — must be inside <Elements> provider
+function StripePaymentForm({
+  onToken,
+  isPending,
+}: {
+  onToken: (paymentMethodId: string) => void;
+  isPending: boolean;
+}) {
+  const stripe = useStripe();
+  const elements = useElements();
+  const [cardError, setCardError] = useState<string | null>(null);
+
+  const handleSubmit = async () => {
+    if (!stripe || !elements) return;
+    const cardEl = elements.getElement(CardElement);
+    if (!cardEl) return;
+    const { error, paymentMethod } = await stripe.createPaymentMethod({
+      type: "card",
+      card: cardEl,
+    });
+    if (error) {
+      setCardError(error.message ?? "Card error");
+    } else if (paymentMethod) {
+      setCardError(null);
+      onToken(paymentMethod.id);
+    }
+  };
+
+  return (
+    <div className="space-y-3">
+      <Label className="flex items-center gap-1">
+        <CreditCard className="w-3.5 h-3.5" />
+        Card Details
+      </Label>
+      <div className="border rounded-md px-3 py-3 bg-background">
+        <CardElement options={{ style: STRIPE_ELEMENT_STYLE, hidePostalCode: true }} />
+      </div>
+      {cardError && <p className="text-xs text-red-500">{cardError}</p>}
+      <p className="text-xs text-muted-foreground flex items-center gap-1">
+        <span>⚡</span> Powered by Stripe — your card details are never stored on JutJut servers.
+      </p>
+      <Button className="w-full" onClick={handleSubmit} disabled={!stripe || isPending}>
+        {isPending ? "Processing..." : "Confirm Payment"}
+      </Button>
+    </div>
+  );
+}
+
 function BuyCreditsModal({ open, onClose }: { open: boolean; onClose: () => void }) {
   const [selectedPack, setSelectedPack] = useState<"pack_1" | "pack_5">("pack_1");
   const [promoCode, setPromoCode] = useState("");
@@ -76,11 +138,27 @@ function BuyCreditsModal({ open, onClose }: { open: boolean; onClose: () => void
     bonusCredits: number;
     code: string;
   } | null>(null);
-  const [cardToken, setCardToken] = useState(""); // In production: from PinPayments Hosted Fields
+  const [cardToken, setCardToken] = useState(""); // PinPayments token
   const [saveCard, setSaveCard] = useState(false);
   const [includeGst, setIncludeGst] = useState(false);
+  const [stripePromise, setStripePromise] = useState<ReturnType<typeof loadStripe> | null>(null);
 
   const utils = trpc.useUtils();
+
+  // Fetch active gateway and (if Stripe) the publishable key
+  const activeGatewayQuery = trpc.employer.credits.activeGateway.useQuery();
+  const stripeKeyQuery = trpc.employer.credits.stripePublishableKey.useQuery(undefined, {
+    enabled: activeGatewayQuery.data?.gateway === "stripe",
+  });
+
+  const activeGateway = activeGatewayQuery.data?.gateway ?? "pin";
+
+  // Initialise Stripe.js lazily once we have the publishable key
+  useEffect(() => {
+    if (activeGateway === "stripe" && stripeKeyQuery.data?.publishableKey) {
+      setStripePromise(loadStripe(stripeKeyQuery.data.publishableKey));
+    }
+  }, [activeGateway, stripeKeyQuery.data?.publishableKey]);
 
   const validatePromo = trpc.employer.credits.validatePromo.useMutation({
     onSuccess: (data) => {
@@ -137,9 +215,10 @@ function BuyCreditsModal({ open, onClose }: { open: boolean; onClose: () => void
     validatePromo.mutate({ code: promoCode.trim(), packId: selectedPack });
   };
 
-  const handlePay = () => {
+  // Called by PinPayments path
+  const handlePinPay = () => {
     if (!cardToken.trim()) {
-      toast.error("Please enter your card details.");
+      toast.error("Please enter your card token.");
       return;
     }
     purchase.mutate({
@@ -148,7 +227,19 @@ function BuyCreditsModal({ open, onClose }: { open: boolean; onClose: () => void
       saveCard,
       promoCode: promoResult ? promoResult.code : undefined,
       includeGst,
-      ipAddress: "0.0.0.0", // In production: pass real IP from server
+      ipAddress: "0.0.0.0",
+    });
+  };
+
+  // Called by Stripe Elements path after createPaymentMethod
+  const handleStripeToken = (paymentMethodId: string) => {
+    purchase.mutate({
+      packId: selectedPack,
+      cardToken: paymentMethodId, // server routes this to Stripe
+      saveCard,
+      promoCode: promoResult ? promoResult.code : undefined,
+      includeGst,
+      ipAddress: "0.0.0.0",
     });
   };
 
@@ -219,32 +310,16 @@ function BuyCreditsModal({ open, onClose }: { open: boolean; onClose: () => void
             )}
           </div>
 
-          {/* Card token input (sandbox: enter test token manually) */}
-          <div className="space-y-2">
-            <Label className="flex items-center gap-1">
-              <CreditCard className="w-3.5 h-3.5" />
-              Card Token
-            </Label>
-            <Input
-              placeholder="card_token from PinPayments Hosted Fields"
-              value={cardToken}
-              onChange={e => setCardToken(e.target.value)}
-            />
-            <p className="text-xs text-muted-foreground">
-              Sandbox test token: use PinPayments test card <code>4111 1111 1111 1111</code> to generate a token via the PinPayments API.
-            </p>
+          {/* GST toggle */}
+          <div className="flex items-center justify-between">
+            <Label htmlFor="include-gst" className="text-sm">I am GST registered (+10% GST)</Label>
+            <Switch id="include-gst" checked={includeGst} onCheckedChange={setIncludeGst} />
           </div>
 
           {/* Save card toggle */}
           <div className="flex items-center justify-between">
             <Label htmlFor="save-card" className="text-sm">Save card for auto-repost</Label>
             <Switch id="save-card" checked={saveCard} onCheckedChange={setSaveCard} />
-          </div>
-
-          {/* GST toggle */}
-          <div className="flex items-center justify-between">
-            <Label htmlFor="include-gst" className="text-sm">I am GST registered (+10% GST)</Label>
-            <Switch id="include-gst" checked={includeGst} onCheckedChange={setIncludeGst} />
           </div>
 
           {/* Price summary */}
@@ -271,13 +346,41 @@ function BuyCreditsModal({ open, onClose }: { open: boolean; onClose: () => void
             </div>
           </div>
 
-          <Button
-            className="w-full"
-            onClick={handlePay}
-            disabled={purchase.isPending || !cardToken.trim()}
-          >
-            {purchase.isPending ? "Processing..." : `Pay $${(displayTotal / 100).toFixed(2)} AUD`}
-          </Button>
+          {/* Payment input — conditionally rendered based on active gateway */}
+          {activeGatewayQuery.isLoading ? (
+            <div className="text-sm text-muted-foreground text-center py-4">Loading payment options…</div>
+          ) : activeGateway === "stripe" ? (
+            stripePromise ? (
+              <Elements stripe={stripePromise}>
+                <StripePaymentForm onToken={handleStripeToken} isPending={purchase.isPending} />
+              </Elements>
+            ) : (
+              <div className="text-sm text-muted-foreground text-center py-4">Loading Stripe…</div>
+            )
+          ) : (
+            /* PinPayments token input */
+            <div className="space-y-2">
+              <Label className="flex items-center gap-1">
+                <CreditCard className="w-3.5 h-3.5" />
+                Card Token
+              </Label>
+              <Input
+                placeholder="card_token from PinPayments Hosted Fields"
+                value={cardToken}
+                onChange={e => setCardToken(e.target.value)}
+              />
+              <p className="text-xs text-muted-foreground">
+                🇦🇺 Powered by PinPayments. Test token: use card <code>4111 1111 1111 1111</code>.
+              </p>
+              <Button
+                className="w-full"
+                onClick={handlePinPay}
+                disabled={purchase.isPending || !cardToken.trim()}
+              >
+                {purchase.isPending ? "Processing..." : `Pay $${(displayTotal / 100).toFixed(2)} AUD`}
+              </Button>
+            </div>
+          )}
         </div>
       </DialogContent>
     </Dialog>

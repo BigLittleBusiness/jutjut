@@ -32,10 +32,14 @@ import {
   CREDIT_PACKS,
   type CreditPackId,
 } from "../pinpayments";
-import { jobs, users } from "../../drizzle/schema";
+import {
+  createStripeCharge,
+  createOrUpdateStripeCustomer,
+} from "../stripe";
+import { jobs, users, transactions } from "../../drizzle/schema";
 import { eq } from "drizzle-orm";
 import { sendEmailSilent } from "../emailService";
-import { createNotification } from "../db.admin";
+import { createNotification, getActiveGateway } from "../db.admin";
 import { getStudentKitForSchool } from "../db.school";
 import { logger } from "../_core/logger";
 
@@ -117,7 +121,10 @@ const creditsRouter = router({
     .input(
       z.object({
         packId: z.enum(["pack_1", "pack_5"]),
-        cardToken: z.string().min(1),
+        // PinPayments: card_token from Hosted Fields
+        cardToken: z.string().optional(),
+        // Stripe: PaymentMethod ID from Stripe Elements (pm_...)
+        paymentMethodId: z.string().optional(),
         saveCard: z.boolean().default(false),
         promoCode: z.string().optional(),
         includeGst: z.boolean().default(false),
@@ -149,46 +156,124 @@ const creditsRouter = router({
         includeGst: input.includeGst,
       });
 
-      // Optionally save card as customer token for auto-repost
-      let chargeToken = input.cardToken;
-      if (input.saveCard && ctx.user.email) {
-        try {
-          const customer = await createCustomer({
-            email: ctx.user.email,
-            cardToken: input.cardToken,
+      const employerId = employer.id;
+      const activeGateway = await getActiveGateway();
+      const chargeDescription = `JutJut ${pack.credits} credit${pack.credits > 1 ? "s" : ""} (${input.packId})`;
+      const chargeMetadata = {
+        employer_id: String(employerId),
+        credit_pack_id: input.packId,
+        credit_pack_size: String(pack.credits),
+        promo_code: promo?.code ?? "",
+        user_id: String(ctx.user.id),
+      };
+
+      let chargeRef: string; // charge token (Pin) or PaymentIntent ID (Stripe)
+      let pinpaymentsChargeId: string | null = null;
+      let stripeChargeId: string | null = null;
+
+      if (activeGateway === "stripe") {
+        // ── Stripe path ────────────────────────────────────────────────────────
+        if (!input.paymentMethodId) {
+          throw new TRPCError({
+            code: "BAD_REQUEST",
+            message: "A Stripe PaymentMethod ID is required when Stripe is the active gateway.",
           });
-          await setEmployerPaymentToken(employer.id, customer.token);
-          chargeToken = customer.token;
-          const refreshed = await getEmployerByUserId(ctx.user.id);
-          if (refreshed) employer = refreshed;
-        } catch (err) {
-          // Non-fatal: fall back to one-time card token
-          logger.warn({ err }, "[PinPayments] Could not create customer");
         }
+
+        let pmId = input.paymentMethodId;
+
+        // Optionally save card as Stripe customer for auto-repost
+        if (input.saveCard && ctx.user.email) {
+          try {
+            const customer = await createOrUpdateStripeCustomer({
+              email: ctx.user.email,
+              paymentMethodId: input.paymentMethodId,
+            });
+            // Store Stripe customer ID in the paymentToken field (reused)
+            await setEmployerPaymentToken(employer.id, customer.customerId);
+            pmId = customer.paymentMethodId;
+            const refreshed = await getEmployerByUserId(ctx.user.id);
+            if (refreshed) employer = refreshed;
+          } catch (err) {
+            logger.warn({ err }, "[Stripe] Could not create/update customer");
+          }
+        }
+
+        const stripeResult = await createStripeCharge({
+          amountCents: totalCents,
+          description: chargeDescription,
+          email: ctx.user.email ?? "noreply@jutjut.com.au",
+          paymentMethodId: pmId,
+          metadata: chargeMetadata,
+        });
+
+        if (!stripeResult.success) {
+          throw new TRPCError({
+            code: "PAYMENT_REQUIRED",
+            message: `Payment declined: ${stripeResult.statusMessage}`,
+          });
+        }
+
+        stripeChargeId = stripeResult.chargeId;
+        chargeRef = stripeResult.chargeId;
+      } else {
+        // ── PinPayments path ───────────────────────────────────────────────────
+        if (!input.cardToken) {
+          throw new TRPCError({
+            code: "BAD_REQUEST",
+            message: "A card token is required when PinPayments is the active gateway.",
+          });
+        }
+
+        let chargeToken = input.cardToken;
+        if (input.saveCard && ctx.user.email) {
+          try {
+            const customer = await createCustomer({
+              email: ctx.user.email,
+              cardToken: input.cardToken,
+            });
+            await setEmployerPaymentToken(employer.id, customer.token);
+            chargeToken = customer.token;
+            const refreshed = await getEmployerByUserId(ctx.user.id);
+            if (refreshed) employer = refreshed;
+          } catch (err) {
+            logger.warn({ err }, "[PinPayments] Could not create customer");
+          }
+        }
+
+        const charge = await createCharge({
+          amount: totalCents,
+          description: chargeDescription,
+          email: ctx.user.email ?? "noreply@jutjut.com.au",
+          ipAddress: input.ipAddress,
+          cardToken: chargeToken,
+          metadata: chargeMetadata,
+        });
+
+        if (!charge.success) {
+          throw new TRPCError({
+            code: "PAYMENT_REQUIRED",
+            message: `Payment declined: ${charge.status_message}`,
+          });
+        }
+
+        pinpaymentsChargeId = charge.token;
+        chargeRef = charge.token;
       }
 
-      const employerId = employer.id;
-
-      // Create the charge
-      const charge = await createCharge({
-        amount: totalCents,
-        description: `JutJut ${pack.credits} credit${pack.credits > 1 ? "s" : ""} (${input.packId})`,
-        email: ctx.user.email ?? "noreply@jutjut.com.au",
-        ipAddress: input.ipAddress,
-        cardToken: chargeToken,
-        metadata: {
-          employer_id: String(employerId),
-          credit_pack_id: input.packId,
-          credit_pack_size: String(pack.credits),
-          promo_code: promo?.code ?? "",
-          user_id: String(ctx.user.id),
-        },
-      });
-
-      if (!charge.success) {
-        throw new TRPCError({
-          code: "PAYMENT_REQUIRED",
-          message: `Payment declined: ${charge.status_message}`,
+      // ── Record transaction in DB ───────────────────────────────────────────
+      const db = await getDb();
+      if (db) {
+        await db.insert(transactions).values({
+          employerId,
+          amountCents: totalCents,
+          pinpaymentsChargeId,
+          stripeChargeId,
+          gateway: activeGateway,
+          status: "succeeded",
+          description: chargeDescription,
+          createdAt: new Date(),
+          updatedAt: new Date(),
         });
       }
 
@@ -197,7 +282,7 @@ const creditsRouter = router({
         employerId,
         amount: pack.credits,
         type: "purchase",
-        reference: charge.token,
+        reference: chargeRef,
         description: `Purchased ${pack.credits} credit(s) — ${input.packId}`,
       });
 
@@ -225,7 +310,7 @@ const creditsRouter = router({
           discountType: promo.discountType,
           discountValue: promo.discountValue,
           bonusCreditsAwarded: promo.bonusCredits,
-          chargeToken: charge.token,
+          chargeToken: chargeRef,
         });
       }
 
@@ -240,7 +325,7 @@ const creditsRouter = router({
           employer_name: employer.businessName,
           credits_purchased: String(pack.credits + (promo?.bonusCredits ?? 0)),
           amount_paid: `$${(totalCents / 100).toFixed(2)}`,
-          charge_reference: charge.token,
+          charge_reference: chargeRef,
           new_balance: String(newBalance),
           purchase_date: new Date().toLocaleDateString("en-AU"),
           dashboard_url: `${process.env.APP_BASE_URL ?? "https://jutjut.com.au"}/employer`,
@@ -257,14 +342,28 @@ const creditsRouter = router({
       });
       return {
         success: true,
-        chargeToken: charge.token,
+        chargeToken: chargeRef,
         creditsAdded: pack.credits + (promo?.bonusCredits ?? 0),
         newBalance,
         subtotalCents,
         gstCents,
         totalCents,
+        gateway: activeGateway,
       };
     }),
+
+  /** Returns the currently active payment gateway so the frontend can render the correct payment UI */
+  activeGateway: protectedProcedure.query(async () => {
+    const gateway = await getActiveGateway();
+    return { gateway };
+  }),
+
+  /** Returns the Stripe publishable key (safe to expose to frontend) */
+  stripePublishableKey: protectedProcedure.query(async () => {
+    const { getStripePublishableKey } = await import("../stripe");
+    const key = await getStripePublishableKey();
+    return { publishableKey: key };
+  }),
 });
 
 // ─── Jobs ─────────────────────────────────────────────────────────────────────

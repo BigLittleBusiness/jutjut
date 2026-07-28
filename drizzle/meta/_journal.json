@@ -43,6 +43,13 @@
       "when": 1782212953686,
       "tag": "0005_daffy_baron_zemo",
       "breakpoints": true
+    },
+    {
+      "idx": 6,
+      "version": "5",
+      "when": 1785239299564,
+      "tag": "0006_bored_the_twelve",
+      "breakpoints": true
     }
   ]
 }

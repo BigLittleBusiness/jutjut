@@ -635,7 +635,7 @@ export type PaymentGatewaySetting = typeof paymentGatewaySettings.$inferSelect;
 export type InsertPaymentGatewaySetting = typeof paymentGatewaySettings.$inferInsert;
 
 // ─────────────────────────────────────────────
-// TRANSACTIONS (PinPayments charge records)
+// TRANSACTIONS (charge records — PinPayments or Stripe)
 // ─────────────────────────────────────────────
 
 export const transactions = mysqlTable("transactions", {
@@ -643,6 +643,8 @@ export const transactions = mysqlTable("transactions", {
   employerId: int("employerId").notNull(), // FK → employers.id
   amountCents: int("amountCents").notNull(), // amount in cents (AUD)
   pinpaymentsChargeId: varchar("pinpaymentsChargeId", { length: 255 }),
+  stripeChargeId: varchar("stripeChargeId", { length: 255 }), // Stripe PaymentIntent ID
+  gateway: mysqlEnum("gateway", ["pin", "stripe"]).default("pin").notNull(), // which provider processed this charge
   status: mysqlEnum("status", ["pending", "succeeded", "refunded"]).default("pending").notNull(),
   description: text("description"),
   createdAt: timestamp("createdAt").defaultNow().notNull(),

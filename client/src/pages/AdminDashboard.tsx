@@ -787,34 +787,182 @@ function StudentsSection() {
 
 // ─── Payments section ─────────────────────────────────────────────────────────
 
+const GATEWAY_KEY_GROUPS = {
+  pin: [
+    { key: "pin_secret_key", label: "Secret Key", hint: "sk_live_... or sk_test_..." },
+    { key: "pin_publishable_key", label: "Publishable Key", hint: "pk_live_... or pk_test_..." },
+  ],
+  stripe: [
+    { key: "stripe_secret_key", label: "Secret Key", hint: "sk_live_... or sk_test_..." },
+    { key: "stripe_publishable_key", label: "Publishable Key", hint: "pk_live_... or pk_test_..." },
+    { key: "stripe_webhook_secret", label: "Webhook Secret", hint: "whsec_..." },
+  ],
+};
+
 function PaymentsSection() {
   const utils = trpc.useUtils();
   const [statusFilter, setStatusFilter] = useState<"pending" | "succeeded" | "refunded" | "all">("all");
-  const [gatewayKey, setGatewayKey] = useState("");
-  const [gatewayValue, setGatewayValue] = useState("");
+  const [customKey, setCustomKey] = useState("");
+  const [customValue, setCustomValue] = useState("");
+  const [quickValues, setQuickValues] = useState<Record<string, string>>({});
 
   const txQuery = trpc.admin.payments.transactions.useQuery({
     status: statusFilter === "all" ? undefined : statusFilter,
   });
   const gatewayQuery = trpc.admin.payments.gatewaySettings.useQuery();
+  const activeGatewayQuery = trpc.employer.credits.activeGateway.useQuery();
 
   const refundMut = trpc.admin.payments.refund.useMutation({
     onSuccess: () => { toast.success("Marked as refunded"); utils.admin.payments.transactions.invalidate(); },
     onError: (e) => toast.error(e.message),
   });
   const setGatewayMut = trpc.admin.payments.setGatewaySetting.useMutation({
-    onSuccess: () => { toast.success("Gateway setting saved"); setGatewayKey(""); setGatewayValue(""); utils.admin.payments.gatewaySettings.invalidate(); },
+    onSuccess: () => {
+      toast.success("Gateway setting saved");
+      setCustomKey(""); setCustomValue("");
+      setQuickValues({});
+      utils.admin.payments.gatewaySettings.invalidate();
+      utils.employer.credits.activeGateway.invalidate();
+    },
     onError: (e) => toast.error(e.message),
   });
+
+  const activeGateway = activeGatewayQuery.data?.gateway ?? "pin";
+
+  const saveQuickKey = (keyName: string) => {
+    const val = quickValues[keyName];
+    if (!val?.trim()) return;
+    setGatewayMut.mutate({ keyName, plainValue: val });
+  };
+
+  const switchGateway = (gateway: "pin" | "stripe") => {
+    setGatewayMut.mutate({ keyName: "active_gateway", plainValue: gateway });
+  };
+
+  const existingKeys = new Set((gatewayQuery.data ?? []).map((s: any) => s.keyName));
 
   return (
     <div className="space-y-6">
       <h2 className="text-2xl font-bold">Payment Management</h2>
 
+      {/* Active Gateway Switcher */}
+      <Card className="border-2">
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2">
+            Active Payment Gateway
+            {activeGatewayQuery.isLoading ? (
+              <span className="text-sm font-normal text-muted-foreground">Loading…</span>
+            ) : (
+              <Badge variant={activeGateway === "stripe" ? "default" : "secondary"} className="ml-2">
+                {activeGateway === "stripe" ? "⚡ Stripe" : "🇦🇺 PinPayments"}
+              </Badge>
+            )}
+          </CardTitle>
+        </CardHeader>
+        <CardContent>
+          <p className="text-sm text-muted-foreground mb-4">
+            All new credit purchases will be processed through the active gateway. Existing transactions are unaffected.
+            Switching gateways takes effect immediately — ensure the corresponding API keys are configured below before switching.
+          </p>
+          <div className="flex gap-3">
+            <Button
+              variant={activeGateway === "pin" ? "default" : "outline"}
+              disabled={setGatewayMut.isPending || activeGateway === "pin"}
+              onClick={() => switchGateway("pin")}
+            >
+              {activeGateway === "pin" ? "✓ PinPayments (active)" : "Switch to PinPayments"}
+            </Button>
+            <Button
+              variant={activeGateway === "stripe" ? "default" : "outline"}
+              style={activeGateway === "stripe" ? { background: "#635bff", borderColor: "#635bff", color: "white" } : {}}
+              disabled={setGatewayMut.isPending || activeGateway === "stripe"}
+              onClick={() => switchGateway("stripe")}
+            >
+              {activeGateway === "stripe" ? "✓ Stripe (active)" : "Switch to Stripe"}
+            </Button>
+          </div>
+        </CardContent>
+      </Card>
+
+      {/* Provider Key Sections */}
+      <div className="grid md:grid-cols-2 gap-4">
+        {/* PinPayments */}
+        <Card className={activeGateway === "pin" ? "border-2 border-primary" : ""}>
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2 text-base">
+              🇦🇺 PinPayments API Keys
+              {activeGateway === "pin" && <Badge variant="default" className="text-xs">Active</Badge>}
+            </CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-3">
+            {GATEWAY_KEY_GROUPS.pin.map(({ key, label, hint }) => (
+              <div key={key} className="space-y-1">
+                <label className="text-xs font-medium text-muted-foreground">{label}</label>
+                <div className="flex gap-2">
+                  <Input
+                    type="password"
+                    placeholder={existingKeys.has(key) ? "•••• (set)" : hint}
+                    value={quickValues[key] ?? ""}
+                    onChange={e => setQuickValues(v => ({ ...v, [key]: e.target.value }))}
+                    className="text-xs"
+                  />
+                  <Button
+                    size="sm"
+                    disabled={!quickValues[key]?.trim() || setGatewayMut.isPending}
+                    onClick={() => saveQuickKey(key)}
+                  >
+                    {existingKeys.has(key) ? "Update" : "Set"}
+                  </Button>
+                </div>
+                <p className="text-xs text-muted-foreground font-mono">{key}</p>
+              </div>
+            ))}
+          </CardContent>
+        </Card>
+
+        {/* Stripe */}
+        <Card style={activeGateway === "stripe" ? { borderWidth: "2px", borderColor: "#635bff" } : {}}>
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2 text-base">
+              <span style={{ color: "#635bff" }}>⚡</span> Stripe API Keys
+              {activeGateway === "stripe" && <Badge className="text-xs" style={{ background: "#635bff" }}>Active</Badge>}
+            </CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-3">
+            {GATEWAY_KEY_GROUPS.stripe.map(({ key, label, hint }) => (
+              <div key={key} className="space-y-1">
+                <label className="text-xs font-medium text-muted-foreground">{label}</label>
+                <div className="flex gap-2">
+                  <Input
+                    type="password"
+                    placeholder={existingKeys.has(key) ? "•••• (set)" : hint}
+                    value={quickValues[key] ?? ""}
+                    onChange={e => setQuickValues(v => ({ ...v, [key]: e.target.value }))}
+                    className="text-xs"
+                  />
+                  <Button
+                    size="sm"
+                    disabled={!quickValues[key]?.trim() || setGatewayMut.isPending}
+                    onClick={() => saveQuickKey(key)}
+                  >
+                    {existingKeys.has(key) ? "Update" : "Set"}
+                  </Button>
+                </div>
+                <p className="text-xs text-muted-foreground font-mono">{key}</p>
+              </div>
+            ))}
+            <p className="text-xs text-muted-foreground border-t pt-2">
+              Webhook endpoint: <span className="font-mono">/api/webhooks/stripe</span>
+            </p>
+          </CardContent>
+        </Card>
+      </div>
+
+      {/* Transactions */}
       <Card>
         <CardHeader><CardTitle>Transactions</CardTitle></CardHeader>
         <CardContent className="space-y-3">
-          <div className="flex gap-2">
+          <div className="flex gap-2 flex-wrap">
             {(["all", "pending", "succeeded", "refunded"] as const).map(s => (
               <Button key={s} size="sm" variant={statusFilter === s ? "default" : "outline"} onClick={() => setStatusFilter(s)}>
                 {s.charAt(0).toUpperCase() + s.slice(1)}
@@ -828,6 +976,7 @@ function PaymentsSection() {
                   <TableHead>ID</TableHead>
                   <TableHead>Employer</TableHead>
                   <TableHead>Amount</TableHead>
+                  <TableHead>Gateway</TableHead>
                   <TableHead>Status</TableHead>
                   <TableHead>Date</TableHead>
                   <TableHead>Actions</TableHead>
@@ -839,6 +988,11 @@ function PaymentsSection() {
                     <TableCell className="font-mono text-xs">{row.transaction.id}</TableCell>
                     <TableCell className="text-sm">{row.employer?.businessName ?? "—"}</TableCell>
                     <TableCell>{fmtMoney(row.transaction.amountCents)}</TableCell>
+                    <TableCell>
+                      <Badge variant="outline" className="text-xs">
+                        {row.transaction.gateway === "stripe" ? "⚡ Stripe" : "🇦🇺 Pin"}
+                      </Badge>
+                    </TableCell>
                     <TableCell>
                       <Badge variant={row.transaction.status === "succeeded" ? "default" : row.transaction.status === "refunded" ? "secondary" : "outline"}>
                         {row.transaction.status}
@@ -855,7 +1009,7 @@ function PaymentsSection() {
                   </TableRow>
                 ))}
                 {(txQuery.data ?? []).length === 0 && (
-                  <TableRow><TableCell colSpan={6} className="text-center text-muted-foreground py-6">No transactions.</TableCell></TableRow>
+                  <TableRow><TableCell colSpan={7} className="text-center text-muted-foreground py-6">No transactions.</TableCell></TableRow>
                 )}
               </TableBody>
             </Table>
@@ -863,8 +1017,9 @@ function PaymentsSection() {
         </CardContent>
       </Card>
 
+      {/* Raw key-value store for advanced / custom keys */}
       <Card>
-        <CardHeader><CardTitle>Gateway Settings (Encrypted)</CardTitle></CardHeader>
+        <CardHeader><CardTitle className="text-sm">All Stored Keys (Encrypted)</CardTitle></CardHeader>
         <CardContent className="space-y-4">
           <div className="overflow-x-auto">
             <Table>
@@ -887,12 +1042,12 @@ function PaymentsSection() {
             </Table>
           </div>
           <div className="border-t pt-4 space-y-3">
-            <h4 className="font-semibold text-sm">Set / Update a Key</h4>
+            <h4 className="font-semibold text-sm">Set / Update a Custom Key</h4>
             <div className="flex gap-2 flex-wrap">
-              <Input placeholder="Key name (e.g. pin_secret_key)" value={gatewayKey} onChange={e => setGatewayKey(e.target.value)} className="max-w-xs" />
-              <Input type="password" placeholder="Value" value={gatewayValue} onChange={e => setGatewayValue(e.target.value)} className="max-w-xs" />
-              <Button disabled={!gatewayKey.trim() || !gatewayValue.trim() || setGatewayMut.isPending}
-                onClick={() => setGatewayMut.mutate({ keyName: gatewayKey, plainValue: gatewayValue })}>
+              <Input placeholder="Key name" value={customKey} onChange={e => setCustomKey(e.target.value)} className="max-w-xs" />
+              <Input type="password" placeholder="Value" value={customValue} onChange={e => setCustomValue(e.target.value)} className="max-w-xs" />
+              <Button disabled={!customKey.trim() || !customValue.trim() || setGatewayMut.isPending}
+                onClick={() => setGatewayMut.mutate({ keyName: customKey, plainValue: customValue })}>
                 {setGatewayMut.isPending ? "Saving…" : "Save"}
               </Button>
             </div>
@@ -902,6 +1057,7 @@ function PaymentsSection() {
     </div>
   );
 }
+
 
 // ─── Admin management section ─────────────────────────────────────────────────
 
