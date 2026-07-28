@@ -406,3 +406,7 @@
 - [x] SEO5 Generate and upload OG social preview image (1200×630px)
 - [x] SEO6 Add JSON-LD structured data (WebSite, Organization, FAQPage, SoftwareApplication) to LandingPage
 - [x] SEO7 Add <main id="main-content"> landmark to LandingPage (wraps hero through footer)
+
+## Social Share (July 2026)
+
+- [x] SS1 Add floating social share buttons to LandingPage (X/Twitter, LinkedIn, Facebook, copy link)

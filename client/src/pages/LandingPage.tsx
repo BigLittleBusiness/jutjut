@@ -130,6 +130,45 @@ export default function LandingPage({ onSignIn }: LandingPageProps) {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [scrolled, setScrolled] = useState(false);
   const [showBackToTop, setShowBackToTop] = useState(false);
+  const [showShareCopied, setShowShareCopied] = useState(false);
+  const [shareExpanded, setShareExpanded] = useState(false);
+
+  const SHARE_URL = "https://jutjut.com.au";
+  const SHARE_TEXT = "JutJut — Turn your proof into your future. Free verified skills, jobs and perks for Australian students.";
+
+  const handleCopyLink = () => {
+    navigator.clipboard.writeText(SHARE_URL).then(() => {
+      setShowShareCopied(true);
+      setTimeout(() => setShowShareCopied(false), 2000);
+    });
+  };
+
+  const shareLinks = [
+    {
+      id: "twitter",
+      label: "Share on X (Twitter)",
+      icon: "𝕏",
+      href: `https://twitter.com/intent/tweet?text=${encodeURIComponent(SHARE_TEXT)}&url=${encodeURIComponent(SHARE_URL)}`,
+      bg: "#000",
+      color: "#fff",
+    },
+    {
+      id: "linkedin",
+      label: "Share on LinkedIn",
+      icon: "in",
+      href: `https://www.linkedin.com/sharing/share-offsite/?url=${encodeURIComponent(SHARE_URL)}`,
+      bg: "#0077b5",
+      color: "#fff",
+    },
+    {
+      id: "facebook",
+      label: "Share on Facebook",
+      icon: "f",
+      href: `https://www.facebook.com/sharer/sharer.php?u=${encodeURIComponent(SHARE_URL)}`,
+      bg: "#1877f2",
+      color: "#fff",
+    },
+  ];
 
   // Waitlist form state
   const [waitlistEmail, setWaitlistEmail] = useState("");
@@ -1101,6 +1140,123 @@ export default function LandingPage({ onSignIn }: LandingPageProps) {
         </div>
       </footer>
       </main>{/* end #main-content */}
+
+      {/* ── FLOATING SOCIAL SHARE BUTTONS ──────────────────────────────── */}
+      <div style={{
+        position: "fixed",
+        left: 16,
+        bottom: 28,
+        zIndex: 200,
+        display: "flex",
+        flexDirection: "column",
+        alignItems: "center",
+        gap: 8,
+        opacity: showBackToTop ? 1 : 0,
+        pointerEvents: showBackToTop ? "auto" : "none",
+        transform: showBackToTop ? "translateY(0)" : "translateY(12px)",
+        transition: "opacity 0.22s cubic-bezier(0.23,1,0.32,1), transform 0.22s cubic-bezier(0.23,1,0.32,1)",
+      }}>
+        {/* Expanded share options — slide up when open */}
+        <div style={{
+          display: "flex",
+          flexDirection: "column",
+          gap: 8,
+          overflow: "hidden",
+          maxHeight: shareExpanded ? 200 : 0,
+          opacity: shareExpanded ? 1 : 0,
+          transition: "max-height 0.28s cubic-bezier(0.23,1,0.32,1), opacity 0.22s ease",
+        }}>
+          {shareLinks.map(s => (
+            <a
+              key={s.id}
+              href={s.href}
+              target="_blank"
+              rel="noopener noreferrer"
+              aria-label={s.label}
+              title={s.label}
+              style={{
+                width: 44,
+                height: 44,
+                background: s.bg,
+                border: "2px solid #1f2937",
+                borderRadius: 10,
+                boxShadow: "3px 3px 0 #1f2937",
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "center",
+                fontSize: 14,
+                fontWeight: 900,
+                color: s.color,
+                textDecoration: "none",
+                transition: "transform 0.15s cubic-bezier(0.23,1,0.32,1), box-shadow 0.15s",
+                flexShrink: 0,
+              }}
+              onMouseEnter={e => { e.currentTarget.style.transform = "translateY(-2px) scale(1.06)"; e.currentTarget.style.boxShadow = "5px 5px 0 #1f2937"; }}
+              onMouseLeave={e => { e.currentTarget.style.transform = ""; e.currentTarget.style.boxShadow = "3px 3px 0 #1f2937"; }}
+              onMouseDown={e => { e.currentTarget.style.transform = "scale(0.96)"; }}
+              onMouseUp={e => { e.currentTarget.style.transform = "translateY(-2px) scale(1.06)"; }}
+            >
+              {s.icon}
+            </a>
+          ))}
+          {/* Copy link */}
+          <button
+            onClick={handleCopyLink}
+            aria-label="Copy link"
+            title={showShareCopied ? "Copied!" : "Copy link"}
+            style={{
+              width: 44,
+              height: 44,
+              background: showShareCopied ? "#16a34a" : "#f9fafb",
+              border: "2px solid #1f2937",
+              borderRadius: 10,
+              boxShadow: "3px 3px 0 #1f2937",
+              cursor: "pointer",
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "center",
+              fontSize: 16,
+              transition: "background 0.2s, transform 0.15s cubic-bezier(0.23,1,0.32,1), box-shadow 0.15s",
+              flexShrink: 0,
+            }}
+            onMouseEnter={e => { e.currentTarget.style.transform = "translateY(-2px) scale(1.06)"; e.currentTarget.style.boxShadow = "5px 5px 0 #1f2937"; }}
+            onMouseLeave={e => { e.currentTarget.style.transform = ""; e.currentTarget.style.boxShadow = "3px 3px 0 #1f2937"; }}
+            onMouseDown={e => { e.currentTarget.style.transform = "scale(0.96)"; }}
+            onMouseUp={e => { e.currentTarget.style.transform = "translateY(-2px) scale(1.06)"; }}
+          >
+            {showShareCopied ? "✓" : "🔗"}
+          </button>
+        </div>
+
+        {/* Share toggle button */}
+        <button
+          onClick={() => setShareExpanded(v => !v)}
+          aria-label={shareExpanded ? "Close share menu" : "Share JutJut"}
+          title={shareExpanded ? "Close" : "Share JutJut"}
+          style={{
+            width: 44,
+            height: 44,
+            background: shareExpanded ? "#1f2937" : "#fff",
+            border: "2px solid #1f2937",
+            borderRadius: 10,
+            boxShadow: "3px 3px 0 #1f2937",
+            cursor: "pointer",
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
+            fontSize: 18,
+            color: shareExpanded ? "#fff" : "#1f2937",
+            transition: "background 0.18s, color 0.18s, transform 0.15s cubic-bezier(0.23,1,0.32,1), box-shadow 0.15s",
+            transform: shareExpanded ? "rotate(45deg) scale(1)" : "rotate(0deg) scale(1)",
+          }}
+          onMouseEnter={e => { e.currentTarget.style.boxShadow = "5px 5px 0 #1f2937"; }}
+          onMouseLeave={e => { e.currentTarget.style.boxShadow = "3px 3px 0 #1f2937"; }}
+          onMouseDown={e => { e.currentTarget.style.transform = `rotate(${shareExpanded ? 45 : 0}deg) scale(0.96)`; }}
+          onMouseUp={e => { e.currentTarget.style.transform = `rotate(${shareExpanded ? 45 : 0}deg) scale(1)`; }}
+        >
+          {shareExpanded ? "✕" : "📤"}
+        </button>
+      </div>
 
       {/* ── BACK TO TOP BUTTON ────────────────────────────────────────────── */}
       <button
