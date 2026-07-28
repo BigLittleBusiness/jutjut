@@ -396,3 +396,13 @@
 
 - [x] R5.1 Add floating back-to-top button to LandingPage (appears after scrolling down, smooth scroll to hero)
 - [x] R5.2 Verify and fix sticky nav on LandingPage — urgency banner moved above nav so nav sticks correctly from page top
+
+## SEO & AI Indexability Fixes (July 2026)
+
+- [x] SEO1 Add robots.txt to client/public/
+- [x] SEO2 Add sitemap.xml to client/public/
+- [x] SEO3 Add llms.txt to client/public/
+- [x] SEO4 Add canonical link tag to index.html
+- [x] SEO5 Generate and upload OG social preview image (1200×630px)
+- [x] SEO6 Add JSON-LD structured data (WebSite, Organization, FAQPage, SoftwareApplication) to LandingPage
+- [x] SEO7 Add <main id="main-content"> landmark to LandingPage (wraps hero through footer)

@@ -1,0 +1,45 @@
+# JutJut — robots.txt
+# https://jutjut.com.au/robots.txt
+
+User-agent: *
+Allow: /
+
+# Block authenticated app routes from indexing (no useful content for crawlers)
+Disallow: /api/
+Disallow: /dashboard
+Disallow: /my-kit
+Disallow: /jobs
+Disallow: /drops
+Disallow: /university
+Disallow: /your-way
+Disallow: /employer
+Disallow: /school-portal
+Disallow: /admin-dashboard
+Disallow: /admin-promos
+Disallow: /admin-waitlist
+Disallow: /email-preferences
+Disallow: /privacy-settings
+Disallow: /business-dashboard
+Disallow: /teacher-portal
+
+# Sitemap location
+Sitemap: https://jutjut.com.au/sitemap.xml
+
+# AI crawlers — welcome to index public content
+User-agent: GPTBot
+Allow: /
+
+User-agent: ClaudeBot
+Allow: /
+
+User-agent: PerplexityBot
+Allow: /
+
+User-agent: anthropic-ai
+Allow: /
+
+User-agent: Google-Extended
+Allow: /
+
+User-agent: Applebot-Extended
+Allow: /

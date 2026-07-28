@@ -1,0 +1,59 @@
+# JutJut
+
+> JutJut is an Australian platform that helps high school students turn verified skills, grades, and credentials into part-time jobs, university pathways, and weekly local perks. Free for students. Always.
+
+## What JutJut does
+
+JutJut connects three groups:
+
+- **Students** — build a verified digital skills profile ("My Kit") containing teacher-verified skills, report card grades, and credentials. Use it to apply for jobs with one click, submit to universities via the YourWay portal, and access weekly perks from local businesses.
+- **Employers** — post part-time and casual jobs, browse verified student profiles, and hire with confidence knowing skills have been independently verified by teachers and coaches.
+- **Schools and Universities** — manage student verification requests, view cohort analytics, and receive verified skill submissions for admissions.
+
+## Key features
+
+- **My Kit** — a student's verified digital profile. Skills are confirmed by teachers or coaches with a green tick. Employers see only what the student chooses to share.
+- **The Drop** — a weekly perks board. Local businesses post exclusive discounts and offers for JutJut students. New drops every Monday.
+- **YourWay** — a university pathway portal. Students submit their verified My Kit as evidence of skills and character alongside academic results.
+- **Jobs Board** — employer-posted part-time and casual jobs, searchable by location and role type.
+- **Squads** — student groups for team-based skill verification and peer accountability.
+
+## Pricing
+
+- Students: Free forever.
+- Employers: Starter ($0/month, 1 active listing), Growth ($49/month, 5 listings + analytics), Scale ($149/month, unlimited listings + featured placement + priority support).
+
+## About
+
+- Founded in Australia
+- ABN: 12 345 678 901
+- Target market: Australian high school students (Years 9–12) and their employers, schools, and universities
+- Website: https://jutjut.com.au
+- Waitlist: https://jutjut.com.au/#waitlist
+
+## Pages
+
+- / — Landing page with full product overview, pricing, FAQ, and waitlist signup
+- /#students — Features for students
+- /#employers — Features for employers and recruiters
+- /#thedrop — Weekly perks board overview
+- /#pricing — Employer pricing tiers
+- /#faq — Frequently asked questions
+- /#waitlist — Join the waitlist
+
+## Frequently Asked Questions
+
+**Is JutJut really free for students?**
+Yes — 100% free for students, forever. Revenue comes from employers who post jobs, not from students.
+
+**How does skill verification work?**
+A teacher, coach, or employer logs in and confirms the student's skill directly on JutJut. Once verified, it shows a green tick on the student's My Kit profile.
+
+**What is The Drop?**
+The Drop is a weekly perks board. Local businesses post exclusive discounts, freebies, and offers just for JutJut students. New drops every Monday.
+
+**Can I use JutJut to apply for university?**
+Yes. The YourWay portal lets students submit their verified My Kit directly to participating universities as evidence of skills and character alongside academic results.
+
+**Is student data safe?**
+Student data belongs to the student. JutJut never sells it. Students can delete their account and all associated data at any time from their settings.

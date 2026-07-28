@@ -322,8 +322,72 @@ export default function LandingPage({ onSignIn }: LandingPageProps) {
     { label: "Pricing", id: "pricing" },
   ];
 
+  // ── JSON-LD structured data ─────────────────────────────────────────────
+  const structuredData = [
+    {
+      "@context": "https://schema.org",
+      "@type": "WebSite",
+      "name": "JutJut",
+      "url": "https://jutjut.com.au",
+      "description": "JutJut helps Australian students turn verified skills into jobs, university pathways, and weekly perks. Free for students. Always.",
+      "potentialAction": {
+        "@type": "SearchAction",
+        "target": "https://jutjut.com.au/#waitlist",
+        "query-input": "required name=search_term_string"
+      }
+    },
+    {
+      "@context": "https://schema.org",
+      "@type": "Organization",
+      "name": "JutJut",
+      "url": "https://jutjut.com.au",
+      "logo": "https://jutjut.com.au/favicon.svg",
+      "description": "Australian student platform for verified skills, part-time jobs, university pathways, and weekly perks.",
+      "address": {
+        "@type": "PostalAddress",
+        "addressCountry": "AU"
+      },
+      "sameAs": [
+        "https://instagram.com/jutjut_au",
+        "https://linkedin.com/company/jutjut",
+        "https://tiktok.com/@jutjut_au"
+      ]
+    },
+    {
+      "@context": "https://schema.org",
+      "@type": "FAQPage",
+      "mainEntity": FAQ_ITEMS.map(item => ({
+        "@type": "Question",
+        "name": item.q,
+        "acceptedAnswer": {
+          "@type": "Answer",
+          "text": item.a
+        }
+      }))
+    },
+    {
+      "@context": "https://schema.org",
+      "@type": "SoftwareApplication",
+      "name": "JutJut",
+      "applicationCategory": "EducationApplication",
+      "operatingSystem": "Web",
+      "offers": {
+        "@type": "Offer",
+        "price": "0",
+        "priceCurrency": "AUD",
+        "description": "Free for students"
+      },
+      "url": "https://jutjut.com.au",
+      "description": "Verified skills, part-time jobs, university entry, and weekly student perks for Australian students."
+    }
+  ];
+
   return (
     <div style={{ fontFamily: "'Inter', 'Helvetica Neue', Arial, sans-serif", background: "#f9fafb", color: "#1f2937", overflowX: "hidden" }}>
+      {/* ── JSON-LD structured data for SEO / AI crawlers ─────────────────── */}
+      {structuredData.map((schema, i) => (
+        <script key={i} type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(schema) }} />
+      ))}
 
       {/* ── URGENCY BANNER ─────────────────────────────────────────────────── */}
       <div style={{ background: "#1f2937", color: "#fff", textAlign: "center", padding: "10px 1rem", fontSize: 14, fontWeight: 700 }}>
@@ -392,6 +456,9 @@ export default function LandingPage({ onSignIn }: LandingPageProps) {
           <button onClick={onSignIn} style={{ background: "none", border: "2px solid #1f2937", borderRadius: 8, padding: "10px", fontWeight: 800, fontSize: 14, cursor: "pointer", marginTop: 4 }}>Sign in</button>
         </div>
       </nav>
+
+      {/* ── MAIN CONTENT LANDMARK (skip-link target, SEO) ─────────────────── */}
+      <main id="main-content">
 
       {/* ── HERO ───────────────────────────────────────────────────────────── */}
       <section id="hero" style={{ background: "linear-gradient(135deg, #f0fdf9 0%, #fefce8 100%)", borderBottom: "2px solid #1f2937", padding: "5rem 1.5rem" }}>
@@ -1033,6 +1100,7 @@ export default function LandingPage({ onSignIn }: LandingPageProps) {
           </div>
         </div>
       </footer>
+      </main>{/* end #main-content */}
 
       {/* ── BACK TO TOP BUTTON ────────────────────────────────────────────── */}
       <button
