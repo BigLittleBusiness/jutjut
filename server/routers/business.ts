@@ -10,7 +10,8 @@ import { protectedProcedure, router } from "../_core/trpc";
 import { getDb } from "../db";
 import { getDropAnalyticsDetail, recordDropView } from "../db";
 import { drops, dropClaims } from "../../drizzle/schema";
-import { eq, desc, and, inArray } from "drizzle-orm";
+import { eq, desc, and, inArray, sql } from "drizzle-orm";
+import { notifyOwner } from "../_core/notification";
 
 // ─── Drops management ─────────────────────────────────────────────────────────
 
@@ -32,6 +33,9 @@ const dropsRouter = router({
       title: z.string().min(1).max(255),
       description: z.string().optional(),
       maxClaims: z.number().int().positive().optional(),
+      imageUrl: z.string().url().optional(),
+      imageKey: z.string().optional(),
+      scheduledDate: z.date().optional(),
     }))
     .mutation(async ({ ctx, input }) => {
       const db = await getDb();
@@ -43,12 +47,20 @@ const dropsRouter = router({
         status: "draft",
         claimCount: 0,
         maxClaims: input.maxClaims ?? null,
+        imageUrl: input.imageUrl ?? null,
+        imageKey: input.imageKey ?? null,
+        scheduledDate: input.scheduledDate ?? null,
         sponsorshipFee: 0,
         impressions: 0,
         createdAt: new Date(),
         updatedAt: new Date(),
       });
       const dropId = (result as { insertId: number }).insertId;
+      // Notify the JutJut owner that a new Drop has been submitted for review
+      await notifyOwner({
+        title: "New Drop Submission",
+        content: `${ctx.user.name ?? ctx.user.email} submitted a new Drop: "${input.title}". Review it in the Admin Dashboard.`,
+      }).catch(() => {});
       return { dropId };
     }),
 

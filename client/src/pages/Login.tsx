@@ -19,6 +19,8 @@ export const Login: React.FC<LoginProps> = ({ onLoginSuccess }) => {
   const [password, setPassword] = useState("");
   const [name, setName] = useState("");
   const [school, setSchool] = useState("");
+  const [businessName, setBusinessName] = useState("");
+  const [accountType, setAccountType] = useState<"student" | "employer" | "business">("student");
   const [showPassword, setShowPassword] = useState(false);
   const [error, setError] = useState("");
 
@@ -42,13 +44,16 @@ export const Login: React.FC<LoginProps> = ({ onLoginSuccess }) => {
   const handleSignUp = (e: React.FormEvent) => {
     e.preventDefault();
     setError("");
-    if (!name || !school || !email || !password) {
-      setError("Please fill out all fields.");
-      return;
-    }
-    if (!email.endsWith(".edu") && !email.includes("school") && !email.includes("college") && !email.includes("uni")) {
-      setError("For verified status, we recommend signing up with a student email (e.g., .edu or school address).");
-      return;
+    if (accountType === "student") {
+      if (!name || !school || !email || !password) {
+        setError("Please fill out all fields.");
+        return;
+      }
+    } else if (accountType === "employer" || accountType === "business") {
+      if (!businessName || !email || !password) {
+        setError("Please fill out all fields.");
+        return;
+      }
     }
     login(email);
     onLoginSuccess();
@@ -177,7 +182,30 @@ export const Login: React.FC<LoginProps> = ({ onLoginSuccess }) => {
     <>
       <div className="text-center mb-6">
         <h2 className="text-3xl font-extrabold tracking-tight">Join JutJut 🚀</h2>
-        <p className="text-muted-foreground mt-2 text-sm">Verify your skills, unlock drops, and find jobs!</p>
+        <p className="text-muted-foreground mt-2 text-sm">Create your free account to get started.</p>
+      </div>
+
+      {/* Account type selector */}
+      <div className="grid grid-cols-3 gap-2 mb-5">
+        {([
+          { id: "student", label: "Student", emoji: "🎓" },
+          { id: "employer", label: "Recruiter", emoji: "💼" },
+          { id: "business", label: "Business", emoji: "🏪" },
+        ] as const).map((t) => (
+          <button
+            key={t.id}
+            type="button"
+            onClick={() => { setAccountType(t.id); setError(""); }}
+            className={`py-2.5 px-2 rounded-lg border-2 text-xs font-extrabold uppercase tracking-wide transition-colors ${
+              accountType === t.id
+                ? "border-primary bg-primary/10 text-primary"
+                : "border-border text-muted-foreground hover:border-primary/50"
+            }`}
+          >
+            <span className="block text-base mb-0.5">{t.emoji}</span>
+            {t.label}
+          </button>
+        ))}
       </div>
 
       {error && (
@@ -188,23 +216,44 @@ export const Login: React.FC<LoginProps> = ({ onLoginSuccess }) => {
       )}
 
       <form onSubmit={handleSignUp} className="space-y-4">
+        {accountType === "student" && (
+          <>
+            <div>
+              <label className="block text-xs font-extrabold uppercase tracking-wider mb-1">Full Name</label>
+              <input type="text" placeholder="Alex Mercer" value={name} onChange={(e) => setName(e.target.value)}
+                className="w-full p-3 brutal-border rounded-lg bg-background text-foreground font-semibold text-sm focus:outline-none focus:ring-2 focus:ring-primary" />
+            </div>
+            <div>
+              <label className="block text-xs font-extrabold uppercase tracking-wider mb-1">High School or Uni</label>
+              <input type="text" placeholder="West High School" value={school} onChange={(e) => setSchool(e.target.value)}
+                className="w-full p-3 brutal-border rounded-lg bg-background text-foreground font-semibold text-sm focus:outline-none focus:ring-2 focus:ring-primary" />
+            </div>
+          </>
+        )}
+        {(accountType === "employer" || accountType === "business") && (
+          <div>
+            <label className="block text-xs font-extrabold uppercase tracking-wider mb-1">
+              {accountType === "employer" ? "Company / Organisation Name" : "Business Name"}
+            </label>
+            <input type="text"
+              placeholder={accountType === "employer" ? "Acme Pty Ltd" : "Sunrise Café"}
+              value={businessName}
+              onChange={(e) => setBusinessName(e.target.value)}
+              className="w-full p-3 brutal-border rounded-lg bg-background text-foreground font-semibold text-sm focus:outline-none focus:ring-2 focus:ring-primary"
+            />
+          </div>
+        )}
         <div>
-          <label className="block text-xs font-extrabold uppercase tracking-wider mb-1">Full Name</label>
-          <input type="text" placeholder="Alex Mercer" value={name} onChange={(e) => setName(e.target.value)}
-            className="w-full p-3 brutal-border rounded-lg bg-background text-foreground font-semibold text-sm focus:outline-none focus:ring-2 focus:ring-primary" />
-        </div>
-        <div>
-          <label className="block text-xs font-extrabold uppercase tracking-wider mb-1">High School or Uni</label>
-          <input type="text" placeholder="West High School" value={school} onChange={(e) => setSchool(e.target.value)}
-            className="w-full p-3 brutal-border rounded-lg bg-background text-foreground font-semibold text-sm focus:outline-none focus:ring-2 focus:ring-primary" />
-        </div>
-        <div>
-          <label className="block text-xs font-extrabold uppercase tracking-wider mb-1 flex justify-between">
-            <span>Email Address</span>
-          </label>
-          <input type="email" placeholder="alex.mercer@school.edu" value={email} onChange={(e) => setEmail(e.target.value)}
-            className="w-full p-3 brutal-border rounded-lg bg-background text-foreground font-semibold text-sm focus:outline-none focus:ring-2 focus:ring-primary" />
-          <p className="text-[10px] text-muted-foreground mt-1">💡 Sign up with a school email to automatically unlock verified badge status.</p>
+          <label className="block text-xs font-extrabold uppercase tracking-wider mb-1">Email Address</label>
+          <input type="email"
+            placeholder={accountType === "student" ? "alex.mercer@school.edu" : "hello@yourbusiness.com.au"}
+            value={email}
+            onChange={(e) => setEmail(e.target.value)}
+            className="w-full p-3 brutal-border rounded-lg bg-background text-foreground font-semibold text-sm focus:outline-none focus:ring-2 focus:ring-primary"
+          />
+          {accountType === "student" && (
+            <p className="text-[10px] text-muted-foreground mt-1">💡 Sign up with a school email to automatically unlock verified badge status.</p>
+          )}
         </div>
         <div>
           <label className="block text-xs font-extrabold uppercase tracking-wider mb-1">Password</label>
@@ -217,7 +266,7 @@ export const Login: React.FC<LoginProps> = ({ onLoginSuccess }) => {
           </div>
         </div>
         <button type="submit" className="w-full brutal-btn bg-primary text-primary-foreground py-3 text-base mt-2">
-          Create My Free Account
+          {accountType === "student" ? "Create My Free Account" : accountType === "employer" ? "Create Recruiter Account" : "Create Business Account"}
         </button>
       </form>
 

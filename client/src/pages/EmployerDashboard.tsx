@@ -20,7 +20,7 @@ import { Switch } from "@/components/ui/switch";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
 import { toast } from "sonner";
-import { Coins, Plus, BarChart2, Briefcase, Star, RefreshCw, CreditCard, Tag, Info, ChevronDown, ChevronRight, Users, Eye, TrendingUp, Clock, Mail, ShieldOff } from "lucide-react";
+import { Coins, Plus, BarChart2, Briefcase, Star, RefreshCw, CreditCard, Tag, Info, ChevronDown, ChevronRight, Users, Eye, TrendingUp, Clock, Mail, ShieldOff, Settings, Building2, Phone, MapPin, CheckCircle2 } from "lucide-react";
 import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, LineChart, Line, CartesianGrid } from "recharts";
 import { loadStripe } from "@stripe/stripe-js";
 import { Elements, CardElement, useStripe, useElements } from "@stripe/react-stripe-js";
@@ -802,12 +802,423 @@ function TransactionHistory() {
 
 // ─── Main Page ────────────────────────────────────────────────────────────────
 
+// ─── Employer Onboarding ─────────────────────────────────────────────────────
+
+const INDUSTRY_OPTIONS = [
+  "Retail & Hospitality",
+  "Food & Beverage",
+  "Health & Wellness",
+  "Education & Tutoring",
+  "Technology & IT",
+  "Construction & Trades",
+  "Administration & Office",
+  "Marketing & Media",
+  "Sport & Recreation",
+  "Community & Not-for-Profit",
+  "Other",
+];
+
+function EmployerOnboarding({ onComplete }: { onComplete: () => void }) {
+  const [step, setStep] = useState(1);
+  const [form, setForm] = useState({
+    businessName: "",
+    abn: "",
+    contactEmail: "",
+    contactPhone: "",
+    industry: "",
+    postcode: "",
+    isGstRegistered: false,
+    visibleToSchools: true,
+    acceptsWorkExperience: false,
+  });
+
+  const upsert = trpc.employer.profile.upsert.useMutation({
+    onSuccess: () => {
+      toast.success("Profile set up! Welcome to JutJut.");
+      onComplete();
+    },
+    onError: (err) => toast.error(err.message),
+  });
+
+  const handleSubmit = () => {
+    if (!form.businessName.trim()) {
+      toast.error("Business name is required.");
+      return;
+    }
+    upsert.mutate({
+      businessName: form.businessName.trim(),
+      abn: form.abn || null,
+      contactEmail: form.contactEmail || null,
+      contactPhone: form.contactPhone || null,
+      industry: form.industry || null,
+      postcode: form.postcode || null,
+      isGstRegistered: form.isGstRegistered,
+      visibleToSchools: form.visibleToSchools,
+      acceptsWorkExperience: form.acceptsWorkExperience,
+    });
+  };
+
+  return (
+    <div className="min-h-screen bg-background flex items-center justify-center px-4 py-12">
+      <div className="max-w-lg w-full space-y-6">
+        {/* Progress */}
+        <div className="flex items-center gap-2">
+          {[1, 2, 3].map((s) => (
+            <div key={s} className="flex items-center gap-2">
+              <div
+                className={`w-8 h-8 rounded-full flex items-center justify-center text-sm font-bold border-2 transition-colors ${
+                  step > s
+                    ? "bg-primary border-primary text-primary-foreground"
+                    : step === s
+                    ? "border-primary text-primary bg-primary/10"
+                    : "border-muted-foreground/30 text-muted-foreground"
+                }`}
+              >
+                {step > s ? <CheckCircle2 className="w-4 h-4" /> : s}
+              </div>
+              {s < 3 && <div className={`flex-1 h-0.5 w-12 ${step > s ? "bg-primary" : "bg-muted-foreground/20"}`} />}
+            </div>
+          ))}
+          <span className="ml-2 text-sm text-muted-foreground">
+            {step === 1 ? "Business details" : step === 2 ? "Contact & location" : "Preferences"}
+          </span>
+        </div>
+
+        <Card className="border-2">
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <Building2 className="w-5 h-5 text-primary" />
+              {step === 1 ? "Tell us about your business" : step === 2 ? "Contact & location" : "Hiring preferences"}
+            </CardTitle>
+            <CardDescription>
+              {step === 1
+                ? "This information appears on your employer profile visible to students."
+                : step === 2
+                ? "How students and schools can reach you."
+                : "Control how your business appears in the JutJut ecosystem."}
+            </CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            {step === 1 && (
+              <>
+                <div className="space-y-1.5">
+                  <Label htmlFor="ob-bname">Business name <span className="text-destructive">*</span></Label>
+                  <Input
+                    id="ob-bname"
+                    placeholder="e.g. Sunrise Café"
+                    value={form.businessName}
+                    onChange={(e) => setForm((f) => ({ ...f, businessName: e.target.value }))}
+                  />
+                </div>
+                <div className="space-y-1.5">
+                  <Label htmlFor="ob-abn">ABN <span className="text-muted-foreground text-xs">(optional)</span></Label>
+                  <Input
+                    id="ob-abn"
+                    placeholder="12 345 678 901"
+                    value={form.abn}
+                    onChange={(e) => setForm((f) => ({ ...f, abn: e.target.value }))}
+                  />
+                </div>
+                <div className="space-y-1.5">
+                  <Label htmlFor="ob-industry">Industry</Label>
+                  <Select value={form.industry} onValueChange={(v) => setForm((f) => ({ ...f, industry: v }))}>
+                    <SelectTrigger id="ob-industry">
+                      <SelectValue placeholder="Select your industry" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {INDUSTRY_OPTIONS.map((o) => (
+                        <SelectItem key={o} value={o}>{o}</SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div className="flex items-center gap-3 pt-1">
+                  <Switch
+                    id="ob-gst"
+                    checked={form.isGstRegistered}
+                    onCheckedChange={(v) => setForm((f) => ({ ...f, isGstRegistered: v }))}
+                  />
+                  <Label htmlFor="ob-gst" className="cursor-pointer">
+                    Registered for GST
+                    <span className="block text-xs text-muted-foreground font-normal">Affects how credits are invoiced</span>
+                  </Label>
+                </div>
+              </>
+            )}
+            {step === 2 && (
+              <>
+                <div className="space-y-1.5">
+                  <Label htmlFor="ob-email">Contact email</Label>
+                  <Input
+                    id="ob-email"
+                    type="email"
+                    placeholder="hiring@yourbusiness.com.au"
+                    value={form.contactEmail}
+                    onChange={(e) => setForm((f) => ({ ...f, contactEmail: e.target.value }))}
+                  />
+                </div>
+                <div className="space-y-1.5">
+                  <Label htmlFor="ob-phone">Contact phone</Label>
+                  <Input
+                    id="ob-phone"
+                    type="tel"
+                    placeholder="04xx xxx xxx"
+                    value={form.contactPhone}
+                    onChange={(e) => setForm((f) => ({ ...f, contactPhone: e.target.value }))}
+                  />
+                </div>
+                <div className="space-y-1.5">
+                  <Label htmlFor="ob-postcode">Postcode</Label>
+                  <Input
+                    id="ob-postcode"
+                    placeholder="3000"
+                    maxLength={4}
+                    value={form.postcode}
+                    onChange={(e) => setForm((f) => ({ ...f, postcode: e.target.value }))}
+                  />
+                </div>
+              </>
+            )}
+            {step === 3 && (
+              <>
+                <div className="flex items-center gap-3">
+                  <Switch
+                    id="ob-schools"
+                    checked={form.visibleToSchools}
+                    onCheckedChange={(v) => setForm((f) => ({ ...f, visibleToSchools: v }))}
+                  />
+                  <Label htmlFor="ob-schools" className="cursor-pointer">
+                    Visible to schools
+                    <span className="block text-xs text-muted-foreground font-normal">Schools can see your business in their employer directory</span>
+                  </Label>
+                </div>
+                <div className="flex items-center gap-3">
+                  <Switch
+                    id="ob-wex"
+                    checked={form.acceptsWorkExperience}
+                    onCheckedChange={(v) => setForm((f) => ({ ...f, acceptsWorkExperience: v }))}
+                  />
+                  <Label htmlFor="ob-wex" className="cursor-pointer">
+                    Accept work experience students
+                    <span className="block text-xs text-muted-foreground font-normal">Schools can arrange placements with your business</span>
+                  </Label>
+                </div>
+                <div className="rounded-lg bg-primary/5 border border-primary/20 p-4 text-sm text-muted-foreground">
+                  <p className="font-medium text-foreground mb-1">You're almost ready!</p>
+                  <p>After setup you'll be able to post jobs, buy credits, and track applicant analytics from your dashboard.</p>
+                </div>
+              </>
+            )}
+          </CardContent>
+        </Card>
+
+        <div className="flex gap-3">
+          {step > 1 && (
+            <Button variant="outline" onClick={() => setStep((s) => s - 1)} className="flex-1">
+              Back
+            </Button>
+          )}
+          {step < 3 ? (
+            <Button
+              onClick={() => {
+                if (step === 1 && !form.businessName.trim()) {
+                  toast.error("Business name is required.");
+                  return;
+                }
+                setStep((s) => s + 1);
+              }}
+              className="flex-1"
+            >
+              Continue
+            </Button>
+          ) : (
+            <Button onClick={handleSubmit} disabled={upsert.isPending} className="flex-1">
+              {upsert.isPending ? "Setting up..." : "Complete Setup"}
+            </Button>
+          )}
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// ─── Account Settings Tab ─────────────────────────────────────────────────────
+
+function AccountSettingsTab() {
+  const { data: profile, refetch } = trpc.employer.profile.get.useQuery();
+  const [form, setForm] = useState({
+    businessName: "",
+    abn: "",
+    contactEmail: "",
+    contactPhone: "",
+    industry: "",
+    postcode: "",
+    isGstRegistered: false,
+    visibleToSchools: true,
+    acceptsWorkExperience: false,
+  });
+  const [dirty, setDirty] = useState(false);
+
+  useEffect(() => {
+    if (profile) {
+      setForm({
+        businessName: profile.businessName ?? "",
+        abn: profile.abn ?? "",
+        contactEmail: profile.contactEmail ?? "",
+        contactPhone: profile.contactPhone ?? "",
+        industry: profile.industry ?? "",
+        postcode: profile.postcode ?? "",
+        isGstRegistered: profile.isGstRegistered ?? false,
+        visibleToSchools: profile.visibleToSchools ?? true,
+        acceptsWorkExperience: profile.acceptsWorkExperience ?? false,
+      });
+    }
+  }, [profile]);
+
+  const upsert = trpc.employer.profile.upsert.useMutation({
+    onSuccess: () => {
+      toast.success("Settings saved.");
+      setDirty(false);
+      refetch();
+    },
+    onError: (err) => toast.error(err.message),
+  });
+
+  const update = (patch: Partial<typeof form>) => {
+    setForm((f) => ({ ...f, ...patch }));
+    setDirty(true);
+  };
+
+  const handleSave = () => {
+    if (!form.businessName.trim()) {
+      toast.error("Business name is required.");
+      return;
+    }
+    upsert.mutate({
+      businessName: form.businessName.trim(),
+      abn: form.abn || null,
+      contactEmail: form.contactEmail || null,
+      contactPhone: form.contactPhone || null,
+      industry: form.industry || null,
+      postcode: form.postcode || null,
+      isGstRegistered: form.isGstRegistered,
+      visibleToSchools: form.visibleToSchools,
+      acceptsWorkExperience: form.acceptsWorkExperience,
+    });
+  };
+
+  return (
+    <div className="space-y-6">
+      <Card>
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2 text-base">
+            <Building2 className="w-4 h-4 text-primary" />
+            Business Details
+          </CardTitle>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            <div className="space-y-1.5">
+              <Label htmlFor="s-bname">Business name <span className="text-destructive">*</span></Label>
+              <Input id="s-bname" value={form.businessName} onChange={(e) => update({ businessName: e.target.value })} />
+            </div>
+            <div className="space-y-1.5">
+              <Label htmlFor="s-abn">ABN</Label>
+              <Input id="s-abn" placeholder="12 345 678 901" value={form.abn} onChange={(e) => update({ abn: e.target.value })} />
+            </div>
+          </div>
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            <div className="space-y-1.5">
+              <Label htmlFor="s-industry">Industry</Label>
+              <Select value={form.industry} onValueChange={(v) => update({ industry: v })}>
+                <SelectTrigger id="s-industry"><SelectValue placeholder="Select industry" /></SelectTrigger>
+                <SelectContent>
+                  {INDUSTRY_OPTIONS.map((o) => <SelectItem key={o} value={o}>{o}</SelectItem>)}
+                </SelectContent>
+              </Select>
+            </div>
+            <div className="space-y-1.5">
+              <Label htmlFor="s-postcode">Postcode</Label>
+              <Input id="s-postcode" placeholder="3000" maxLength={4} value={form.postcode} onChange={(e) => update({ postcode: e.target.value })} />
+            </div>
+          </div>
+          <div className="flex items-center gap-3">
+            <Switch id="s-gst" checked={form.isGstRegistered} onCheckedChange={(v) => update({ isGstRegistered: v })} />
+            <Label htmlFor="s-gst" className="cursor-pointer">Registered for GST</Label>
+          </div>
+        </CardContent>
+      </Card>
+
+      <Card>
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2 text-base">
+            <Phone className="w-4 h-4 text-primary" />
+            Contact Details
+          </CardTitle>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            <div className="space-y-1.5">
+              <Label htmlFor="s-email">Contact email</Label>
+              <Input id="s-email" type="email" value={form.contactEmail} onChange={(e) => update({ contactEmail: e.target.value })} />
+            </div>
+            <div className="space-y-1.5">
+              <Label htmlFor="s-phone">Contact phone</Label>
+              <Input id="s-phone" type="tel" value={form.contactPhone} onChange={(e) => update({ contactPhone: e.target.value })} />
+            </div>
+          </div>
+        </CardContent>
+      </Card>
+
+      <Card>
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2 text-base">
+            <Users className="w-4 h-4 text-primary" />
+            School Visibility
+          </CardTitle>
+          <CardDescription>Control how your business appears to schools and students</CardDescription>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          <div className="flex items-center gap-3">
+            <Switch id="s-schools" checked={form.visibleToSchools} onCheckedChange={(v) => update({ visibleToSchools: v })} />
+            <Label htmlFor="s-schools" className="cursor-pointer">
+              Visible to schools
+              <span className="block text-xs text-muted-foreground font-normal">Schools can see your business in their employer directory</span>
+            </Label>
+          </div>
+          <div className="flex items-center gap-3">
+            <Switch id="s-wex" checked={form.acceptsWorkExperience} onCheckedChange={(v) => update({ acceptsWorkExperience: v })} />
+            <Label htmlFor="s-wex" className="cursor-pointer">
+              Accept work experience students
+              <span className="block text-xs text-muted-foreground font-normal">Schools can arrange placements with your business</span>
+            </Label>
+          </div>
+        </CardContent>
+      </Card>
+
+      <div className="flex justify-end">
+        <Button onClick={handleSave} disabled={!dirty || upsert.isPending} className="gap-2">
+          {upsert.isPending ? "Saving..." : "Save Changes"}
+        </Button>
+      </div>
+    </div>
+  );
+}
+
+// ─── Main EmployerDashboard ───────────────────────────────────────────────────
+
 export default function EmployerDashboard() {
   const { user, loading, isAuthenticated } = useAuth();
   const [buyCreditsOpen, setBuyCreditsOpen] = useState(false);
   const [postJobOpen, setPostJobOpen] = useState(false);
+  const [activeTab, setActiveTab] = useState<"overview" | "settings">("overview");
 
-  if (loading) {
+  const { data: profile, isLoading: profileLoading } = trpc.employer.profile.get.useQuery(
+    undefined,
+    { enabled: isAuthenticated }
+  );
+
+  if (loading || (isAuthenticated && profileLoading)) {
     return (
       <div className="min-h-screen flex items-center justify-center">
         <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary" />
@@ -831,57 +1242,81 @@ export default function EmployerDashboard() {
     );
   }
 
+  // First-time employer: no profile record yet → show onboarding
+  if (!profile) {
+    return <EmployerOnboarding onComplete={() => window.location.reload()} />;
+  }
+
   return (
     <div className="min-h-screen bg-background">
       <div className="max-w-5xl mx-auto px-4 py-8 space-y-8">
         {/* Header */}
         <div className="flex items-center justify-between">
           <div>
-            <h1 className="text-2xl font-bold text-foreground">Employer Dashboard</h1>
-            <p className="text-muted-foreground text-sm mt-0.5">Manage your job listings and credits</p>
+            <h1 className="text-2xl font-bold text-foreground">{profile.businessName}</h1>
+            <p className="text-muted-foreground text-sm mt-0.5">Employer Dashboard</p>
           </div>
-          <Button onClick={() => setPostJobOpen(true)} className="gap-2">
-            <Plus className="w-4 h-4" />
-            Post a Job
-          </Button>
-        </div>
-
-        {/* Credit balance */}
-        <CreditBalanceCard onBuyCredits={() => setBuyCreditsOpen(true)} />
-
-        {/* Main grid */}
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-          {/* Analytics — takes 2 cols */}
-          <div className="lg:col-span-2">
-            <Card>
-              <CardHeader>
-                <CardTitle className="flex items-center gap-2 text-base">
-                  <BarChart2 className="w-4 h-4 text-primary" />
-                  Job Performance
-                </CardTitle>
-                <CardDescription>Views and applications for your active listings</CardDescription>
-              </CardHeader>
-              <CardContent>
-                <JobAnalyticsTable />
-              </CardContent>
-            </Card>
-          </div>
-
-          {/* Transaction history */}
-          <div>
-            <Card>
-              <CardHeader>
-                <CardTitle className="flex items-center gap-2 text-base">
-                  <Coins className="w-4 h-4 text-primary" />
-                  Credit History
-                </CardTitle>
-              </CardHeader>
-              <CardContent>
-                <TransactionHistory />
-              </CardContent>
-            </Card>
+          <div className="flex items-center gap-2">
+            <Button
+              variant={activeTab === "settings" ? "default" : "outline"}
+              size="sm"
+              onClick={() => setActiveTab(activeTab === "settings" ? "overview" : "settings")}
+              className="gap-2"
+            >
+              <Settings className="w-4 h-4" />
+              {activeTab === "settings" ? "Back to Dashboard" : "Account Settings"}
+            </Button>
+            {activeTab === "overview" && (
+              <Button onClick={() => setPostJobOpen(true)} className="gap-2">
+                <Plus className="w-4 h-4" />
+                Post a Job
+              </Button>
+            )}
           </div>
         </div>
+
+        {activeTab === "settings" ? (
+          <AccountSettingsTab />
+        ) : (
+          <>
+            {/* Credit balance */}
+            <CreditBalanceCard onBuyCredits={() => setBuyCreditsOpen(true)} />
+
+            {/* Main grid */}
+            <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+              {/* Analytics — takes 2 cols */}
+              <div className="lg:col-span-2">
+                <Card>
+                  <CardHeader>
+                    <CardTitle className="flex items-center gap-2 text-base">
+                      <BarChart2 className="w-4 h-4 text-primary" />
+                      Job Performance
+                    </CardTitle>
+                    <CardDescription>Views and applications for your active listings</CardDescription>
+                  </CardHeader>
+                  <CardContent>
+                    <JobAnalyticsTable />
+                  </CardContent>
+                </Card>
+              </div>
+
+              {/* Transaction history */}
+              <div>
+                <Card>
+                  <CardHeader>
+                    <CardTitle className="flex items-center gap-2 text-base">
+                      <Coins className="w-4 h-4 text-primary" />
+                      Credit History
+                    </CardTitle>
+                  </CardHeader>
+                  <CardContent>
+                    <TransactionHistory />
+                  </CardContent>
+                </Card>
+              </div>
+            </div>
+          </>
+        )}
       </div>
 
       <BuyCreditsModal open={buyCreditsOpen} onClose={() => setBuyCreditsOpen(false)} />

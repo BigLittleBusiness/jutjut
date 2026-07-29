@@ -419,3 +419,10 @@
 - [x] STR4 Update Admin Dashboard payments panel with labelled provider sections and gateway switcher UI
 - [x] STR5 Update buy-credits modal to conditionally render Stripe Elements or PinPayments token input
 - [x] STR6 Stripe webhook handler in server/stripe.ts; endpoint /api/webhooks/stripe documented in Admin Dashboard
+
+## Employer & Business Dashboard Completion (July 2026)
+
+- [ ] D1 Employer onboarding flow — detect missing profile, show setup screen before dashboard
+- [ ] D2 Employer account settings tab — edit businessName, ABN, contactEmail, industry, GST
+- [ ] D3 Business Drop submission form — self-service submit a Drop modal in BusinessDashboard
+- [ ] D4 Login account type selector — Student / Employer / Business tabs on sign-up

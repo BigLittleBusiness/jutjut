@@ -56,6 +56,11 @@ const employerProfileRouter = router({
         businessName: z.string().min(1).max(255),
         abn: z.string().max(16).optional().nullable(),
         contactEmail: z.string().email().optional().nullable(),
+        contactPhone: z.string().max(32).optional().nullable(),
+        industry: z.string().max(128).optional().nullable(),
+        postcode: z.string().max(8).optional().nullable(),
+        visibleToSchools: z.boolean().optional(),
+        acceptsWorkExperience: z.boolean().optional(),
         isGstRegistered: z.boolean().optional(),
       })
     )

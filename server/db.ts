@@ -180,6 +180,11 @@ export async function upsertEmployer(data: {
   businessName: string;
   abn?: string | null;
   contactEmail?: string | null;
+  contactPhone?: string | null;
+  industry?: string | null;
+  postcode?: string | null;
+  visibleToSchools?: boolean;
+  acceptsWorkExperience?: boolean;
   isGstRegistered?: boolean;
 }) {
   const db = await getDb();
