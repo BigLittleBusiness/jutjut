@@ -6,7 +6,7 @@
  * Endpoint: POST /api/upload/drop-image
  * Auth: JWT cookie required (same session cookie used by tRPC)
  * Field name: "image"
- * Limits: 5 MB, JPEG/PNG/WebP/GIF only
+ * Limits: 2 MB, JPEG/PNG/WebP/GIF only
  */
 
 import multer from "multer";
@@ -18,7 +18,7 @@ import { sdk } from "./_core/sdk";
 
 const upload = multer({
   storage: multer.memoryStorage(),
-  limits: { fileSize: 5 * 1024 * 1024 }, // 5 MB
+  limits: { fileSize: 2 * 1024 * 1024 }, // 2 MB
   fileFilter: (_req, file, cb) => {
     const allowed = ["image/jpeg", "image/png", "image/webp", "image/gif"];
     if (allowed.includes(file.mimetype)) {

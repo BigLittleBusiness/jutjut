@@ -216,8 +216,8 @@ function SubmitDropForm({ onSuccess }: { onSuccess: () => void }) {
       toast.error("Only JPEG, PNG, WebP, and GIF images are accepted.");
       return;
     }
-    if (file.size > 5 * 1024 * 1024) {
-      toast.error("Image must be under 5 MB.");
+    if (file.size > 2 * 1024 * 1024) {
+      toast.error("Image must be under 2 MB.");
       return;
     }
     setImageFile(file);
@@ -365,7 +365,7 @@ function SubmitDropForm({ onSuccess }: { onSuccess: () => void }) {
               >
                 <ImageIcon className="w-7 h-7 text-muted-foreground" />
                 <p className="text-sm text-muted-foreground">Click to upload image</p>
-                <p className="text-xs text-muted-foreground">JPEG, PNG, WebP, GIF · max 5 MB</p>
+                <p className="text-xs text-muted-foreground">JPEG, PNG, WebP, GIF · max 2 MB</p>
               </div>
             )}
             <input
