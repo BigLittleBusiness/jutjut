@@ -1205,13 +1205,203 @@ function AccountSettingsTab() {
   );
 }
 
+// ─── Post a Job Tab ─────────────────────────────────────────────────────────
+
+function PostJobTab({ onBuyCredits }: { onBuyCredits: () => void }) {
+  const utils = trpc.useUtils();
+  const { data: balance } = trpc.employer.credits.balance.useQuery();
+  const credits = balance?.balance ?? 0;
+  const { data: myJobs, isLoading: jobsLoading } = trpc.employer.jobs.list.useQuery();
+  const { data: profile } = trpc.employer.profile.get.useQuery();
+
+  const [form, setForm] = useState({
+    title: "",
+    employer: "",
+    description: "",
+    wage: "",
+    distance: "",
+    type: "casual" as "casual" | "part-time" | "full-time" | "volunteer",
+    noCoverLetter: false,
+    isFeatured: false,
+    autoRepostEnabled: false,
+  });
+
+  // Pre-fill employer name from profile
+  useEffect(() => {
+    if (profile?.businessName && !form.employer) {
+      setForm(f => ({ ...f, employer: profile.businessName }));
+    }
+  }, [profile?.businessName]);
+
+  const postJob = trpc.employer.jobs.post.useMutation({
+    onSuccess: () => {
+      toast.success("Job posted successfully! 1 credit deducted.");
+      utils.employer.jobs.list.invalidate();
+      utils.employer.jobs.analytics.invalidate();
+      utils.employer.credits.balance.invalidate();
+      setForm({ title: "", employer: profile?.businessName ?? "", description: "", wage: "", distance: "", type: "casual", noCoverLetter: false, isFeatured: false, autoRepostEnabled: false });
+    },
+    onError: (err) => toast.error(err.message),
+  });
+
+  return (
+    <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+      {/* Left: form */}
+      <div className="space-y-5">
+        <Card>
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2 text-base">
+              <Briefcase className="w-4 h-4 text-primary" />
+              New Job Listing
+            </CardTitle>
+            <CardDescription>
+              Costs 1 credit. Current balance: <strong>{credits}</strong> credit{credits !== 1 ? "s" : ""}
+            </CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            <div className="space-y-1.5">
+              <Label>Job Title <span className="text-destructive">*</span></Label>
+              <Input value={form.title} onChange={e => setForm(f => ({ ...f, title: e.target.value }))} placeholder="e.g. Barista, Retail Assistant" />
+            </div>
+            <div className="space-y-1.5">
+              <Label>Business Name <span className="text-destructive">*</span></Label>
+              <Input value={form.employer} onChange={e => setForm(f => ({ ...f, employer: e.target.value }))} placeholder="Your business name" />
+            </div>
+            <div className="space-y-1.5">
+              <Label>Description</Label>
+              <Textarea value={form.description} onChange={e => setForm(f => ({ ...f, description: e.target.value }))} placeholder="What will the student be doing? Key responsibilities, hours, environment..." rows={4} />
+            </div>
+            <div className="grid grid-cols-2 gap-3">
+              <div className="space-y-1.5">
+                <Label>Pay Rate</Label>
+                <Input value={form.wage} onChange={e => setForm(f => ({ ...f, wage: e.target.value }))} placeholder="e.g. $18/hr" />
+              </div>
+              <div className="space-y-1.5">
+                <Label>Location / Distance</Label>
+                <Input value={form.distance} onChange={e => setForm(f => ({ ...f, distance: e.target.value }))} placeholder="e.g. 2km from CBD" />
+              </div>
+            </div>
+            <div className="space-y-1.5">
+              <Label>Job Type</Label>
+              <Select value={form.type} onValueChange={v => setForm(f => ({ ...f, type: v as typeof form.type }))}>
+                <SelectTrigger><SelectValue /></SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="casual">Casual</SelectItem>
+                  <SelectItem value="part-time">Part-Time</SelectItem>
+                  <SelectItem value="full-time">Full-Time</SelectItem>
+                  <SelectItem value="volunteer">Volunteer</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+            <div className="space-y-3 pt-1 border-t border-border">
+              <div className="flex items-center justify-between">
+                <Label htmlFor="pjt-nocl" className="text-sm cursor-pointer">No cover letter required</Label>
+                <Switch id="pjt-nocl" checked={form.noCoverLetter} onCheckedChange={v => setForm(f => ({ ...f, noCoverLetter: v }))} />
+              </div>
+              <div className="flex items-center justify-between">
+                <div>
+                  <Label htmlFor="pjt-feat" className="text-sm flex items-center gap-1 cursor-pointer">
+                    <Star className="w-3.5 h-3.5 text-amber-500" /> Featured (top of board, 7 days)
+                  </Label>
+                  <p className="text-xs text-muted-foreground">No extra credit — visual boost only</p>
+                </div>
+                <Switch id="pjt-feat" checked={form.isFeatured} onCheckedChange={v => setForm(f => ({ ...f, isFeatured: v }))} />
+              </div>
+              <div className="flex items-center justify-between">
+                <div>
+                  <Label htmlFor="pjt-auto" className="text-sm flex items-center gap-1 cursor-pointer">
+                    <RefreshCw className="w-3.5 h-3.5 text-blue-500" /> Auto-repost when expired
+                  </Label>
+                  <p className="text-xs text-muted-foreground">Uses 1 credit on expiry</p>
+                </div>
+                <Switch id="pjt-auto" checked={form.autoRepostEnabled} onCheckedChange={v => setForm(f => ({ ...f, autoRepostEnabled: v }))} />
+              </div>
+            </div>
+            {credits < 1 && (
+              <div className="rounded-lg bg-amber-50 dark:bg-amber-950/30 border border-amber-200 dark:border-amber-800 p-3 flex items-start gap-2">
+                <Info className="w-4 h-4 text-amber-600 mt-0.5 shrink-0" />
+                <div className="text-sm">
+                  <p className="font-medium text-amber-800 dark:text-amber-200">No credits remaining</p>
+                  <p className="text-amber-700 dark:text-amber-300">Purchase credits to post a job.</p>
+                  <Button size="sm" variant="outline" className="mt-2" onClick={onBuyCredits}>Buy Credits</Button>
+                </div>
+              </div>
+            )}
+            <Button
+              className="w-full"
+              onClick={() => postJob.mutate(form)}
+              disabled={postJob.isPending || !form.title.trim() || !form.employer.trim() || credits < 1}
+            >
+              {postJob.isPending ? "Posting..." : `Post Job (1 credit)`}
+            </Button>
+          </CardContent>
+        </Card>
+      </div>
+
+      {/* Right: my jobs list */}
+      <div>
+        <Card>
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2 text-base">
+              <Briefcase className="w-4 h-4 text-primary" />
+              My Job Listings
+            </CardTitle>
+            <CardDescription>Your posted jobs and their current status</CardDescription>
+          </CardHeader>
+          <CardContent>
+            {jobsLoading ? (
+              <div className="text-sm text-muted-foreground py-4 text-center">Loading...</div>
+            ) : !myJobs || myJobs.length === 0 ? (
+              <div className="text-center py-8 text-muted-foreground">
+                <Briefcase className="w-10 h-10 mx-auto mb-2 opacity-30" />
+                <p>No jobs posted yet.</p>
+              </div>
+            ) : (
+              <div className="space-y-3">
+                {myJobs.map(job => (
+                  <div key={job.id} className="rounded-lg border border-border p-3 space-y-1.5">
+                    <div className="flex items-start justify-between gap-2">
+                      <div>
+                        <p className="font-semibold text-sm">{job.title}</p>
+                        <p className="text-xs text-muted-foreground">{job.employer}</p>
+                      </div>
+                      <div className="flex items-center gap-1.5 shrink-0">
+                        {job.isFeatured && (
+                          <Badge variant="secondary" className="text-xs"><Star className="w-2.5 h-2.5 mr-1" />Featured</Badge>
+                        )}
+                        <Badge variant={job.isActive ? "default" : "secondary"}>
+                          {job.isActive ? "Active" : "Expired"}
+                        </Badge>
+                      </div>
+                    </div>
+                    <div className="flex items-center gap-3 text-xs text-muted-foreground">
+                      <span className="flex items-center gap-1"><Eye className="w-3 h-3" />{job.viewCount ?? 0} views</span>
+                      <span className="flex items-center gap-1"><Users className="w-3 h-3" />{job.applyCount ?? 0} applies</span>
+                      {job.type && <Badge variant="outline" className="text-xs capitalize">{job.type}</Badge>}
+                      {job.expiresAt && (
+                        <span className="flex items-center gap-1 ml-auto">
+                          <Clock className="w-3 h-3" />
+                          Expires {new Date(job.expiresAt).toLocaleDateString("en-AU")}
+                        </span>
+                      )}
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
+          </CardContent>
+        </Card>
+      </div>
+    </div>
+  );
+}
+
 // ─── Main EmployerDashboard ───────────────────────────────────────────────────
 
 export default function EmployerDashboard() {
   const { user, loading, isAuthenticated } = useAuth();
   const [buyCreditsOpen, setBuyCreditsOpen] = useState(false);
-  const [postJobOpen, setPostJobOpen] = useState(false);
-  const [activeTab, setActiveTab] = useState<"overview" | "settings">("overview");
+  const [activeTab, setActiveTab] = useState<"overview" | "jobs" | "settings">("overview");
 
   const { data: profile, isLoading: profileLoading } = trpc.employer.profile.get.useQuery(
     undefined,
@@ -1256,27 +1446,28 @@ export default function EmployerDashboard() {
             <h1 className="text-2xl font-bold text-foreground">{profile.businessName}</h1>
             <p className="text-muted-foreground text-sm mt-0.5">Employer Dashboard</p>
           </div>
-          <div className="flex items-center gap-2">
-            <Button
-              variant={activeTab === "settings" ? "default" : "outline"}
-              size="sm"
-              onClick={() => setActiveTab(activeTab === "settings" ? "overview" : "settings")}
-              className="gap-2"
-            >
-              <Settings className="w-4 h-4" />
-              {activeTab === "settings" ? "Back to Dashboard" : "Account Settings"}
-            </Button>
-            {activeTab === "overview" && (
-              <Button onClick={() => setPostJobOpen(true)} className="gap-2">
-                <Plus className="w-4 h-4" />
-                Post a Job
+          <div className="flex items-center gap-2 flex-wrap">
+            {(["overview", "jobs", "settings"] as const).map(tab => (
+              <Button
+                key={tab}
+                variant={activeTab === tab ? "default" : "outline"}
+                size="sm"
+                onClick={() => setActiveTab(tab)}
+                className="gap-1.5"
+              >
+                {tab === "overview" && <BarChart2 className="w-3.5 h-3.5" />}
+                {tab === "jobs" && <Briefcase className="w-3.5 h-3.5" />}
+                {tab === "settings" && <Settings className="w-3.5 h-3.5" />}
+                {tab === "overview" ? "Overview" : tab === "jobs" ? "Post a Job" : "Settings"}
               </Button>
-            )}
+            ))}
           </div>
         </div>
 
         {activeTab === "settings" ? (
           <AccountSettingsTab />
+        ) : activeTab === "jobs" ? (
+          <PostJobTab onBuyCredits={() => setBuyCreditsOpen(true)} />
         ) : (
           <>
             {/* Credit balance */}
@@ -1320,7 +1511,6 @@ export default function EmployerDashboard() {
       </div>
 
       <BuyCreditsModal open={buyCreditsOpen} onClose={() => setBuyCreditsOpen(false)} />
-      <PostJobModal open={postJobOpen} onClose={() => setPostJobOpen(false)} />
     </div>
   );
 }

@@ -11,7 +11,7 @@
  *   - Breakdown by postcode (table)
  */
 
-import { useState } from "react";
+import { useState, useRef } from "react";
 import { trpc } from "@/lib/trpc";
 import { useAuth } from "@/_core/hooks/useAuth";
 import { getLoginUrl } from "@/const";
@@ -25,7 +25,7 @@ import { toast } from "sonner";
 import {
   BarChart2, ChevronDown, ChevronRight, Eye, TrendingUp, DollarSign, Percent,
   School, MapPin, GraduationCap, Calendar, Plus, Clock, CheckCircle2, XCircle,
-  Package, Send, AlertCircle
+  Package, Send, AlertCircle, Upload, X, Image as ImageIcon
 } from "lucide-react";
 import {
   BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer,
@@ -192,27 +192,90 @@ function SubmitDropForm({ onSuccess }: { onSuccess: () => void }) {
     maxClaims: "",
     scheduledDate: "",
   });
+  const [imageFile, setImageFile] = useState<File | null>(null);
+  const [imagePreview, setImagePreview] = useState<string | null>(null);
+  const [uploading, setUploading] = useState(false);
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
   const submit = trpc.business.drops.submit.useMutation({
     onSuccess: () => {
       toast.success("Drop submitted for review! JutJut will be in touch shortly.");
       setForm({ title: "", description: "", maxClaims: "", scheduledDate: "" });
+      setImageFile(null);
+      setImagePreview(null);
       onSuccess();
     },
     onError: (err) => toast.error(err.message),
   });
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleImageChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    const allowed = ["image/jpeg", "image/png", "image/webp", "image/gif"];
+    if (!allowed.includes(file.type)) {
+      toast.error("Only JPEG, PNG, WebP, and GIF images are accepted.");
+      return;
+    }
+    if (file.size > 5 * 1024 * 1024) {
+      toast.error("Image must be under 5 MB.");
+      return;
+    }
+    setImageFile(file);
+    const reader = new FileReader();
+    reader.onload = (ev) => setImagePreview(ev.target?.result as string);
+    reader.readAsDataURL(file);
+  };
+
+  const removeImage = () => {
+    setImageFile(null);
+    setImagePreview(null);
+    if (fileInputRef.current) fileInputRef.current.value = "";
+  };
+
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!form.title.trim()) {
       toast.error("Offer title is required.");
       return;
     }
+
+    let imageUrl: string | undefined;
+    let imageKey: string | undefined;
+
+    // Upload image first if one was selected
+    if (imageFile) {
+      setUploading(true);
+      try {
+        const fd = new FormData();
+        fd.append("image", imageFile);
+        const res = await fetch("/api/upload/drop-image", {
+          method: "POST",
+          body: fd,
+          credentials: "include",
+        });
+        if (!res.ok) {
+          const err = await res.json().catch(() => ({ error: "Upload failed" }));
+          throw new Error(err.error ?? "Upload failed");
+        }
+        const data = await res.json();
+        imageUrl = data.url;
+        imageKey = data.key;
+      } catch (err: any) {
+        toast.error(err.message ?? "Image upload failed.");
+        setUploading(false);
+        return;
+      } finally {
+        setUploading(false);
+      }
+    }
+
     submit.mutate({
       title: form.title.trim(),
       description: form.description.trim() || undefined,
       maxClaims: form.maxClaims ? parseInt(form.maxClaims, 10) : undefined,
       scheduledDate: form.scheduledDate ? new Date(form.scheduledDate) : undefined,
+      imageUrl,
+      imageKey,
     });
   };
 
@@ -275,6 +338,45 @@ function SubmitDropForm({ onSuccess }: { onSuccess: () => void }) {
             </div>
           </div>
 
+          {/* Promotional Image Upload */}
+          <div className="space-y-1.5">
+            <Label>Promotional image <span className="text-muted-foreground text-xs">(optional)</span></Label>
+            {imagePreview ? (
+              <div className="relative w-full max-w-xs">
+                <img
+                  src={imagePreview}
+                  alt="Drop preview"
+                  className="w-full h-40 object-cover rounded-lg border-2 border-border"
+                />
+                <button
+                  type="button"
+                  onClick={removeImage}
+                  className="absolute top-2 right-2 bg-background/90 border border-border rounded-full p-1 hover:bg-destructive hover:text-destructive-foreground transition-colors"
+                  aria-label="Remove image"
+                >
+                  <X className="w-3.5 h-3.5" />
+                </button>
+                <p className="text-xs text-muted-foreground mt-1">{imageFile?.name} ({((imageFile?.size ?? 0) / 1024).toFixed(0)} KB)</p>
+              </div>
+            ) : (
+              <div
+                onClick={() => fileInputRef.current?.click()}
+                className="flex flex-col items-center justify-center gap-2 w-full max-w-xs h-32 border-2 border-dashed border-border rounded-lg cursor-pointer hover:border-primary hover:bg-primary/5 transition-colors"
+              >
+                <ImageIcon className="w-7 h-7 text-muted-foreground" />
+                <p className="text-sm text-muted-foreground">Click to upload image</p>
+                <p className="text-xs text-muted-foreground">JPEG, PNG, WebP, GIF · max 5 MB</p>
+              </div>
+            )}
+            <input
+              ref={fileInputRef}
+              type="file"
+              accept="image/jpeg,image/png,image/webp,image/gif"
+              className="hidden"
+              onChange={handleImageChange}
+            />
+          </div>
+
           <div className="rounded-lg bg-amber-50 dark:bg-amber-950/30 border border-amber-200 dark:border-amber-800 p-4 flex gap-3">
             <AlertCircle className="w-4 h-4 text-amber-600 dark:text-amber-400 shrink-0 mt-0.5" />
             <div className="text-sm text-amber-800 dark:text-amber-300">
@@ -284,9 +386,14 @@ function SubmitDropForm({ onSuccess }: { onSuccess: () => void }) {
           </div>
 
           <div className="flex justify-end">
-            <Button type="submit" disabled={submit.isPending} className="gap-2">
-              <Send className="w-4 h-4" />
-              {submit.isPending ? "Submitting..." : "Submit Drop for Review"}
+            <Button type="submit" disabled={submit.isPending || uploading} className="gap-2">
+              {uploading ? (
+                <><Upload className="w-4 h-4 animate-bounce" /> Uploading image...</>
+              ) : submit.isPending ? (
+                <><Send className="w-4 h-4" /> Submitting...</>
+              ) : (
+                <><Send className="w-4 h-4" /> Submit Drop for Review</>
+              )}
             </Button>
           </div>
         </form>
@@ -411,8 +518,72 @@ function AnalyticsTab() {
     );
   }
 
+  // Aggregate KPIs across all drops
+  const totalImpressions = summary.reduce((s, d) => s + d.impressions, 0);
+  const totalClaims = summary.reduce((s, d) => s + d.claims, 0);
+  const overallClaimRate = totalImpressions > 0
+    ? ((totalClaims / totalImpressions) * 100).toFixed(1)
+    : "0.0";
+  const totalSpend = summary.reduce((s, d) => s + (d.sponsorshipFeeDollars ?? 0), 0);
+
+  // Chart data — one bar group per drop (truncate title for readability)
+  const chartData = summary.map(d => ({
+    name: d.title.length > 18 ? d.title.slice(0, 16) + "…" : d.title,
+    Impressions: d.impressions,
+    Claims: d.claims,
+  }));
+
   return (
-    <div className="space-y-3">
+    <div className="space-y-5">
+      {/* KPI summary row */}
+      <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+        {[
+          { label: "Total Impressions", value: totalImpressions.toLocaleString(), icon: <Eye className="w-4 h-4" /> },
+          { label: "Total Claims", value: totalClaims.toLocaleString(), icon: <TrendingUp className="w-4 h-4" /> },
+          { label: "Overall Claim Rate", value: `${overallClaimRate}%`, icon: <Percent className="w-4 h-4" /> },
+          { label: "Total Spend", value: totalSpend > 0 ? `$${totalSpend.toFixed(2)}` : "—", icon: <DollarSign className="w-4 h-4" /> },
+        ].map(kpi => (
+          <Card key={kpi.label} className="border">
+            <CardContent className="pt-4 pb-3">
+              <div className="flex items-center gap-1.5 text-muted-foreground mb-1">
+                {kpi.icon}
+                <span className="text-xs">{kpi.label}</span>
+              </div>
+              <p className="text-xl font-bold tabular-nums">{kpi.value}</p>
+            </CardContent>
+          </Card>
+        ))}
+      </div>
+
+      {/* Impressions vs Claims bar chart */}
+      {chartData.length > 0 && (
+        <Card className="border">
+          <CardHeader className="pb-2">
+            <CardTitle className="text-sm font-semibold">Impressions vs Claims by Drop</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <ResponsiveContainer width="100%" height={220}>
+              <BarChart data={chartData} margin={{ top: 4, right: 8, left: -10, bottom: 4 }}>
+                <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" />
+                <XAxis dataKey="name" tick={{ fontSize: 11 }} />
+                <YAxis tick={{ fontSize: 11 }} />
+                <Tooltip
+                  contentStyle={{
+                    background: "hsl(var(--card))",
+                    border: "1px solid hsl(var(--border))",
+                    borderRadius: "6px",
+                    fontSize: 12,
+                  }}
+                />
+                <Bar dataKey="Impressions" fill="hsl(var(--primary))" radius={[3, 3, 0, 0]} />
+                <Bar dataKey="Claims" fill="hsl(var(--primary) / 0.4)" radius={[3, 3, 0, 0]} />
+              </BarChart>
+            </ResponsiveContainer>
+          </CardContent>
+        </Card>
+      )}
+
+      {/* Per-drop table */}
       <div className="overflow-x-auto">
         <table className="w-full text-sm">
           <thead>

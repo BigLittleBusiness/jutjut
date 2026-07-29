@@ -13,6 +13,7 @@ import { appRouter } from "../routers.js";
 import { createContext } from "./context.js";
 import { serveStatic, setupVite } from "./vite.js";
 import { registerPinPaymentsWebhook } from "../webhooks/pinpayments.js";
+import { dropImageUploadMiddleware } from "../uploadHandler.js";
 import { startAutoRepostCron } from "../cron/autoRepost.js";
 import { sesWebhookHandler } from "../sesWebhook.js";
 import { adminDailySummaryHandler } from "../scheduledHandlers.js";
@@ -213,6 +214,10 @@ async function startServer() {
       return res.redirect(`${baseUrl}/kit?vouch=error`);
     }
   });
+
+  // ── File upload routes ────────────────────────────────────────────────────
+  // POST /api/upload/drop-image — authenticated multipart upload, returns { key, url }
+  app.post("/api/upload/drop-image", ...dropImageUploadMiddleware);
 
   // ── Scheduled heartbeat handlers ───────────────────────────────────────────
   app.post("/api/scheduled/admin-daily-summary", adminDailySummaryHandler);

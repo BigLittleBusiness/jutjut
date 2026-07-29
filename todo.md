@@ -426,3 +426,10 @@
 - [ ] D2 Employer account settings tab — edit businessName, ABN, contactEmail, industry, GST
 - [ ] D3 Business Drop submission form — self-service submit a Drop modal in BusinessDashboard
 - [ ] D4 Login account type selector — Student / Employer / Business tabs on sign-up
+
+## Business & Employer Dashboard Enhancements (July 2026 — Session 5)
+
+- [ ] IMG1 Add server-side image upload endpoint for Drop promotional images (S3 storage, tRPC mutation)
+- [ ] IMG2 Add image upload field to Submit a Drop form (preview, remove, file size/type validation)
+- [ ] CHT1 Add Recharts line charts to Business Analytics tab (impressions over time, claims over time)
+- [ ] JOB1 Add Post a Job tab to EmployerDashboard with full job posting form (title, description, type, location, wage, school targets)
