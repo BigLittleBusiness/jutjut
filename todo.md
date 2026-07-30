@@ -433,3 +433,27 @@
 - [ ] IMG2 Add image upload field to Submit a Drop form (preview, remove, file size/type validation)
 - [ ] CHT1 Add Recharts line charts to Business Analytics tab (impressions over time, claims over time)
 - [ ] JOB1 Add Post a Job tab to EmployerDashboard with full job posting form (title, description, type, location, wage, school targets)
+
+## QR Code Redemption System (The Drop)
+
+- [x] QR1 Update spec with confirmed product decisions (per-listing claims, first name + initial, 10-min TTL, co-branding, CSV export)
+- [x] QR2 Add dropRedemptionTokens table to drizzle/schema.ts; add redeemedAt + redemptionTokenId to dropClaims; run db:push
+- [x] QR3 Add student.drops.generateQR tRPC procedure (per-listing claim policy, 10-min TTL)
+- [x] QR4 Add student.drops.refreshQR tRPC procedure
+- [x] QR5 Add student.drops.checkRedemptionStatus tRPC procedure (polled every 3s by QR display)
+- [x] QR6 Add GET /api/redeem/:token REST endpoint (server-rendered co-branded HTML, all 4 states)
+- [x] QR7 Add POST /api/redeem/:token REST endpoint (mark redeemed, idempotent)
+- [x] QR8 Install qrcode.react; build DropQRDisplay.tsx (countdown, polling, refresh, success state)
+- [x] QR9 Wire "Claim This Drop" button in TheDrop.tsx to generateQR and show DropQRDisplay overlay
+- [ ] QR10 Extend getDropAnalyticsDetail to return redemption timeline, school breakdown, year level split, peak times
+- [ ] QR11 Add redemption charts, school/year breakdown, peak times heatmap, cost-per-redemption KPI to Business Dashboard Analytics tab
+- [ ] QR12 Add CSV export button to Business Dashboard Analytics tab
+- [ ] QR13 Add nightly cron job to clean up expired unredeemed tokens
+- [x] QR14 Write Vitest tests for all new procedures and endpoints
+
+## Business Logo Upload
+- [x] LOGO1 Add logoUrl column to employers table in drizzle/schema.ts; run db:push
+- [x] LOGO2 Add POST /api/upload/business-logo REST endpoint (500 KB limit, image/* only, S3 storage, auth required)
+- [x] LOGO3 Add employer.profile.uploadLogo tRPC mutation (saves S3 URL to employers.logoUrl)
+- [x] LOGO4 Add logo upload UI section to Business Dashboard (preview, remove, 500 KB guard, upload progress)
+- [x] LOGO5 Wire business logo URL into GET /api/redeem/:token staff redemption page co-branding

@@ -75,3 +75,45 @@ export const dropImageUploadMiddleware = [
   upload.single("image"),
   handleDropImageUpload,
 ];
+
+// ─── Business logo upload (500 KB limit) ─────────────────────────────────────
+
+const logoUpload = multer({
+  storage: multer.memoryStorage(),
+  limits: { fileSize: 500 * 1024 }, // 500 KB
+  fileFilter: (_req, file, cb) => {
+    const allowed = ["image/jpeg", "image/png", "image/webp", "image/gif", "image/svg+xml"];
+    if (allowed.includes(file.mimetype)) {
+      cb(null, true);
+    } else {
+      cb(new Error("Only JPEG, PNG, WebP, GIF, and SVG images are accepted."));
+    }
+  },
+});
+
+export async function handleBusinessLogoUpload(req: Request, res: Response) {
+  try {
+    const file = req.file;
+    if (!file) {
+      res.status(400).json({ error: "No logo file provided." });
+      return;
+    }
+
+    const user = (req as any).user as { id: string };
+    const ext = file.mimetype.split("/")[1].replace("jpeg", "jpg").replace("svg+xml", "svg");
+    const key = `business-logos/${user.id}/${Date.now()}.${ext}`;
+
+    const { url } = await storagePut(key, file.buffer, file.mimetype);
+
+    res.json({ key, url });
+  } catch (err: any) {
+    console.error("[uploadHandler] Business logo upload failed:", err);
+    res.status(500).json({ error: err?.message ?? "Upload failed." });
+  }
+}
+
+export const businessLogoUploadMiddleware = [
+  requireAuth,
+  logoUpload.single("logo"),
+  handleBusinessLogoUpload,
+];

@@ -2,14 +2,20 @@ import React, { useState } from "react";
 import { useApp } from "@/contexts/AppContext";
 import { toast } from "sonner";
 import { trpc } from "@/lib/trpc";
+import { DropQRDisplay } from "@/components/DropQRDisplay";
 
 export const TheDrop: React.FC = () => {
   const { claimDrop } = useApp();
+  // QR overlay state
+  const [qrDropId, setQrDropId] = useState<number | null>(null);
+  const [qrDropTitle, setQrDropTitle] = useState("");
+
   // Live drops from DB
   const { data: dbDrops = [], refetch: refetchDrops } = trpc.student.drops.list.useQuery();
   // Map DB drops to the AppContext Drop shape for the existing UI
   const drops = dbDrops.map(d => ({
     id: String(d.id),
+    numericId: d.id,
     title: d.title,
     offer: d.description ?? "",
     code: "",
@@ -175,10 +181,18 @@ export const TheDrop: React.FC = () => {
                 </div>
               ) : (
                 <button
-                  onClick={() => claimDrop(activeDrops[0]?.id || "drop-1")}
+                  onClick={() => {
+                    const d = activeDrops[0];
+                    if (d?.numericId) {
+                      setQrDropId(d.numericId);
+                      setQrDropTitle(d.title);
+                    } else {
+                      claimDrop("drop-1");
+                    }
+                  }}
                   className="brutal-btn bg-secondary text-secondary-foreground text-sm py-2.5 px-6"
                 >
-                  ⚡ Claim My Burrito Discount
+                  ⚡ Claim This Drop
                 </button>
               )}
             </div>
@@ -427,6 +441,13 @@ export const TheDrop: React.FC = () => {
           </div>
         </div>
       )}
+      {/* QR Code Redemption Overlay */}
+      <DropQRDisplay
+        dropId={qrDropId ?? 0}
+        dropTitle={qrDropTitle}
+        open={qrDropId !== null}
+        onClose={() => setQrDropId(null)}
+      />
     </div>
   );
 };

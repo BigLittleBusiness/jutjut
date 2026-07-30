@@ -25,7 +25,7 @@ import { toast } from "sonner";
 import {
   BarChart2, ChevronDown, ChevronRight, Eye, TrendingUp, DollarSign, Percent,
   School, MapPin, GraduationCap, Calendar, Plus, Clock, CheckCircle2, XCircle,
-  Package, Send, AlertCircle, Upload, X, Image as ImageIcon
+  Package, Send, AlertCircle, Upload, X, Image as ImageIcon, Building2, Trash2
 } from "lucide-react";
 import {
   BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer,
@@ -33,6 +33,180 @@ import {
 } from "recharts";
 
 // ─── Drop Analytics Detail Panel ─────────────────────────────────────────────
+
+// ─── Business Logo Tab ─────────────────────────────────────────────────────────
+
+const MAX_LOGO_BYTES = 500 * 1024; // 500 KB
+
+function BusinessLogoTab() {
+  const utils = trpc.useUtils();
+  const { data: profile, isLoading } = trpc.business.profile.get.useQuery();
+  const saveLogo = trpc.business.profile.saveLogo.useMutation({
+    onSuccess: () => {
+      toast.success("Logo saved successfully.");
+      utils.business.profile.get.invalidate();
+    },
+    onError: (err) => toast.error(err.message ?? "Failed to save logo."),
+  });
+  const removeLogo = trpc.business.profile.removeLogo.useMutation({
+    onSuccess: () => {
+      toast.success("Logo removed.");
+      utils.business.profile.get.invalidate();
+      setPreview(null);
+    },
+    onError: (err) => toast.error(err.message ?? "Failed to remove logo."),
+  });
+
+  const [preview, setPreview] = useState<string | null>(null);
+  const [uploading, setUploading] = useState(false);
+  const [dragOver, setDragOver] = useState(false);
+  const fileInputRef = useRef<HTMLInputElement>(null);
+
+  async function handleFile(file: File) {
+    if (!file.type.startsWith("image/")) {
+      toast.error("Please select an image file (JPEG, PNG, WebP, GIF, or SVG).");
+      return;
+    }
+    if (file.size > MAX_LOGO_BYTES) {
+      toast.error(`Logo must be 500 KB or smaller. Your file is ${(file.size / 1024).toFixed(0)} KB.`);
+      return;
+    }
+    const reader = new FileReader();
+    reader.onload = (e) => setPreview(e.target?.result as string);
+    reader.readAsDataURL(file);
+
+    setUploading(true);
+    try {
+      const formData = new FormData();
+      formData.append("logo", file);
+      const resp = await fetch("/api/upload/business-logo", { method: "POST", body: formData });
+      if (!resp.ok) {
+        const err = await resp.json().catch(() => ({}));
+        throw new Error((err as any).error ?? "Upload failed.");
+      }
+      const { url } = await resp.json() as { url: string };
+      saveLogo.mutate({ logoUrl: url });
+    } catch (err: any) {
+      toast.error(err.message ?? "Upload failed.");
+      setPreview(null);
+    } finally {
+      setUploading(false);
+    }
+  }
+
+  function onFileChange(e: React.ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0];
+    if (file) handleFile(file);
+    e.target.value = "";
+  }
+
+  function onDrop(e: React.DragEvent) {
+    e.preventDefault();
+    setDragOver(false);
+    const file = e.dataTransfer.files?.[0];
+    if (file) handleFile(file);
+  }
+
+  const currentLogo = preview ?? profile?.logoUrl ?? null;
+  const busy = uploading || saveLogo.isPending || removeLogo.isPending;
+
+  if (isLoading) {
+    return (
+      <div className="space-y-3">
+        {[1, 2].map(i => <div key={i} className="h-12 bg-muted animate-pulse rounded-xl" />)}
+      </div>
+    );
+  }
+
+  return (
+    <Card className="border">
+      <CardHeader>
+        <CardTitle className="flex items-center gap-2 text-base">
+          <Building2 className="w-4 h-4" />
+          Business Logo
+        </CardTitle>
+        <CardDescription>
+          Upload your logo to co-brand the student redemption page. Max 500 KB — JPEG, PNG, WebP, GIF, or SVG.
+        </CardDescription>
+      </CardHeader>
+      <CardContent className="space-y-5">
+        {currentLogo ? (
+          <div className="flex items-start gap-4">
+            <div className="w-28 h-28 rounded-xl border-2 border-border bg-muted flex items-center justify-center overflow-hidden shrink-0">
+              <img src={currentLogo} alt="Business logo" className="w-full h-full object-contain p-2" />
+            </div>
+            <div className="flex flex-col gap-2 justify-center">
+              <p className="text-sm font-medium">Current logo</p>
+              <p className="text-xs text-muted-foreground">This logo appears on the student QR redemption page alongside the JutJut branding.</p>
+              <div className="flex gap-2 mt-1">
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => fileInputRef.current?.click()}
+                  disabled={busy}
+                  className="gap-1.5"
+                >
+                  <Upload className="w-3.5 h-3.5" /> Replace
+                </Button>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => removeLogo.mutate()}
+                  disabled={busy}
+                  className="gap-1.5 text-destructive hover:text-destructive"
+                >
+                  <Trash2 className="w-3.5 h-3.5" /> Remove
+                </Button>
+              </div>
+            </div>
+          </div>
+        ) : (
+          <div
+            onDragOver={(e) => { e.preventDefault(); setDragOver(true); }}
+            onDragLeave={() => setDragOver(false)}
+            onDrop={onDrop}
+            onClick={() => fileInputRef.current?.click()}
+            className={`flex flex-col items-center justify-center gap-3 w-full h-44 border-2 border-dashed rounded-xl cursor-pointer transition-colors ${
+              dragOver ? "border-primary bg-primary/5" : "border-border hover:border-primary hover:bg-primary/5"
+            }`}
+          >
+            {uploading ? (
+              <>
+                <div className="h-8 w-8 rounded-full border-4 border-primary border-t-transparent animate-spin" />
+                <p className="text-sm text-muted-foreground">Uploading…</p>
+              </>
+            ) : (
+              <>
+                <ImageIcon className="w-10 h-10 text-muted-foreground/50" />
+                <div className="text-center">
+                  <p className="text-sm font-medium">Click or drag &amp; drop your logo</p>
+                  <p className="text-xs text-muted-foreground mt-1">JPEG, PNG, WebP, GIF, SVG · max 500 KB</p>
+                </div>
+              </>
+            )}
+          </div>
+        )}
+
+        <input
+          ref={fileInputRef}
+          type="file"
+          accept="image/jpeg,image/png,image/webp,image/gif,image/svg+xml"
+          className="hidden"
+          onChange={onFileChange}
+        />
+
+        <div className="rounded-lg bg-blue-50 dark:bg-blue-950/30 border border-blue-200 dark:border-blue-800 p-4 flex gap-3">
+          <AlertCircle className="w-4 h-4 text-blue-600 dark:text-blue-400 shrink-0 mt-0.5" />
+          <div className="text-sm text-blue-800 dark:text-blue-300">
+            <p className="font-medium">How your logo is used</p>
+            <p className="mt-0.5">When a student scans a QR code for your drop, the redemption page shown to staff will display your logo alongside the JutJut branding, creating a co-branded experience.</p>
+          </div>
+        </div>
+      </CardContent>
+    </Card>
+  );
+}
+
 
 function DropAnalyticsDetailPanel({ dropId, onClose }: { dropId: number; onClose: () => void }) {
   const { data, isLoading } = trpc.business.drops.analytics.useQuery({ dropId });
@@ -651,7 +825,7 @@ function AnalyticsTab() {
 
 // ─── Main BusinessDashboard ────────────────────────────────────────────────────────────
 
-type DashTab = "submit" | "my-drops" | "analytics";
+type DashTab = "submit" | "my-drops" | "analytics" | "branding";
 
 export default function BusinessDashboard() {
   const { isAuthenticated, loading } = useAuth();
@@ -680,6 +854,7 @@ export default function BusinessDashboard() {
     { id: "submit", label: "Submit a Drop", icon: <Send className="w-4 h-4" /> },
     { id: "my-drops", label: "My Drops", icon: <Package className="w-4 h-4" /> },
     { id: "analytics", label: "Analytics", icon: <BarChart2 className="w-4 h-4" /> },
+    { id: "branding", label: "Branding", icon: <Building2 className="w-4 h-4" /> },
   ];
 
   return (
@@ -728,6 +903,7 @@ export default function BusinessDashboard() {
           </CardContent>
         </Card>
       )}
+      {activeTab === "branding" && <BusinessLogoTab />}
     </div>
   );
 }

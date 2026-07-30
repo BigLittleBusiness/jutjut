@@ -156,6 +156,7 @@ import {
   dropViews,
   drops,
   dropClaims,
+  dropRedemptionTokens,
   waitlistSignups,
   WaitlistSignup,
 } from "../drizzle/schema";
@@ -758,6 +759,93 @@ export async function getDropAnalyticsDetail(dropId: number, businessUserId: num
     claimsOverTime.push({ date, hour: parseInt(hourStr, 10), count: cnt });
   }
 
+  // Redemptions (tokens that have been redeemed)
+  const redemptionRows = await db
+    .select({
+      userId: dropRedemptionTokens.userId,
+      redeemedAt: dropRedemptionTokens.redeemedAt,
+    })
+    .from(dropRedemptionTokens)
+    .where(
+      and(
+        eq(dropRedemptionTokens.dropId, dropId),
+        isNotNull(dropRedemptionTokens.redeemedAt)
+      )
+    )
+    .orderBy(desc(dropRedemptionTokens.redeemedAt));
+
+  const redemptionCount = redemptionRows.length;
+  const costPerRedemption = redemptionCount > 0 ? sponsorshipFee / 100 / redemptionCount : 0;
+
+  // Redemptions over time (by date + hour)
+  const redemptionsOverTime: { date: string; hour: number; count: number }[] = [];
+  const redemptionHourMap: Record<string, number> = {};
+  for (const r of redemptionRows) {
+    if (!r.redeemedAt) continue;
+    const d = r.redeemedAt.toISOString().slice(0, 10);
+    const h = r.redeemedAt.getUTCHours();
+    const key = `${d}:${h}`;
+    redemptionHourMap[key] = (redemptionHourMap[key] ?? 0) + 1;
+  }
+  for (const [key, cnt] of Object.entries(redemptionHourMap).sort(([a], [b]) => a.localeCompare(b))) {
+    const [date, hourStr] = key.split(":");
+    redemptionsOverTime.push({ date, hour: parseInt(hourStr, 10), count: cnt });
+  }
+
+  // Peak times heatmap: hour-of-day × day-of-week redemption counts
+  const peakTimes: { day_of_week: number; hour: number; count: number }[] = [];
+  const peakMap: Record<string, number> = {};
+  for (const r of redemptionRows) {
+    if (!r.redeemedAt) continue;
+    const dow = r.redeemedAt.getUTCDay(); // 0=Sun
+    const h = r.redeemedAt.getUTCHours();
+    const key = `${dow}:${h}`;
+    peakMap[key] = (peakMap[key] ?? 0) + 1;
+  }
+  for (const [key, cnt] of Object.entries(peakMap)) {
+    const [dowStr, hStr] = key.split(":");
+    peakTimes.push({ day_of_week: parseInt(dowStr, 10), hour: parseInt(hStr, 10), count: cnt });
+  }
+
+  // School breakdown for redemptions
+  const redemptionUserIds = redemptionRows.map(r => r.userId);
+  const redemptionSchoolRows = redemptionUserIds.length > 0
+    ? await db
+        .select({ schoolName: schools.name, userId: schoolStudents.studentId })
+        .from(schoolStudents)
+        .innerJoin(schools, eq(schools.id, schoolStudents.schoolId))
+        .where(inArray(schoolStudents.studentId, redemptionUserIds))
+    : [];
+  const redemptionSchoolMap = new Map(redemptionSchoolRows.map(r => [r.userId, r.schoolName]));
+
+  const redemptionBySchoolCounts: Record<string, number> = {};
+  for (const r of redemptionRows) {
+    const sn = redemptionSchoolMap.get(r.userId) ?? "Other";
+    redemptionBySchoolCounts[sn] = (redemptionBySchoolCounts[sn] ?? 0) + 1;
+  }
+  const redemptionBySchool = Object.entries(redemptionBySchoolCounts)
+    .sort((a, b) => b[1] - a[1])
+    .map(([school_name, count]) => ({ school_name, count }));
+
+  // Year level breakdown for redemptions
+  const redemptionUserData = redemptionUserIds.length > 0
+    ? await db
+        .select({ id: users.id, yearLevel: users.yearLevel })
+        .from(users)
+        .where(inArray(users.id, redemptionUserIds))
+    : [];
+  const redemptionUserMap = new Map(redemptionUserData.map(u => [u.id, u]));
+
+  const redemptionByYearCounts: Record<string, number> = {};
+  for (const r of redemptionRows) {
+    const u = redemptionUserMap.get(r.userId);
+    const yr = u?.yearLevel ?? "Not specified";
+    redemptionByYearCounts[yr] = (redemptionByYearCounts[yr] ?? 0) + 1;
+  }
+  const redemptionByYearLevel = Object.entries(redemptionByYearCounts)
+    .sort((a, b) => b[1] - a[1])
+    .map(([year, count]) => ({ year, count }));
+
   return {
     drop: {
       id: drop.id,
@@ -766,17 +854,23 @@ export async function getDropAnalyticsDetail(dropId: number, businessUserId: num
       sponsorship_fee: sponsorshipFee,
       impressions,
       claims: claimCount,
+      redemptions: redemptionCount,
     },
     metrics: {
       claim_rate: Math.round(claimRate * 100) / 100,
       cost_per_impression: Math.round(costPerImpression * 100) / 100,
       cost_per_claim: Math.round(costPerClaim * 100) / 100,
+      cost_per_redemption: Math.round(costPerRedemption * 100) / 100,
     },
     breakdowns: {
       by_school: bySchool,
       by_year_level: byYearLevel,
       by_postcode: byPostcode,
       claims_over_time: claimsOverTime,
+      redemptions_over_time: redemptionsOverTime,
+      redemption_by_school: redemptionBySchool,
+      redemption_by_year_level: redemptionByYearLevel,
+      peak_times: peakTimes,
     },
   };
 }

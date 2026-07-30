@@ -244,10 +244,37 @@ export const dropClaims = mysqlTable("dropClaims", {
   dropId: int("dropId").notNull(),
   userId: int("userId").notNull(),
   claimedAt: timestamp("claimedAt").defaultNow().notNull(),
+  /** Set when a staff member marks the token as redeemed */
+  redeemedAt: timestamp("redeemedAt"),
+  /** FK → dropRedemptionTokens.id — the token that was used to redeem */
+  redemptionTokenId: int("redemptionTokenId"),
 });
 
 export type DropClaim = typeof dropClaims.$inferSelect;
 export type InsertDropClaim = typeof dropClaims.$inferInsert;
+
+// ─────────────────────────────────────────────
+// DROP REDEMPTION TOKENS (QR code system)
+// ─────────────────────────────────────────────
+
+export const dropRedemptionTokens = mysqlTable("dropRedemptionTokens", {
+  id: int("id").autoincrement().primaryKey(),
+  /** UUID v4 — encoded in the QR code URL */
+  token: varchar("token", { length: 36 }).notNull().unique(),
+  dropId: int("dropId").notNull(),       // FK → drops.id
+  userId: int("userId").notNull(),       // FK → users.id (the student)
+  claimId: int("claimId").notNull(),     // FK → dropClaims.id
+  /** UTC timestamp when this token expires (10 minutes after creation) */
+  expiresAt: timestamp("expiresAt").notNull(),
+  /** Set when a staff member marks this token as redeemed */
+  redeemedAt: timestamp("redeemedAt"),
+  /** IP address of the device that performed the redemption (staff device) */
+  redeemedByIp: varchar("redeemedByIp", { length: 45 }),
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+});
+
+export type DropRedemptionToken = typeof dropRedemptionTokens.$inferSelect;
+export type InsertDropRedemptionToken = typeof dropRedemptionTokens.$inferInsert;
 
 // ─────────────────────────────────────────────
 // REPORT CARDS (AI OCR verification)
@@ -371,6 +398,7 @@ export const employers = mysqlTable("employers", {
   status: mysqlEnum("status", ["active", "suspended"]).default("active").notNull(),
   suspendedAt: timestamp("suspendedAt"),
   suspendedReason: text("suspendedReason"),
+  logoUrl: text("logoUrl"),        // S3 path for business logo (≤ 500 KB)
   createdAt: timestamp("createdAt").defaultNow().notNull(),
   updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
 });

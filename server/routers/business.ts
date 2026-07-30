@@ -9,7 +9,7 @@ import { z } from "zod";
 import { protectedProcedure, router } from "../_core/trpc";
 import { getDb } from "../db";
 import { getDropAnalyticsDetail, recordDropView } from "../db";
-import { drops, dropClaims } from "../../drizzle/schema";
+import { drops, dropClaims, employers } from "../../drizzle/schema";
 import { eq, desc, and, inArray, sql } from "drizzle-orm";
 import { notifyOwner } from "../_core/notification";
 
@@ -164,6 +164,62 @@ const dropsRouter = router({
 
 // ─── Compose business router ──────────────────────────────────────────────────
 
+// ─── Employer profile (logo) ──────────────────────────────────────────────────
+
+const profileRouter = router({
+  /** Get the current employer profile */
+  get: protectedProcedure.query(async ({ ctx }) => {
+    const db = await getDb();
+    if (!db) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: "Database unavailable." });
+    const [row] = await db
+      .select({ id: employers.id, businessName: employers.businessName, logoUrl: employers.logoUrl })
+      .from(employers)
+      .where(eq(employers.userId, ctx.user.id))
+      .limit(1);
+    return row ?? null;
+  }),
+
+  /** Save the S3 URL returned by POST /api/upload/business-logo */
+  saveLogo: protectedProcedure
+    .input(z.object({ logoUrl: z.string().url() }))
+    .mutation(async ({ ctx, input }) => {
+      const db = await getDb();
+      if (!db) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: "Database unavailable." });
+      const [existing] = await db
+        .select({ id: employers.id })
+        .from(employers)
+        .where(eq(employers.userId, ctx.user.id))
+        .limit(1);
+      if (!existing) {
+        await db.insert(employers).values({
+          userId: ctx.user.id,
+          businessName: ctx.user.name ?? "My Business",
+          logoUrl: input.logoUrl,
+          createdAt: new Date(),
+          updatedAt: new Date(),
+        });
+      } else {
+        await db
+          .update(employers)
+          .set({ logoUrl: input.logoUrl, updatedAt: new Date() })
+          .where(eq(employers.userId, ctx.user.id));
+      }
+      return { success: true };
+    }),
+
+  /** Remove the business logo */
+  removeLogo: protectedProcedure.mutation(async ({ ctx }) => {
+    const db = await getDb();
+    if (!db) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: "Database unavailable." });
+    await db
+      .update(employers)
+      .set({ logoUrl: null, updatedAt: new Date() })
+      .where(eq(employers.userId, ctx.user.id));
+    return { success: true };
+  }),
+});
+
 export const businessRouter = router({
   drops: dropsRouter,
+  profile: profileRouter,
 });

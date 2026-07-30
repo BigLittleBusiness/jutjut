@@ -13,12 +13,13 @@ import { appRouter } from "../routers.js";
 import { createContext } from "./context.js";
 import { serveStatic, setupVite } from "./vite.js";
 import { registerPinPaymentsWebhook } from "../webhooks/pinpayments.js";
-import { dropImageUploadMiddleware } from "../uploadHandler.js";
+import { dropImageUploadMiddleware, businessLogoUploadMiddleware } from "../uploadHandler.js";
 import { startAutoRepostCron } from "../cron/autoRepost.js";
 import { sesWebhookHandler } from "../sesWebhook.js";
 import { adminDailySummaryHandler } from "../scheduledHandlers.js";
 import { preGraduationReminderHandler } from "../cron/preGraduationReminder.js";
 import { verifyAlumniEmailToken, verifyVouchToken, declineVouchToken, closeDb } from "../db.js";
+import { handleGetRedeem, handlePostRedeem } from "../redeemHandler.js";
 import { sendEmailSilent } from "../emailService.js";
 import { ENV } from "./env.js";
 import { logger } from "./logger.js";
@@ -218,6 +219,14 @@ async function startServer() {
   // ── File upload routes ────────────────────────────────────────────────────
   // POST /api/upload/drop-image — authenticated multipart upload, returns { key, url }
   app.post("/api/upload/drop-image", ...dropImageUploadMiddleware);
+  // POST /api/upload/business-logo — 500 KB max, saves to S3, returns { key, url }
+  app.post("/api/upload/business-logo", ...businessLogoUploadMiddleware);
+
+  // ── QR Code Redemption routes ─────────────────────────────────────────────
+  // GET  /api/redeem/:token — co-branded staff redemption page (4 states)
+  // POST /api/redeem/:token — mark token as redeemed (idempotent)
+  app.get("/api/redeem/:token", handleGetRedeem);
+  app.post("/api/redeem/:token", handlePostRedeem);
 
   // ── Scheduled heartbeat handlers ───────────────────────────────────────────
   app.post("/api/scheduled/admin-daily-summary", adminDailySummaryHandler);
