@@ -467,4 +467,4 @@
 - [x] PRACTICALS7 Build Institution Practicals Hub: pathway builder, opportunity review queue, student matching and completion approval
 - [x] PRACTICALS8 Add shared status timelines, safeguards, approval messaging and concern escalation routes
 - [x] PRACTICALS9 Create Vitest coverage for practicals workflow permissions, status transitions and approval requirements
-- [ ] PRACTICALS10 Perform responsive visual verification, save checkpoint and push the JutJut Practicals implementation to GitHub
+- [x] PRACTICALS10 Perform responsive visual verification, save checkpoint and push the JutJut Practicals implementation to GitHub
