@@ -471,5 +471,5 @@
 
 ## JutJut Practicals Discoverability Fix
 - [x] PRACTICALS11 Add a public marketing navigation link and clearly visible JutJut Practicals introduction section that routes visitors into the authenticated Practicals workspace
-- [ ] PRACTICALS12 Verify public desktop and mobile discoverability, then checkpoint and push the correction to GitHub
+- [x] PRACTICALS12 Verify public desktop and mobile discoverability, then checkpoint and push the correction to GitHub
 - [x] PRACTICALS13 Correct public mobile navigation so the Practicals link remains accessible in the hamburger menu without desktop-link overflow
