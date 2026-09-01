@@ -301,7 +301,7 @@ export default function LandingPage({ onSignIn }: LandingPageProps) {
 
   // Active nav section via IntersectionObserver
   useEffect(() => {
-    const sectionIds = ["students", "yourway", "employers", "thedrop", "pricing"];
+    const sectionIds = ["students", "practicals", "yourway", "employers", "thedrop", "pricing"];
     const observers: IntersectionObserver[] = [];
     sectionIds.forEach(id => {
       const el = document.getElementById(id);
@@ -319,6 +319,11 @@ export default function LandingPage({ onSignIn }: LandingPageProps) {
   const scrollTo = (id: string) => {
     setMobileMenuOpen(false);
     document.getElementById(id)?.scrollIntoView({ behavior: "smooth" });
+  };
+
+  /** Preserves the Practicals destination through the app's existing sign-in gate. */
+  const openPracticals = () => {
+    window.dispatchEvent(new CustomEvent("jutjut:navigate", { detail: { page: "practicals" } }));
   };
 
   const handleWaitlist = (e: React.FormEvent) => {
@@ -355,6 +360,7 @@ export default function LandingPage({ onSignIn }: LandingPageProps) {
   // ── NAV LINKS ───────────────────────────────────────────────────────────────
   const navLinks = [
     { label: "For Students", id: "students" },
+    { label: "Practicals", id: "practicals" },
     { label: "Your Way", id: "yourway" },
     { label: "For Employers", id: "employers" },
     { label: "The Drop", id: "thedrop" },
@@ -451,7 +457,7 @@ export default function LandingPage({ onSignIn }: LandingPageProps) {
           </div>
 
           {/* Desktop nav */}
-          <div style={{ display: "flex", gap: 8, alignItems: "center" }} className="hidden md:flex">
+          <div style={{ gap: 8, alignItems: "center" }} className="landing-desktop-nav">
             {navLinks.map(l => (
               <button key={l.id} onClick={() => scrollTo(l.id)}
                 style={{ background: activeSection === l.id ? "#f0fdf9" : "none", border: activeSection === l.id ? "2px solid #0d9488" : "2px solid transparent", cursor: "pointer", fontWeight: 700, fontSize: 14, color: activeSection === l.id ? "#0d9488" : "#374151", padding: "6px 12px", borderRadius: 6, transition: "all 0.15s" }}
@@ -462,17 +468,17 @@ export default function LandingPage({ onSignIn }: LandingPageProps) {
           </div>
 
           {/* CTA buttons */}
-          <div style={{ display: "flex", gap: 8, alignItems: "center" }}>
-            <button onClick={onSignIn} style={{ background: "none", border: "2px solid #1f2937", borderRadius: 8, padding: "8px 18px", fontWeight: 800, fontSize: 14, cursor: "pointer", color: "#1f2937", transition: "all 0.15s" }}
+          <div style={{ gap: 8, alignItems: "center" }} className="landing-actions">
+            <button className="landing-primary-action" onClick={onSignIn} style={{ background: "none", border: "2px solid #1f2937", borderRadius: 8, padding: "8px 18px", fontWeight: 800, fontSize: 14, cursor: "pointer", color: "#1f2937", transition: "all 0.15s" }}
               onMouseEnter={e => { e.currentTarget.style.background = "#f3f4f6"; }}
               onMouseLeave={e => { e.currentTarget.style.background = "none"; }}
             >Sign in</button>
-            <button onClick={() => scrollTo("waitlist")} style={{ background: "#0d9488", border: "2px solid #1f2937", borderRadius: 8, padding: "8px 18px", fontWeight: 800, fontSize: 14, cursor: "pointer", color: "#fff", transition: "all 0.15s", boxShadow: "3px 3px 0 #1f2937" }}
+            <button className="landing-primary-action" onClick={() => scrollTo("waitlist")} style={{ background: "#0d9488", border: "2px solid #1f2937", borderRadius: 8, padding: "8px 18px", fontWeight: 800, fontSize: 14, cursor: "pointer", color: "#fff", transition: "all 0.15s", boxShadow: "3px 3px 0 #1f2937" }}
               onMouseEnter={e => { e.currentTarget.style.transform = "translate(-2px,-2px)"; e.currentTarget.style.boxShadow = "5px 5px 0 #1f2937"; }}
               onMouseLeave={e => { e.currentTarget.style.transform = ""; e.currentTarget.style.boxShadow = "3px 3px 0 #1f2937"; }}
             >Join waitlist</button>
             {/* Mobile hamburger */}
-            <button className="flex md:hidden" onClick={() => setMobileMenuOpen(v => !v)} style={{ background: "none", border: "2px solid #1f2937", borderRadius: 6, padding: "6px 10px", cursor: "pointer", fontWeight: 900, fontSize: 16 }}>☰</button>
+            <button className="landing-mobile-toggle" onClick={() => setMobileMenuOpen(v => !v)} aria-label="Open navigation menu" aria-expanded={mobileMenuOpen} style={{ background: "none", border: "2px solid #1f2937", borderRadius: 6, padding: "6px 10px", cursor: "pointer", fontWeight: 900, fontSize: 16 }}>☰</button>
           </div>
         </div>
 
@@ -485,7 +491,7 @@ export default function LandingPage({ onSignIn }: LandingPageProps) {
           flexDirection: "column",
           gap: 8,
           overflow: "hidden",
-          maxHeight: mobileMenuOpen ? 400 : 0,
+          maxHeight: mobileMenuOpen ? 440 : 0,
           opacity: mobileMenuOpen ? 1 : 0,
           transition: "max-height 0.28s cubic-bezier(0.23,1,0.32,1), opacity 0.22s ease, padding 0.22s ease",
         }}>
@@ -604,6 +610,47 @@ export default function LandingPage({ onSignIn }: LandingPageProps) {
                 onMouseEnter={e => { e.currentTarget.style.transform = "translate(-2px,-2px)"; e.currentTarget.style.boxShadow = "6px 6px 0 #1f2937"; }}
                 onMouseLeave={e => { e.currentTarget.style.transform = ""; e.currentTarget.style.boxShadow = "4px 4px 0 #1f2937"; }}
               >Join the waitlist</button>
+            </div>
+          </Reveal>
+        </div>
+      </section>
+
+      {/* ── JUTJUT PRACTICALS ───────────────────────────────────────────────── */}
+      <section id="practicals" style={{ background: "#ecfdf5", borderBottom: "2px solid #1f2937", padding: "5rem 1.5rem" }}>
+        <div style={{ maxWidth: 1200, margin: "0 auto" }}>
+          <Reveal>
+            <div style={{ display: "grid", gap: "2rem", alignItems: "center" }} className="grid-cols-1 md:grid-cols-[1.1fr_0.9fr]">
+              <div>
+                <div style={{ display: "inline-flex", alignItems: "center", gap: 8, border: "2px solid #0d9488", background: "#fff", borderRadius: 6, padding: "6px 12px", color: "#0d9488", fontSize: 12, fontWeight: 900, letterSpacing: "0.08em", textTransform: "uppercase" }}>
+                  Real-world learning
+                </div>
+                <h2 style={{ fontSize: "clamp(2rem, 4vw, 3.25rem)", lineHeight: 1.05, letterSpacing: "-0.04em", margin: "1rem 0", fontWeight: 900, color: "#1f2937" }}>
+                  JutJut <span style={{ color: "#0d9488" }}>Practicals</span>
+                </h2>
+                <p style={{ fontSize: 18, lineHeight: 1.65, color: "#4b5563", maxWidth: 620, margin: 0 }}>
+                  A clear pathway for course-required projects, placements and cohort briefs. Students find approved opportunities, businesses host meaningful work, and institutions retain the final approval of what counts toward a course.
+                </p>
+                <div style={{ display: "flex", flexWrap: "wrap", gap: 10, marginTop: "1.5rem" }}>
+                  <button onClick={openPracticals} style={{ background: "#0d9488", border: "2px solid #1f2937", borderRadius: 8, padding: "12px 18px", fontWeight: 900, fontSize: 15, cursor: "pointer", color: "#fff", boxShadow: "4px 4px 0 #1f2937", transition: "all 0.15s" }} onMouseEnter={e => { e.currentTarget.style.transform = "translate(-2px,-2px)"; e.currentTarget.style.boxShadow = "6px 6px 0 #1f2937"; }} onMouseLeave={e => { e.currentTarget.style.transform = ""; e.currentTarget.style.boxShadow = "4px 4px 0 #1f2937"; }}>
+                    Explore JutJut Practicals →
+                  </button>
+                  <button onClick={() => scrollTo("waitlist")} style={{ background: "#fff", border: "2px solid #1f2937", borderRadius: 8, padding: "12px 18px", fontWeight: 900, fontSize: 15, cursor: "pointer", color: "#1f2937" }}>
+                    Register interest
+                  </button>
+                </div>
+              </div>
+              <div style={{ display: "grid", gap: 12 }}>
+                {[
+                  { icon: "🎓", title: "For students", body: "Link a course requirement, apply for approved opportunities and keep your practical evidence in one place." },
+                  { icon: "🏢", title: "For businesses", body: "Submit a well-scoped project or placement with a named supervisor and clear deliverables." },
+                  { icon: "🏛️", title: "For institutions", body: "Set course pathways, review proposals, approve matches and confirm completion." },
+                ].map(item => (
+                  <div key={item.title} style={{ display: "flex", gap: 14, alignItems: "flex-start", background: "#fff", border: "2px solid #1f2937", borderRadius: 10, padding: 16, boxShadow: "3px 3px 0 #1f2937" }}>
+                    <span style={{ fontSize: 24, lineHeight: 1 }}>{item.icon}</span>
+                    <div><h3 style={{ margin: 0, fontSize: 16, fontWeight: 900, color: "#1f2937" }}>{item.title}</h3><p style={{ margin: "4px 0 0", fontSize: 14, lineHeight: 1.5, color: "#4b5563" }}>{item.body}</p></div>
+                  </div>
+                ))}
+              </div>
             </div>
           </Reveal>
         </div>

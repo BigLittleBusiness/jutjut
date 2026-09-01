@@ -149,6 +149,33 @@
   box-shadow: 4px 4px 0px 0px #0D9488;
 }
 
+/* Landing-page header: explicit responsive display rules avoid inline display
+   styles defeating the mobile breakpoint and keep all public links reachable. */
+.landing-desktop-nav,
+.landing-actions {
+  display: flex;
+}
+
+.landing-mobile-toggle {
+  display: none;
+}
+
+@media (max-width: 767px) {
+  .landing-desktop-nav {
+    display: none !important;
+  }
+
+  .landing-primary-action {
+    display: none !important;
+  }
+
+  .landing-mobile-toggle {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+}
+
 .brutal-btn {
   border: 2px solid var(--border);
   box-shadow: 4px 4px 0px 0px rgba(15, 23, 42, 1);

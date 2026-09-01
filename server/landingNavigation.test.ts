@@ -19,7 +19,7 @@ function isValidNavigateMessage(data: unknown): data is JutJutNavigateMessage {
   return msg.type === "JUTJUT_NAVIGATE" && typeof msg.page === "string" && msg.page.length > 0;
 }
 
-const VALID_PAGES = ["login", "my-kit", "jobs", "drops", "university", "your-way", "dashboard"];
+const VALID_PAGES = ["login", "my-kit", "jobs", "drops", "practicals", "university", "your-way", "dashboard"];
 
 function isKnownPage(page: string): boolean {
   return VALID_PAGES.includes(page);
@@ -74,6 +74,7 @@ describe("Known page routing", () => {
     expect(isKnownPage("my-kit")).toBe(true);
     expect(isKnownPage("jobs")).toBe(true);
     expect(isKnownPage("drops")).toBe(true);
+    expect(isKnownPage("practicals")).toBe(true);
     expect(isKnownPage("university")).toBe(true);
     expect(isKnownPage("your-way")).toBe(true);
     expect(isKnownPage("dashboard")).toBe(true);
@@ -99,7 +100,7 @@ describe("Deep-link routing logic", () => {
   });
 
   it("routes non-login messages to deep-link handler", () => {
-    const pages = ["my-kit", "jobs", "drops"];
+    const pages = ["my-kit", "jobs", "drops", "practicals"];
     pages.forEach((page) => {
       const msg = { type: "JUTJUT_NAVIGATE", page };
       const isDeepLink = isValidNavigateMessage(msg) && msg.page !== "login";

@@ -468,3 +468,8 @@
 - [x] PRACTICALS8 Add shared status timelines, safeguards, approval messaging and concern escalation routes
 - [x] PRACTICALS9 Create Vitest coverage for practicals workflow permissions, status transitions and approval requirements
 - [x] PRACTICALS10 Perform responsive visual verification, save checkpoint and push the JutJut Practicals implementation to GitHub
+
+## JutJut Practicals Discoverability Fix
+- [x] PRACTICALS11 Add a public marketing navigation link and clearly visible JutJut Practicals introduction section that routes visitors into the authenticated Practicals workspace
+- [ ] PRACTICALS12 Verify public desktop and mobile discoverability, then checkpoint and push the correction to GitHub
+- [x] PRACTICALS13 Correct public mobile navigation so the Practicals link remains accessible in the hamburger menu without desktop-link overflow
