@@ -735,3 +735,284 @@ export const inAppNotifications = mysqlTable("inAppNotifications", {
 
 export type InAppNotification = typeof inAppNotifications.$inferSelect;
 export type InsertInAppNotification = typeof inAppNotifications.$inferInsert;
+
+// ─────────────────────────────────────────────
+// JUTJUT PRACTICALS — COURSE-REQUIRED WORK-INTEGRATED LEARNING
+// ─────────────────────────────────────────────
+
+/** Participating universities, TAFEs, schools and other authorised providers. */
+export const institutions = mysqlTable("institutions", {
+  id: int("id").autoincrement().primaryKey(),
+  name: varchar("name", { length: 255 }).notNull(),
+  domain: varchar("domain", { length: 255 }).notNull().unique(),
+  providerType: mysqlEnum("providerType", ["university", "tafe", "school", "other"])
+    .default("university")
+    .notNull(),
+  contactName: varchar("contactName", { length: 255 }),
+  contactEmail: varchar("contactEmail", { length: 320 }),
+  state: varchar("state", { length: 3 }),
+  approved: boolean("approved").default(false).notNull(),
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+  updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
+});
+
+export type Institution = typeof institutions.$inferSelect;
+export type InsertInstitution = typeof institutions.$inferInsert;
+
+/** Institution staff with authority to configure, review and approve Practicals. */
+export const institutionMembers = mysqlTable("institutionMembers", {
+  id: int("id").autoincrement().primaryKey(),
+  institutionId: int("institutionId").notNull(),
+  userId: int("userId").notNull(),
+  role: mysqlEnum("role", ["admin", "coordinator", "wil_officer"])
+    .default("coordinator")
+    .notNull(),
+  active: boolean("active").default(true).notNull(),
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+  updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
+});
+
+export type InstitutionMember = typeof institutionMembers.$inferSelect;
+export type InsertInstitutionMember = typeof institutionMembers.$inferInsert;
+
+/** Provider-defined practical requirements used to assess opportunities and students. */
+export const coursePathways = mysqlTable("coursePathways", {
+  id: int("id").autoincrement().primaryKey(),
+  institutionId: int("institutionId").notNull(),
+  createdByUserId: int("createdByUserId").notNull(),
+  title: varchar("title", { length: 255 }).notNull(),
+  courseName: varchar("courseName", { length: 255 }).notNull(),
+  unitName: varchar("unitName", { length: 255 }),
+  discipline: varchar("discipline", { length: 255 }).notNull(),
+  level: varchar("level", { length: 128 }),
+  practicalType: mysqlEnum("practicalType", ["placement", "project", "cohort_brief", "mixed"])
+    .default("project")
+    .notNull(),
+  description: text("description"),
+  learningOutcomes: text("learningOutcomes"), // JSON string
+  eligibilitySummary: text("eligibilitySummary"),
+  requiredHours: int("requiredHours"),
+  requiredDeliverables: text("requiredDeliverables"),
+  allowedDeliveryModes: text("allowedDeliveryModes"), // JSON string
+  applicationOpenAt: timestamp("applicationOpenAt"),
+  applicationCloseAt: timestamp("applicationCloseAt"),
+  practicalStartAt: timestamp("practicalStartAt"),
+  practicalEndAt: timestamp("practicalEndAt"),
+  status: mysqlEnum("status", ["draft", "active", "paused", "archived"])
+    .default("draft")
+    .notNull(),
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+  updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
+});
+
+export type CoursePathway = typeof coursePathways.$inferSelect;
+export type InsertCoursePathway = typeof coursePathways.$inferInsert;
+
+/** A student's course-linked requirement and their current practicals progress. */
+export const studentPracticalRequirements = mysqlTable("studentPracticalRequirements", {
+  id: int("id").autoincrement().primaryKey(),
+  studentUserId: int("studentUserId").notNull(),
+  coursePathwayId: int("coursePathwayId").notNull(),
+  status: mysqlEnum("status", ["not_started", "finding", "applying", "approved", "active", "completed", "not_approved"])
+    .default("finding")
+    .notNull(),
+  plannedCompletionAt: timestamp("plannedCompletionAt"),
+  notes: text("notes"),
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+  updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
+});
+
+export type StudentPracticalRequirement = typeof studentPracticalRequirements.$inferSelect;
+export type InsertStudentPracticalRequirement = typeof studentPracticalRequirements.$inferInsert;
+
+/** A business-submitted placement, industry project or cohort brief. */
+export const practicalOpportunities = mysqlTable("practicalOpportunities", {
+  id: int("id").autoincrement().primaryKey(),
+  employerId: int("employerId").notNull(),
+  createdByUserId: int("createdByUserId").notNull(),
+  type: mysqlEnum("type", ["placement", "project", "cohort_brief"]).default("project").notNull(),
+  title: varchar("title", { length: 255 }).notNull(),
+  businessNeed: text("businessNeed").notNull(),
+  description: text("description").notNull(),
+  deliveryMode: mysqlEnum("deliveryMode", ["on_site", "remote", "hybrid"]).default("hybrid").notNull(),
+  location: varchar("location", { length: 255 }),
+  proposedStartAt: timestamp("proposedStartAt"),
+  proposedEndAt: timestamp("proposedEndAt"),
+  estimatedHours: int("estimatedHours"),
+  maxParticipants: int("maxParticipants").default(1).notNull(),
+  suggestedCourseAreas: text("suggestedCourseAreas"), // JSON string
+  deliverables: text("deliverables").notNull(),
+  scopeExclusions: text("scopeExclusions"),
+  toolsProvided: text("toolsProvided"),
+  supervisorName: varchar("supervisorName", { length: 255 }).notNull(),
+  supervisorTitle: varchar("supervisorTitle", { length: 255 }),
+  supervisorEmail: varchar("supervisorEmail", { length: 320 }).notNull(),
+  supervisionCadence: varchar("supervisionCadence", { length: 128 }).notNull(),
+  accessibilityInfo: text("accessibilityInfo"),
+  paymentDetails: text("paymentDetails"),
+  safetyAcknowledged: boolean("safetyAcknowledged").default(false).notNull(),
+  status: mysqlEnum("status", ["draft", "submitted", "needs_information", "approved", "open", "matching", "active", "completed", "closed", "cancelled"])
+    .default("draft")
+    .notNull(),
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+  updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
+});
+
+export type PracticalOpportunity = typeof practicalOpportunities.$inferSelect;
+export type InsertPracticalOpportunity = typeof practicalOpportunities.$inferInsert;
+
+/** Institution review of an opportunity against a specific course pathway. */
+export const practicalOpportunityReviews = mysqlTable("practicalOpportunityReviews", {
+  id: int("id").autoincrement().primaryKey(),
+  opportunityId: int("opportunityId").notNull(),
+  coursePathwayId: int("coursePathwayId").notNull(),
+  reviewerUserId: int("reviewerUserId"),
+  status: mysqlEnum("status", ["submitted", "needs_information", "approved", "declined"])
+    .default("submitted")
+    .notNull(),
+  reviewNotes: text("reviewNotes"),
+  conditions: text("conditions"),
+  studentVisibility: boolean("studentVisibility").default(false).notNull(),
+  reviewedAt: timestamp("reviewedAt"),
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+  updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
+});
+
+export type PracticalOpportunityReview = typeof practicalOpportunityReviews.$inferSelect;
+export type InsertPracticalOpportunityReview = typeof practicalOpportunityReviews.$inferInsert;
+
+/** Student application to an institution-reviewed practical opportunity. */
+export const practicalApplications = mysqlTable("practicalApplications", {
+  id: int("id").autoincrement().primaryKey(),
+  opportunityId: int("opportunityId").notNull(),
+  coursePathwayId: int("coursePathwayId").notNull(),
+  studentUserId: int("studentUserId").notNull(),
+  availability: text("availability"),
+  statement: text("statement").notNull(),
+  skillsSummary: text("skillsSummary"),
+  status: mysqlEnum("status", ["submitted", "shortlisted", "approved", "waitlisted", "declined", "withdrawn"])
+    .default("submitted")
+    .notNull(),
+  reviewedByUserId: int("reviewedByUserId"),
+  reviewNote: text("reviewNote"),
+  reviewedAt: timestamp("reviewedAt"),
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+  updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
+});
+
+export type PracticalApplication = typeof practicalApplications.$inferSelect;
+export type InsertPracticalApplication = typeof practicalApplications.$inferInsert;
+
+/** Student-initiated host proposal awaiting business details and institution review. */
+export const studentSourcedPracticals = mysqlTable("studentSourcedPracticals", {
+  id: int("id").autoincrement().primaryKey(),
+  studentUserId: int("studentUserId").notNull(),
+  coursePathwayId: int("coursePathwayId").notNull(),
+  hostOrganisationName: varchar("hostOrganisationName", { length: 255 }).notNull(),
+  hostContactName: varchar("hostContactName", { length: 255 }),
+  hostContactEmail: varchar("hostContactEmail", { length: 320 }),
+  proposedTitle: varchar("proposedTitle", { length: 255 }).notNull(),
+  proposedDescription: text("proposedDescription").notNull(),
+  status: mysqlEnum("status", ["submitted", "awaiting_host", "under_review", "approved", "declined", "cancelled"])
+    .default("submitted")
+    .notNull(),
+  coordinatorNote: text("coordinatorNote"),
+  reviewedByUserId: int("reviewedByUserId"),
+  reviewedAt: timestamp("reviewedAt"),
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+  updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
+});
+
+export type StudentSourcedPractical = typeof studentSourcedPracticals.$inferSelect;
+export type InsertStudentSourcedPractical = typeof studentSourcedPracticals.$inferInsert;
+
+/** The course-approved, individual student practical arrangement. */
+export const practicalArrangements = mysqlTable("practicalArrangements", {
+  id: int("id").autoincrement().primaryKey(),
+  institutionId: int("institutionId").notNull(),
+  coursePathwayId: int("coursePathwayId").notNull(),
+  opportunityId: int("opportunityId").notNull(),
+  applicationId: int("applicationId"),
+  employerId: int("employerId").notNull(),
+  studentUserId: int("studentUserId").notNull(),
+  approvedByUserId: int("approvedByUserId").notNull(),
+  supervisorName: varchar("supervisorName", { length: 255 }).notNull(),
+  supervisorEmail: varchar("supervisorEmail", { length: 320 }).notNull(),
+  status: mysqlEnum("status", ["approved", "ready_to_commence", "active", "completion_pending", "completed", "cancelled"])
+    .default("approved")
+    .notNull(),
+  agreementConfirmedAt: timestamp("agreementConfirmedAt"),
+  startedAt: timestamp("startedAt"),
+  endedAt: timestamp("endedAt"),
+  cancellationReason: text("cancellationReason"),
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+  updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
+});
+
+export type PracticalArrangement = typeof practicalArrangements.$inferSelect;
+export type InsertPracticalArrangement = typeof practicalArrangements.$inferInsert;
+
+/** Course-specific milestones, evidence and supervision confirmations. */
+export const practicalMilestones = mysqlTable("practicalMilestones", {
+  id: int("id").autoincrement().primaryKey(),
+  arrangementId: int("arrangementId").notNull(),
+  title: varchar("title", { length: 255 }).notNull(),
+  description: text("description"),
+  dueAt: timestamp("dueAt"),
+  sortOrder: int("sortOrder").default(0).notNull(),
+  status: mysqlEnum("status", ["not_started", "in_progress", "submitted", "confirmed", "needs_revision"])
+    .default("not_started")
+    .notNull(),
+  evidenceUrl: text("evidenceUrl"),
+  studentNote: text("studentNote"),
+  submittedAt: timestamp("submittedAt"),
+  confirmedByUserId: int("confirmedByUserId"),
+  confirmedAt: timestamp("confirmedAt"),
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+  updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
+});
+
+export type PracticalMilestone = typeof practicalMilestones.$inferSelect;
+export type InsertPracticalMilestone = typeof practicalMilestones.$inferInsert;
+
+/** Final supervisor and coordinator confirmation of the completed practical. */
+export const practicalCompletionRecords = mysqlTable("practicalCompletionRecords", {
+  id: int("id").autoincrement().primaryKey(),
+  arrangementId: int("arrangementId").notNull().unique(),
+  studentReflection: text("studentReflection"),
+  supervisorFeedback: text("supervisorFeedback"),
+  supervisorConfirmedAt: timestamp("supervisorConfirmedAt"),
+  coordinatorUserId: int("coordinatorUserId"),
+  coordinatorConfirmedAt: timestamp("coordinatorConfirmedAt"),
+  outcomeSummary: text("outcomeSummary"),
+  status: mysqlEnum("status", ["pending", "supervisor_confirmed", "completed", "returned"])
+    .default("pending")
+    .notNull(),
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+  updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
+});
+
+export type PracticalCompletionRecord = typeof practicalCompletionRecords.$inferSelect;
+export type InsertPracticalCompletionRecord = typeof practicalCompletionRecords.$inferInsert;
+
+/** Structured safety, wellbeing or conduct concerns that require institution ownership. */
+export const practicalConcerns = mysqlTable("practicalConcerns", {
+  id: int("id").autoincrement().primaryKey(),
+  arrangementId: int("arrangementId").notNull(),
+  raisedByUserId: int("raisedByUserId").notNull(),
+  category: mysqlEnum("category", ["safety", "wellbeing", "conduct", "scope_change", "other"])
+    .default("other")
+    .notNull(),
+  description: text("description").notNull(),
+  status: mysqlEnum("status", ["open", "under_review", "resolved"])
+    .default("open")
+    .notNull(),
+  assignedToUserId: int("assignedToUserId"),
+  resolution: text("resolution"),
+  resolvedAt: timestamp("resolvedAt"),
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+  updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
+});
+
+export type PracticalConcern = typeof practicalConcerns.$inferSelect;
+export type InsertPracticalConcern = typeof practicalConcerns.$inferInsert;

@@ -457,3 +457,14 @@
 - [x] LOGO3 Add employer.profile.uploadLogo tRPC mutation (saves S3 URL to employers.logoUrl)
 - [x] LOGO4 Add logo upload UI section to Business Dashboard (preview, remove, 500 KB guard, upload progress)
 - [x] LOGO5 Wire business logo URL into GET /api/redeem/:token staff redemption page co-branding
+
+## JutJut Practicals Implementation
+- [x] PRACTICALS2 Define and migrate core data model for institutions, course pathways, practical opportunities, reviews, applications, arrangements, milestones and completion records
+- [x] PRACTICALS3 Add role-aware backend procedures for course pathway setup, business opportunity submission, institution approval and student matching
+- [x] PRACTICALS4 Add backend procedures for student self-sourced opportunities, arrangement commencement, milestone updates and completion confirmation
+- [x] PRACTICALS5 Build Student Practicals dashboard: requirement overview, matched opportunity discovery, applications and active practical workspace
+- [x] PRACTICALS6 Build Business Practicals dashboard: host-a-practical guidance, opportunity builder, review status, supervisor and completion controls
+- [x] PRACTICALS7 Build Institution Practicals Hub: pathway builder, opportunity review queue, student matching and completion approval
+- [x] PRACTICALS8 Add shared status timelines, safeguards, approval messaging and concern escalation routes
+- [x] PRACTICALS9 Create Vitest coverage for practicals workflow permissions, status transitions and approval requirements
+- [ ] PRACTICALS10 Perform responsive visual verification, save checkpoint and push the JutJut Practicals implementation to GitHub

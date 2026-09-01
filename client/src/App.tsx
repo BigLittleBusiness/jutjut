@@ -23,6 +23,7 @@ import EmailPreferences from "./pages/EmailPreferences";
 import PrivacySettings from "./pages/PrivacySettings";
 import BusinessDashboard from "./pages/BusinessDashboard";
 import TeacherPortal from "./pages/TeacherPortal";
+import PracticalsHub from "./pages/PracticalsHub";
 
 function MainLayout() {
   const { isAuthenticated } = useApp();
@@ -52,6 +53,7 @@ function MainLayout() {
     "privacy-settings": "Privacy Settings — JutJut",
     "business-dashboard": "Business Dashboard — JutJut",
     "teacher-portal": "Teacher Portal — JutJut",
+    practicals: "JutJut Practicals — Real-world learning",
   };
 
   const handleNavigate = (page: string) => {
@@ -140,6 +142,7 @@ function MainLayout() {
             {currentPage === "privacy-settings" && <PrivacySettings />}
             {currentPage === "business-dashboard" && <BusinessDashboard />}
             {currentPage === "teacher-portal" && <TeacherPortal />}
+            {currentPage === "practicals" && <PracticalsHub />}
           </>
         )}
       </main>

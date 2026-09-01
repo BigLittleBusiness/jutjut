@@ -12,6 +12,7 @@ import { alumniRouter } from "./routers/alumni";
 import { vouchesRouter } from "./routers/vouches";
 import { studentRouter } from "./routers/student";
 import { teacherRouter } from "./routers/teacher";
+import { practicalsRouter } from "./routers/practicals";
 
 export const appRouter = router({
     // if you need to use socket.io, read and register route in server/_core/index.ts, all api should start with '/api/' so that the gateway can route correctly
@@ -40,6 +41,7 @@ export const appRouter = router({
   vouches: vouchesRouter,
   student: studentRouter,
   teacher: teacherRouter,
+  practicals: practicalsRouter,
 });
 
 export type AppRouter = typeof appRouter;
