@@ -476,4 +476,4 @@
 
 ## JutJut Practicals First-Visit Guidance
 - [x] PRACTICALS14 Add a concise student welcome modal on first authenticated Practicals visit, with placement application steps and persistent dismissal
-- [ ] PRACTICALS15 Test, visually verify, checkpoint and push the Practicals welcome modal to GitHub
+- [x] PRACTICALS15 Test, visually verify, checkpoint and push the Practicals welcome modal to GitHub
