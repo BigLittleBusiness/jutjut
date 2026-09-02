@@ -1,6 +1,7 @@
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useAuth } from "@/_core/hooks/useAuth";
 import { trpc } from "@/lib/trpc";
+import { dismissPracticalsWelcome, getPracticalsWelcomeStorageKey, hasSeenPracticalsWelcome } from "@/lib/practicalsWelcome";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -240,7 +241,7 @@ function ConcernDialog({ open, onOpenChange, arrangement }: { open: boolean; onO
 }
 
 function StudentPracticals() {
-  const { isAuthenticated, loading } = useAuth();
+  const { isAuthenticated, loading, user } = useAuth();
   const { data: requirements = [], isLoading: requirementsLoading } = trpc.practicals.student.requirements.useQuery(undefined, { enabled: isAuthenticated });
   const { data: opportunities = [], isLoading: opportunitiesLoading } = trpc.practicals.student.opportunities.useQuery(undefined, { enabled: isAuthenticated });
   const { data: applications = [] } = trpc.practicals.student.applications.useQuery(undefined, { enabled: isAuthenticated });
@@ -254,10 +255,41 @@ function StudentPracticals() {
   const [milestoneTarget, setMilestoneTarget] = useState<any>();
   const [completionTarget, setCompletionTarget] = useState<any>();
   const [concernTarget, setConcernTarget] = useState<any>();
+  const [welcomeOpen, setWelcomeOpen] = useState(false);
 
   const primaryRequirement = requirements[0];
   const requirementPathwayId = primaryRequirement?.pathway.id;
   const activeArrangement = arrangements.find(item => ["approved", "ready_to_commence", "active", "completion_pending"].includes(item.arrangement.status));
+  const studentUserId = user?.id;
+  const welcomeStorageKey = studentUserId ? getPracticalsWelcomeStorageKey(studentUserId) : null;
+
+  useEffect(() => {
+    if (loading || !isAuthenticated || !welcomeStorageKey || !studentUserId) return;
+    try {
+      if (!hasSeenPracticalsWelcome(window.localStorage, studentUserId)) setWelcomeOpen(true);
+    } catch {
+      // If storage is unavailable, show helpful guidance for this visit only.
+      setWelcomeOpen(true);
+    }
+  }, [isAuthenticated, loading, studentUserId, welcomeStorageKey]);
+
+  const dismissWelcome = () => {
+    try {
+      if (user?.id) dismissPracticalsWelcome(window.localStorage, user.id);
+    } catch {
+      // Continue without persistent storage rather than blocking the student.
+    }
+    setWelcomeOpen(false);
+  };
+
+  const takeWelcomeNextStep = () => {
+    dismissWelcome();
+    if (!primaryRequirement) {
+      setRequirementOpen(true);
+      return;
+    }
+    document.getElementById("practical-discovery")?.scrollIntoView({ behavior: "smooth" });
+  };
 
   if (loading) return <div className="container mx-auto py-12"><div className="h-44 rounded-2xl bg-muted animate-pulse" /></div>;
   if (!isAuthenticated) return <div className="container mx-auto py-12 text-center"><p className="text-muted-foreground">Sign in to view your JutJut Practicals workspace.</p></div>;
@@ -291,6 +323,22 @@ function StudentPracticals() {
       <MilestoneDialog open={Boolean(milestoneTarget)} onOpenChange={open => !open && setMilestoneTarget(undefined)} milestone={milestoneTarget} />
       <CompletionDialog open={Boolean(completionTarget)} onOpenChange={open => !open && setCompletionTarget(undefined)} arrangement={completionTarget} />
       <ConcernDialog open={Boolean(concernTarget)} onOpenChange={open => !open && setConcernTarget(undefined)} arrangement={concernTarget} />
+      <Dialog open={welcomeOpen} onOpenChange={open => !open && dismissWelcome()}>
+        <DialogContent className="sm:max-w-lg">
+          <DialogHeader>
+            <div className="mb-2 flex h-11 w-11 items-center justify-center rounded-xl bg-primary text-primary-foreground"><GraduationCap className="h-6 w-6" /></div>
+            <DialogTitle>Welcome to JutJut Practicals</DialogTitle>
+            <DialogDescription>Use this workspace to move from a course requirement to an approved, real-world practical.</DialogDescription>
+          </DialogHeader>
+          <ol className="space-y-3 py-2 text-sm">
+            <li className="flex gap-3"><span className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-primary/10 font-extrabold text-primary">1</span><span><strong>Link your course requirement.</strong> This matches you with the correct course pathway.</span></li>
+            <li className="flex gap-3"><span className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-primary/10 font-extrabold text-primary">2</span><span><strong>Choose an approved opportunity</strong> and submit a short application, or submit a host you found yourself.</span></li>
+            <li className="flex gap-3"><span className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-primary/10 font-extrabold text-primary">3</span><span><strong>Wait for institution approval</strong> before starting. Your coordinator confirms what counts toward your course.</span></li>
+          </ol>
+          <div className="rounded-xl border border-amber-300 bg-amber-50 p-3 text-sm text-amber-950"><strong>Important:</strong> an opportunity is not a confirmed placement until your institution approves your individual arrangement.</div>
+          <DialogFooter className="mt-2"><Button variant="outline" onClick={dismissWelcome}>I’ll explore first</Button><Button onClick={takeWelcomeNextStep}>{primaryRequirement ? "View approved opportunities" : "Link my requirement"}<ArrowRight className="ml-2 h-4 w-4" /></Button></DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
