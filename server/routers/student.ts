@@ -37,15 +37,31 @@ const studentJobsRouter = router({
 // ─── Public Drops (student-facing) ───────────────────────────────────────────
 const studentDropsRouter = router({
   /** List all active drops for The Drop page */
-  list: protectedProcedure.query(async () => {
+  list: protectedProcedure.query(async ({ ctx }) => {
     const db = await getDb();
     if (!db) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: "Database unavailable." });
-    return db
+    const activeDrops = await db
       .select()
       .from(drops)
       .where(eq(drops.status, "active"))
       .orderBy(desc(drops.createdAt))
       .limit(50);
+
+    if (activeDrops.length === 0) return [];
+    const claims = await db
+      .select({ dropId: dropClaims.dropId, redeemedAt: dropClaims.redeemedAt })
+      .from(dropClaims)
+      .where(eq(dropClaims.userId, ctx.user.id));
+    const claimByDropId = new Map(claims.map(claim => [claim.dropId, claim]));
+
+    return activeDrops.map(drop => {
+      const claim = claimByDropId.get(drop.id);
+      return {
+        ...drop,
+        claimStatus: claim?.redeemedAt ? "redeemed" as const : claim ? "claimed" as const : "available" as const,
+        isSoldOut: drop.maxClaims !== null && drop.claimCount >= drop.maxClaims,
+      };
+    });
   }),
 
   /**

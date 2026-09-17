@@ -5,6 +5,7 @@ import { useTheme } from "@/contexts/ThemeContext";
 import { Link, useLocation } from "wouter";
 import { motion, AnimatePresence } from "framer-motion";
 import { useUserRole } from "@/hooks/useUserRole";
+import { useAuth } from "@/_core/hooks/useAuth";
 
 interface NavbarProps {
   onNavigate: (page: string) => void;
@@ -12,12 +13,13 @@ interface NavbarProps {
 }
 
 export const Navbar: React.FC<NavbarProps> = ({ onNavigate, currentPage }) => {
-  const { isAuthenticated, logout, userProfile } = useApp();
+  const { userProfile } = useApp();
+  const { isAuthenticated, logout } = useAuth();
   const { theme, toggleTheme } = useTheme();
-  const { isBusiness } = useUserRole();
+  const { isBusiness, isEmployer, isInstitution, isSchool, isAdmin } = useUserRole();
   const [isOpen, setIsOpen] = useState(false);
 
-  const primaryItems = [
+  const studentItems = [
     { id: "dashboard", label: "Dashboard", icon: "fa-house" },
     { id: "my-kit", label: "My Kit", icon: "fa-briefcase" },
     { id: "jobs", label: "Job Board", icon: "fa-clipboard-list" },
@@ -25,10 +27,27 @@ export const Navbar: React.FC<NavbarProps> = ({ onNavigate, currentPage }) => {
     { id: "drops", label: "The Drop", icon: "fa-fire" },
   ];
 
-  const secondaryItems = [
+  const businessItems = [
+    { id: "employer", label: "Business Hub", icon: "fa-building" },
+    { id: "business-dashboard", label: "The Drop", icon: "fa-fire" },
+    { id: "practicals", label: "Host a Practical", icon: "fa-handshake" },
+  ];
+
+  const institutionItems = [
+    { id: "practicals", label: "Institution Workspace", icon: "fa-building-columns" },
+    { id: "school-portal", label: "School Portal", icon: "fa-school" },
+  ];
+
+  const primaryItems = isInstitution
+    ? institutionItems
+    : isEmployer
+      ? businessItems
+      : studentItems;
+
+  const secondaryItems = !isInstitution && !isEmployer ? [
     { id: "university", label: "Uni Portal", icon: "fa-graduation-cap" },
     { id: "your-way", label: "Your Way", icon: "fa-sliders" },
-  ];
+  ] : [];
 
   const allItems = [...primaryItems, ...secondaryItems];
   const [isMoreOpen, setIsMoreOpen] = useState(false);
@@ -151,17 +170,19 @@ export const Navbar: React.FC<NavbarProps> = ({ onNavigate, currentPage }) => {
 
           {/* Actions / Theme Toggle / Profile */}
         <div className="flex items-center gap-3">
-          {/* Brand Guidelines Link */}
-          <a
-            href="/brand-assets.html"
-            target="_blank"
-            rel="noopener noreferrer"
-            className="hidden sm:flex h-10 px-3 brutal-border rounded-xl items-center justify-center bg-background text-foreground hover:bg-accent brutal-shadow font-bold text-xs gap-1.5"
-            title="View Brand Assets Guidelines"
-          >
-            <i className="fa-solid fa-palette text-primary"></i>
-            <span>Brand Assets</span>
-          </a>
+          {/* Brand guidance is an internal staff resource, not a student action. */}
+          {isAdmin && (
+            <a
+              href="/brand-assets.html"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="hidden sm:flex h-10 px-3 brutal-border rounded-xl items-center justify-center bg-background text-foreground hover:bg-accent brutal-shadow font-bold text-xs gap-1.5"
+              title="View Brand Assets Guidelines"
+            >
+              <i className="fa-solid fa-palette text-primary"></i>
+              <span>Brand Assets</span>
+            </a>
+          )}
           {/* Dark Mode Toggle */}
           <button
             onClick={toggleTheme}
@@ -239,30 +260,26 @@ export const Navbar: React.FC<NavbarProps> = ({ onNavigate, currentPage }) => {
                           <i className="fa-solid fa-envelope w-4 text-center text-primary"></i>
                           <span>Email Preferences</span>
                         </button>
-                        {/* Business Dashboard — only shown to employer/business users */}
+                        {/* Business navigation — visible only to an active business profile. */}
                         {isBusiness && (
                           <button
-                            onClick={() => { handleNavClick("business-dashboard"); setIsProfileOpen(false); }}
+                            onClick={() => { handleNavClick("employer"); setIsProfileOpen(false); }}
                             className="w-full px-3 py-2 rounded-lg font-bold flex items-center gap-2.5 transition-all text-left hover:bg-accent text-muted-foreground hover:text-foreground"
                           >
-                            <i className="fa-solid fa-chart-bar w-4 text-center text-primary"></i>
-                            <span>Drop Analytics</span>
+                            <i className="fa-solid fa-building w-4 text-center text-primary"></i>
+                            <span>Business Hub</span>
                           </button>
                         )}
-                        {/* Teacher Portal — accessible to all authenticated users */}
-                        <button
-                          onClick={() => { handleNavClick("teacher-portal"); setIsProfileOpen(false); }}
-                          className="w-full px-3 py-2 rounded-lg font-bold flex items-center gap-2.5 transition-all text-left hover:bg-accent text-muted-foreground hover:text-foreground"
-                        >
-                          <i className="fa-solid fa-chalkboard-teacher w-4 text-center text-primary"></i>
-                          <span>Teacher Portal</span>
-                        </button>
+                        {isBusiness && <button onClick={() => { handleNavClick("business-dashboard"); setIsProfileOpen(false); }} className="w-full px-3 py-2 rounded-lg font-bold flex items-center gap-2.5 transition-all text-left hover:bg-accent text-muted-foreground hover:text-foreground"><i className="fa-solid fa-fire w-4 text-center text-primary"></i><span>The Drop campaigns</span></button>}
+                        {isInstitution && <button onClick={() => { handleNavClick("practicals"); setIsProfileOpen(false); }} className="w-full px-3 py-2 rounded-lg font-bold flex items-center gap-2.5 transition-all text-left hover:bg-accent text-muted-foreground hover:text-foreground"><i className="fa-solid fa-building-columns w-4 text-center text-primary"></i><span>Institution workspace</span></button>}
+                        {/* Teaching tools are limited to approved education roles. */}
+                        {(isSchool || isInstitution || isAdmin) && <button onClick={() => { handleNavClick("teacher-portal"); setIsProfileOpen(false); }} className="w-full px-3 py-2 rounded-lg font-bold flex items-center gap-2.5 transition-all text-left hover:bg-accent text-muted-foreground hover:text-foreground"><i className="fa-solid fa-chalkboard-teacher w-4 text-center text-primary"></i><span>Teacher Portal</span></button>}
                         {/* Divider */}
                         <div className="border-t border-border my-0.5" />
 
                         {/* Logout */}
                         <button
-                          onClick={() => { logout(); setIsProfileOpen(false); }}
+                          onClick={() => { void logout(); setIsProfileOpen(false); }}
                           className="w-full px-3 py-2 rounded-lg font-bold flex items-center gap-2.5 transition-all text-left hover:bg-destructive/10 text-destructive"
                         >
                           <i className="fa-solid fa-right-from-bracket w-4 text-center"></i>
@@ -359,23 +376,17 @@ export const Navbar: React.FC<NavbarProps> = ({ onNavigate, currentPage }) => {
             <i className="fa-solid fa-envelope w-5 text-center text-primary"></i>
             <span>Email Preferences</span>
           </button>
-                    {isBusiness && (
+          {isBusiness && (
             <button
-              onClick={() => handleNavClick("business-dashboard")}
+              onClick={() => handleNavClick("employer")}
               className="w-full p-2.5 rounded-lg font-bold flex items-center gap-3 hover:bg-accent text-left text-muted-foreground hover:text-foreground transition-all"
             >
-              <i className="fa-solid fa-chart-bar w-5 text-center text-primary"></i>
-              <span>Drop Analytics</span>
+              <i className="fa-solid fa-building w-5 text-center text-primary"></i>
+              <span>Business Hub</span>
             </button>
           )}
-          {/* Teacher Portal — accessible to all authenticated users */}
-          <button
-            onClick={() => handleNavClick("teacher-portal")}
-            className="w-full p-2.5 rounded-lg font-bold flex items-center gap-3 hover:bg-accent text-left text-muted-foreground hover:text-foreground transition-all"
-          >
-            <i className="fa-solid fa-chalkboard-teacher w-5 text-center text-primary"></i>
-            <span>Teacher Portal</span>
-          </button>
+          {isBusiness && <button onClick={() => handleNavClick("business-dashboard")} className="w-full p-2.5 rounded-lg font-bold flex items-center gap-3 hover:bg-accent text-left text-muted-foreground hover:text-foreground transition-all"><i className="fa-solid fa-fire w-5 text-center text-primary"></i><span>The Drop campaigns</span></button>}
+          {(isSchool || isInstitution || isAdmin) && <button onClick={() => handleNavClick("teacher-portal")} className="w-full p-2.5 rounded-lg font-bold flex items-center gap-3 hover:bg-accent text-left text-muted-foreground hover:text-foreground transition-all"><i className="fa-solid fa-chalkboard-teacher w-5 text-center text-primary"></i><span>Teacher Portal</span></button>}
           <div className="border-t border-border my-2 pt-2">
             <button
               onClick={logout}

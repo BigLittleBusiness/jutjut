@@ -17,6 +17,7 @@ vi.mock("./db.practicals", () => ({
   getInstitutionApplications: vi.fn(),
   getInstitutionArrangements: vi.fn(),
   getInstitutionByDomain: vi.fn(),
+  getInstitutionConcerns: vi.fn(),
   getInstitutionMemberForUser: vi.fn(),
   getInstitutionOpportunityReviews: vi.fn(),
   getInstitutionStudentSourcedPracticals: vi.fn(),
@@ -36,6 +37,7 @@ vi.mock("./db.practicals", () => ({
   submitCompletionReflection: vi.fn(),
   submitMilestone: vi.fn(),
   updateCoursePathwayStatus: vi.fn(),
+  updateInstitutionConcern: vi.fn(),
 }));
 
 import { appRouter } from "./routers";
@@ -165,5 +167,17 @@ describe("JutJut Practicals — permissions and approval gates", () => {
     vi.mocked(db.confirmInstitutionCompletion).mockResolvedValue({ error: "SUPERVISOR_CONFIRMATION_REQUIRED" } as any);
     const caller = appRouter.createCaller(makeContext());
     await expect(caller.practicals.institution.review.confirmCompletion({ arrangementId: 55, outcomeSummary: "The student completed the approved project and supplied the required evidence." })).rejects.toMatchObject({ code: "BAD_REQUEST" });
+  });
+
+  it("keeps a concern in the owning institution's triage workflow", async () => {
+    vi.mocked(db.getInstitutionMemberForUser).mockResolvedValue({ member: INSTITUTION_MEMBER, institution: APPROVED_INSTITUTION } as any);
+    vi.mocked(db.updateInstitutionConcern).mockResolvedValue({ success: true });
+    const caller = appRouter.createCaller(makeContext());
+    await expect(caller.practicals.institution.review.updateConcern({
+      concernId: 77,
+      status: "resolved",
+      resolution: "The coordinator reviewed the concern, agreed the support plan and documented the outcome.",
+    })).resolves.toEqual({ success: true });
+    expect(db.updateInstitutionConcern).toHaveBeenCalledWith(expect.objectContaining({ concernId: 77, institutionId: 7, coordinatorUserId: 42, status: "resolved" }));
   });
 });

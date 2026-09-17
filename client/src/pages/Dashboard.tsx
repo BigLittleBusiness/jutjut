@@ -20,6 +20,7 @@ interface DashboardProps {
 export const Dashboard: React.FC<DashboardProps> = ({ onNavigate }) => {
   const { conversations, activeChatId, setActiveChatId, sendMessage, userProfile, anonymousAvatarSetting, setAnonymousAvatarSetting, setSelectedKitUser } = useApp();
   const { user } = useAuth();
+  const isAdmin = user?.role === "admin";
   const { data: badgeCounts } = trpc.alumni.badgeCounts.useQuery(undefined, { enabled: !!user });
   const [showBadgeModal, setShowBadgeModal] = useState(false);
   const [showAdminSettings, setShowAdminSettings] = useState(false);
@@ -192,8 +193,8 @@ export const Dashboard: React.FC<DashboardProps> = ({ onNavigate }) => {
       
       {/* Left Sidebar: Quick Profile & Squads */}
       <div className="lg:col-span-3 space-y-6">
-        {/* System Admin Settings Toggle */}
-        <div className="brutal-card bg-amber-500/10 border-amber-500 brutal-shadow-amber p-4">
+        {/* System controls are deliberately absent from the student workspace. */}
+        {isAdmin && <div className="brutal-card bg-amber-500/10 border-amber-500 brutal-shadow-amber p-4">
           <button
             onClick={() => setShowAdminSettings(!showAdminSettings)}
             className="w-full text-left font-black text-xs uppercase tracking-wider flex items-center justify-between text-amber-700 dark:text-amber-400"
@@ -345,8 +346,7 @@ export const Dashboard: React.FC<DashboardProps> = ({ onNavigate }) => {
               </div>
             </div>
           )}
-        </div>
-
+        </div>}
         {/* Profile Card */}
         <div className="brutal-card brutal-shadow-teal bg-card">
           <div className="flex flex-col items-center text-center">

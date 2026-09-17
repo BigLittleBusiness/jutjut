@@ -27,6 +27,7 @@ import {
   getInstitutionApplications,
   getInstitutionArrangements,
   getInstitutionByDomain,
+  getInstitutionConcerns,
   getInstitutionMemberForUser,
   getInstitutionOpportunityReviews,
   getInstitutionStudentSourcedPracticals,
@@ -46,6 +47,7 @@ import {
   submitCompletionReflection,
   submitMilestone,
   updateCoursePathwayStatus,
+  updateInstitutionConcern,
 } from "../db.practicals";
 
 const practicalTypeSchema = z.enum(["placement", "project", "cohort_brief"]);
@@ -235,6 +237,24 @@ const institutionReviewRouter = router({
     }),
 
   arrangements: institutionProcedure.query(({ ctx }) => getInstitutionArrangements(ctx.institution.id)),
+
+  concerns: institutionProcedure.query(({ ctx }) => getInstitutionConcerns(ctx.institution.id)),
+
+  updateConcern: institutionProcedure
+    .input(z.object({
+      concernId: z.number().int().positive(),
+      status: z.enum(["under_review", "resolved"]),
+      resolution: optionalText(4000),
+    }).superRefine((value, ctx) => {
+      if (value.status === "resolved" && (!value.resolution || value.resolution.trim().length < 20)) {
+        ctx.addIssue({ code: z.ZodIssueCode.custom, path: ["resolution"], message: "Record a resolution of at least 20 characters before closing a concern." });
+      }
+    }))
+    .mutation(async ({ ctx, input }) => {
+      const result = await updateInstitutionConcern({ ...input, institutionId: ctx.institution.id, coordinatorUserId: ctx.user.id });
+      if (!result) throw new TRPCError({ code: "NOT_FOUND", message: "Concern not found for this institution." });
+      return result;
+    }),
 
   confirmCompletion: institutionProcedure
     .input(z.object({ arrangementId: z.number().int().positive(), outcomeSummary: z.string().trim().min(20).max(4000) }))

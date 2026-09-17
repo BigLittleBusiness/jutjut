@@ -3,10 +3,11 @@ import { Toaster } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import ErrorBoundary from "./components/ErrorBoundary";
 import { ThemeProvider } from "./contexts/ThemeContext";
-import { AppProvider, useApp } from "./contexts/AppContext";
+import { AppProvider } from "./contexts/AppContext";
 import { Navbar } from "./components/Navbar";
 import { useUserRole } from "./hooks/useUserRole";
-import { Login } from "./pages/Login";
+import { useAuth } from "@/_core/hooks/useAuth";
+import { getLoginUrl } from "@/const";
 import { Dashboard } from "./pages/Dashboard";
 import { MyKit } from "./pages/MyKit";
 import { JobBoard } from "./pages/JobBoard";
@@ -26,14 +27,12 @@ import TeacherPortal from "./pages/TeacherPortal";
 import PracticalsHub from "./pages/PracticalsHub";
 
 function MainLayout() {
-  const { isAuthenticated } = useApp();
+  const { isAuthenticated, loading: authLoading } = useAuth();
   const { defaultPage, loading: roleLoading } = useUserRole();
-  // Simple state-based routing for static prototype navigation
+  // Simple state-based routing for authenticated product navigation.
   const [currentPage, setCurrentPage] = useState<string>(() => {
     return isAuthenticated ? "dashboard" : "landing";
   });
-  // Preserve deep-link destination so we can route there after login
-  const [pendingDeepLink, setPendingDeepLink] = useState<string | null>(null);
 
   const PAGE_TITLES: Record<string, string> = {
     landing: "JutJut — Turn your proof into your future",
@@ -56,7 +55,20 @@ function MainLayout() {
     practicals: "JutJut Practicals — Real-world learning",
   };
 
+  const rememberDestinationAndSignIn = (page: string) => {
+    try {
+      window.sessionStorage.setItem("jutjut:after-login-page", page);
+    } catch {
+      // Continue to sign-in if session storage is unavailable.
+    }
+    window.location.assign(getLoginUrl());
+  };
+
   const handleNavigate = (page: string) => {
+    if (!isAuthenticated && page !== "landing") {
+      rememberDestinationAndSignIn(page);
+      return;
+    }
     setCurrentPage(page);
     document.title = PAGE_TITLES[page] ?? "JutJut";
   };
@@ -67,9 +79,7 @@ function MainLayout() {
       const page = (e as CustomEvent<{ page: string }>).detail?.page;
       if (!page) return;
       if (!isAuthenticated) {
-        // Remember destination, then send to login
-        setPendingDeepLink(page);
-        setCurrentPage("login");
+        rememberDestinationAndSignIn(page);
       } else {
         setCurrentPage(page);
       }
@@ -78,12 +88,24 @@ function MainLayout() {
     return () => window.removeEventListener("jutjut:navigate", handleDeepLink);
   }, [isAuthenticated]);
 
-  const handleLoginSuccess = () => {
-    // Route to the preserved deep-link destination, or fall back to role-based default
-    const destination = pendingDeepLink || defaultPage;
-    setPendingDeepLink(null);
-    setCurrentPage(destination);
-  };
+  // OAuth is the only production authentication source. Restore the task that
+  // brought the person to sign-in, then use a role-aware workspace by default.
+  useEffect(() => {
+    if (authLoading || roleLoading) return;
+    if (!isAuthenticated) {
+      if (currentPage !== "landing") setCurrentPage("landing");
+      return;
+    }
+    if (currentPage !== "landing") return;
+    let destination: string | null = null;
+    try {
+      destination = window.sessionStorage.getItem("jutjut:after-login-page");
+      window.sessionStorage.removeItem("jutjut:after-login-page");
+    } catch {
+      // The role-aware default remains a safe fallback.
+    }
+    setCurrentPage(destination && PAGE_TITLES[destination] ? destination : defaultPage);
+  }, [authLoading, roleLoading, isAuthenticated, currentPage, defaultPage]);
 
   // Sync page title on mount and when currentPage changes
   useEffect(() => {
@@ -91,7 +113,7 @@ function MainLayout() {
   }, [currentPage]);
 
   // Landing page renders without the app shell (it has its own nav/footer)
-  if (!isAuthenticated && currentPage === "landing") {
+  if (!isAuthenticated) {
     return (
       <>
         {/* Skip to main content — WCAG 2.4.1 */}
@@ -101,7 +123,7 @@ function MainLayout() {
         >
           Skip to main content
         </a>
-        <LandingPage onSignIn={() => handleNavigate("login")} />
+        <LandingPage onSignIn={() => handleNavigate("dashboard")} />
       </>
     );
   }
@@ -120,19 +142,13 @@ function MainLayout() {
       </a>
 
       <main id="main-content" className="flex-grow">
-        {!isAuthenticated ? (
-          <>
-            {currentPage === "login" && <Login onLoginSuccess={handleLoginSuccess} />}
-          </>
-        ) : (
-          <>
+        <>
             {currentPage === "dashboard" && <Dashboard onNavigate={handleNavigate} />}
             {currentPage === "my-kit" && <MyKit />}
             {currentPage === "jobs" && <JobBoard />}
             {currentPage === "drops" && <TheDrop />}
             {currentPage === "university" && <UniversityPortal />}
             {currentPage === "your-way" && <YourWay />}
-            {currentPage === "login" && <Dashboard onNavigate={handleNavigate} />}
             {currentPage === "employer" && <EmployerDashboard />}
             {currentPage === "admin-promos" && <AdminPromoCodes />}
             {currentPage === "admin-waitlist" && <AdminWaitlist onNavigate={handleNavigate} />}
@@ -143,8 +159,7 @@ function MainLayout() {
             {currentPage === "business-dashboard" && <BusinessDashboard />}
             {currentPage === "teacher-portal" && <TeacherPortal />}
             {currentPage === "practicals" && <PracticalsHub />}
-          </>
-        )}
+        </>
       </main>
 
       {/* Footer */}

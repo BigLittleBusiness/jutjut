@@ -1,453 +1,69 @@
 import React, { useState } from "react";
-import { useApp } from "@/contexts/AppContext";
 import { toast } from "sonner";
 import { trpc } from "@/lib/trpc";
 import { DropQRDisplay } from "@/components/DropQRDisplay";
 
+/**
+ * Student-facing The Drop surface. Business campaign management lives in the
+ * Business Dashboard so students never encounter an editable provider form.
+ */
 export const TheDrop: React.FC = () => {
-  const { claimDrop } = useApp();
-  // QR overlay state
-  const [qrDropId, setQrDropId] = useState<number | null>(null);
-  const [qrDropTitle, setQrDropTitle] = useState("");
+  const [qrDrop, setQrDrop] = useState<{ id: number; title: string } | null>(null);
+  const { data: drops = [], isLoading, error, refetch } = trpc.student.drops.list.useQuery();
+  const recordView = trpc.business.drops.recordView.useMutation();
 
-  // Live drops from DB
-  const { data: dbDrops = [], refetch: refetchDrops } = trpc.student.drops.list.useQuery();
-  // Map DB drops to the AppContext Drop shape for the existing UI
-  const drops = dbDrops.map(d => ({
-    id: String(d.id),
-    numericId: d.id,
-    title: d.title,
-    offer: d.description ?? "",
-    code: "",
-    countdown: d.scheduledDate
-      ? `Starts ${new Date(d.scheduledDate).toLocaleDateString("en-AU", { day: "numeric", month: "short" })}`
-      : "Live now",
-    isActive: d.status === "active",
-    date: d.scheduledDate ? new Date(d.scheduledDate).toLocaleDateString("en-AU") : "",
-    redemptionCount: d.claimCount,
-    isClaimed: false,
-  }));
-  // Drop submission mutation
-  const submitDrop = trpc.business.drops.submit.useMutation({
-    onSuccess: () => {
-      toast.success("Drop proposal submitted! Our team will review it within 48 hours.");
-      refetchDrops();
-    },
-    onError: (err) => toast.error(err.message ?? "Failed to submit drop."),
-  });
-  const [viewMode, setViewMode] = useState<"student" | "business">("student");
-
-  // Form states for business dashboard
-  const [dropTitle, setDropTitle] = useState("");
-  const [dropOffer, setDropOffer] = useState("");
-  const [dropCode, setDropCode] = useState("");
-  const [dropDate, setDropDate] = useState("");
-  const [dropImage, setDropImage] = useState<File | null>(null);
-  const [isUploading, setIsUploading] = useState(false);
-  const [uploadedImageUrl, setUploadedImageUrl] = useState("");
-
-  // Calendar States
-  const [currentDate, setCurrentDate] = useState(new Date(2026, 4, 1)); // May 2026 as starting point
-
-  const handleImageChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (!file) return;
-
-    setDropImage(file);
-    setIsUploading(true);
-
-    toast.promise(
-      new Promise((resolve) => {
-        setTimeout(() => {
-          // Simulate AWS S3 upload
-          const simulatedUrl = "https://images.unsplash.com/photo-1546069901-ba9599a7e63c?w=400&auto=format&fit=crop&q=80"; // Salad/Food drop image
-          resolve(simulatedUrl);
-        }, 1800);
-      }),
-      {
-        loading: "AWS S3 Bucket: Securely uploading offer banner image...",
-        success: (url: any) => {
-          setIsUploading(false);
-          setUploadedImageUrl(url);
-          return "Image uploaded to AWS S3 bucket successfully!";
-        },
-        error: () => {
-          setIsUploading(false);
-          return "AWS S3 Upload failed.";
-        }
-      }
-    );
-  };
-
-  const handleCreateDropSubmit = (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!dropTitle || !dropOffer || !dropCode || !dropDate) {
-      toast.error("Please fill in all fields to submit a drop proposal.");
+  const openRedemption = (drop: typeof drops[number]) => {
+    if (drop.isSoldOut) {
+      toast.info("This Drop has reached its claim limit.");
       return;
     }
-
-    // Verify 2-week lead time check
-    const selectedDate = new Date(dropDate);
-    const twoWeeksFromNow = new Date();
-    twoWeeksFromNow.setDate(twoWeeksFromNow.getDate() + 14);
-
-    if (selectedDate < twoWeeksFromNow) {
-      toast.warning("Warning: Selected date is less than the required 2-week lead time. Our team will review this expedited request.");
-    }
-
-    submitDrop.mutate({
-      title: dropTitle,
-      description: `${dropOffer}${dropCode ? ` | Code: ${dropCode}` : ""}${dropDate ? ` | Launch: ${dropDate}` : ""}`,
-    });
-
-    setDropTitle("");
-    setDropOffer("");
-    setDropCode("");
-    setDropDate("");
-    setDropImage(null);
-    setUploadedImageUrl("");
+    recordView.mutate({ dropId: drop.id });
+    setQrDrop({ id: drop.id, title: drop.title });
   };
 
-  const activeDrops = drops.filter(d => d.isActive);
-  const upcomingDrops = drops.filter(d => !d.isActive && d.countdown.includes("Starts"));
-  const pastDrops = drops.filter(d => !d.isActive && !d.countdown.includes("Starts"));
+  if (isLoading) {
+    return <div className="container mx-auto max-w-6xl px-4 py-8 space-y-5"><div className="h-36 rounded-2xl bg-muted animate-pulse" /><div className="grid gap-4 md:grid-cols-2"><div className="h-64 rounded-2xl bg-muted animate-pulse" /><div className="h-64 rounded-2xl bg-muted animate-pulse" /></div></div>;
+  }
+
+  if (error) {
+    return <div className="container mx-auto max-w-3xl px-4 py-12"><div role="alert" className="rounded-2xl border-2 border-rose-300 bg-rose-50 p-6 text-center dark:bg-rose-950/30"><p className="font-black text-lg">We could not load The Drop</p><p className="mt-2 text-sm text-muted-foreground">No offers are shown until the current list is available.</p><button onClick={() => refetch()} className="mt-5 brutal-btn bg-primary text-primary-foreground px-4 py-2 text-sm">Try again</button></div></div>;
+  }
 
   return (
-    <div className="container mx-auto px-4 py-6 max-w-5xl space-y-8">
-      
-
-      {/* Prototype banner */}
-      <div className="flex items-center gap-3 rounded-xl border-2 border-amber-400 bg-amber-50 dark:bg-amber-950/30 px-4 py-3 text-sm font-semibold text-amber-800 dark:text-amber-300">
-        <i className="fa-solid fa-flask text-amber-500 flex-shrink-0"  aria-hidden="true"/>
-        <span><strong>Prototype preview</strong> — The drops shown here are sample data. Live business perks are coming soon.</span>
-      </div>
-      {/* View Toggle */}
-      <div className="flex justify-center">
-        <div className="brutal-border rounded-xl p-1 bg-card flex gap-1.5 brutal-shadow">
-          <button
-            onClick={() => setViewMode("student")}
-            className={`px-4 py-2 rounded-lg font-bold text-xs transition-all ${
-              viewMode === "student"
-                ? "bg-primary text-primary-foreground brutal-border"
-                : "text-muted-foreground hover:text-foreground"
-            }`}
-          >
-            <i className="fa-solid fa-graduation-cap"></i> Student Perks
-          </button>
-          <button
-            onClick={() => setViewMode("business")}
-            className={`px-4 py-2 rounded-lg font-bold text-xs transition-all ${
-              viewMode === "business"
-                ? "bg-secondary text-secondary-foreground brutal-border"
-                : "text-muted-foreground hover:text-foreground"
-            }`}
-          >
-            <i className="fa-solid fa-briefcase"></i> Business Partner Hub
-          </button>
+    <div className="container mx-auto max-w-6xl px-4 py-8 space-y-8">
+      <header className="flex flex-col gap-4 md:flex-row md:items-end md:justify-between">
+        <div>
+          <div className="inline-flex items-center gap-2 rounded-full border border-secondary/50 bg-secondary/10 px-3 py-1 text-xs font-extrabold uppercase tracking-wider text-secondary-foreground"><i className="fa-solid fa-fire" aria-hidden="true" /> Student perks</div>
+          <h1 className="mt-3 text-3xl font-black tracking-tight">The Drop</h1>
+          <p className="mt-2 max-w-2xl text-muted-foreground">Live offers from JutJut business partners. Claim a listed offer once, then show its time-limited QR code to staff.</p>
         </div>
-      </div>
+        <div className="rounded-xl border-2 border-primary/20 bg-primary/5 px-4 py-3 text-sm"><span className="font-black text-primary">{drops.length}</span> live {drops.length === 1 ? "offer" : "offers"}</div>
+      </header>
 
-      {viewMode === "student" ? (
-        // STUDENT PERKS VIEW
-        <div className="space-y-8">
-          {/* Active Prominent Drop */}
-          <div className="brutal-card bg-gradient-to-br from-amber-500/10 to-amber-500/20 border-amber-500 brutal-shadow-amber p-6 rounded-2xl flex flex-col md:flex-row items-center gap-6">
-            <div className="w-full md:w-1/3 shrink-0">
-              <img
-                src="https://d2xsxph8kpxj0f.cloudfront.net/310419663031090894/jZSR8X26xXSKh5UB6X9gHJ/drop-illustration-YtzgCTqBRVLFQUTt3n7PQD.webp"
-                alt="Active Drop Burrito"
-                className="w-full h-auto rounded-xl brutal-border object-cover aspect-square"
-              />
-            </div>
-            <div className="flex-1 space-y-4 text-center md:text-left">
-              <div className="flex items-center justify-center md:justify-start gap-2">
-                <span className="bg-secondary text-secondary-foreground text-xs font-black px-3 py-1 rounded-full brutal-border uppercase tracking-wider">
-                  Live Drop
-                </span>
-                <span className="bg-destructive text-destructive-foreground text-xs font-bold px-2.5 py-0.5 rounded-full brutal-border flex items-center gap-1">
-                  <i className="fa-solid fa-clock"></i> 14h 25m left
-                </span>
-              </div>
-              <h2 className="text-3xl font-black">Chipotle Burrito Feast</h2>
-              <p className="text-sm font-semibold text-muted-foreground">
-                Claim 50% off any burrito at Chipotle. Verified JutJut students get one redemption per week. Simply claim, get your unique code, and show it at checkout.
-              </p>
+      <div className="rounded-2xl border-2 border-amber-300 bg-amber-50 p-4 text-sm text-amber-950 dark:bg-amber-950/30 dark:text-amber-100 flex gap-3"><i className="fa-solid fa-qrcode mt-0.5 text-amber-700" aria-hidden="true" /><p><strong>How it works:</strong> choose a live offer, generate your QR code when you are ready to redeem, and have staff scan it at the counter. Each listing has its own claim eligibility.</p></div>
 
-              {activeDrops[0]?.isClaimed ? (
-                <div className="p-4 bg-emerald-500/10 border-2 border-emerald-500 rounded-lg max-w-sm mx-auto md:mx-0">
-                  <p className="text-[10px] text-emerald-600 dark:text-emerald-400 font-extrabold uppercase">Claimed Successfully</p>
-                  <p className="text-2xl font-black text-foreground mt-1">CODE: STEP50</p>
-                  <p className="text-[10px] text-muted-foreground mt-1">Show this code at store checkout to redeem.</p>
-                </div>
-              ) : (
-                <button
-                  onClick={() => {
-                    const d = activeDrops[0];
-                    if (d?.numericId) {
-                      setQrDropId(d.numericId);
-                      setQrDropTitle(d.title);
-                    } else {
-                      claimDrop("drop-1");
-                    }
-                  }}
-                  className="brutal-btn bg-secondary text-secondary-foreground text-sm py-2.5 px-6"
-                >
-                  ⚡ Claim This Drop
-                </button>
-              )}
-            </div>
-          </div>
-
-          {/* Upcoming Teasers */}
-          <div className="space-y-4">
-            <h3 className="text-xl font-black">Upcoming Drops</h3>
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              {upcomingDrops.map((drop) => (
-                <div key={drop.id} className="brutal-card brutal-shadow bg-card flex justify-between items-center gap-4">
-                  <div>
-                    <span className="bg-primary/10 text-primary text-[10px] font-bold px-2 py-0.5 rounded border border-primary uppercase">
-                      Teaser
-                    </span>
-                    <h4 className="text-md font-extrabold mt-1.5">{drop.title}</h4>
-                    <p className="text-xs text-muted-foreground mt-0.5">{drop.offer}</p>
-                  </div>
-                  <span className="bg-muted text-muted-foreground text-xs font-extrabold px-3 py-1.5 rounded-lg border-2 border-border text-center shrink-0">
-                    {drop.countdown}
-                  </span>
-                </div>
-              ))}
-            </div>
-          </div>
-
-          {/* Past Drops List */}
-          <div className="space-y-4">
-            <h3 className="text-xl font-black">Past Drops</h3>
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-              {pastDrops.map((drop) => (
-                <div key={drop.id} className="brutal-card brutal-shadow bg-card opacity-70 flex flex-col justify-between h-full">
-                  <div>
-                    <div className="flex justify-between items-start mb-2">
-                      <span className="bg-muted text-muted-foreground text-[10px] font-bold px-2 py-0.5 rounded border border-border uppercase">
-                        Expired
-                      </span>
-                      <span className="text-[10px] text-muted-foreground font-bold">{drop.date}</span>
-                    </div>
-                    <h4 className="text-sm font-extrabold">{drop.title}</h4>
-                    <p className="text-xs text-muted-foreground mt-0.5">{drop.offer}</p>
-                  </div>
-                  <div className="border-t border-border mt-4 pt-3 flex justify-between items-center text-[10px] font-bold text-muted-foreground">
-                    <span>Used {drop.redemptionCount} times</span>
-                    <span className="text-emerald-600 dark:text-emerald-400">Verified Partner</span>
-                  </div>
-                </div>
-              ))}
-            </div>
-          </div>
-        </div>
+      {drops.length === 0 ? (
+        <div className="rounded-2xl border-2 border-dashed border-border bg-card/50 px-6 py-16 text-center"><div className="mx-auto flex h-14 w-14 items-center justify-center rounded-2xl bg-secondary/10 text-2xl">🎁</div><h2 className="mt-4 text-xl font-black">No Drops are live right now</h2><p className="mx-auto mt-2 max-w-md text-sm text-muted-foreground">New offers appear here only after a business campaign is approved and live. Check back soon.</p></div>
       ) : (
-        // BUSINESS PARTNER HUB VIEW
-        <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
-          {/* Create Drop Form */}
-          <div className="lg:col-span-5 space-y-6">
-            <div className="brutal-card brutal-shadow-amber bg-card">
-              <h3 className="text-lg font-black mb-4">Create A Weekly Drop</h3>
-              
-              <div className="bg-amber-500/10 border-2 border-amber-500 rounded-lg p-3 text-xs text-amber-700 dark:text-amber-400 font-semibold mb-4 flex items-start gap-2">
-                <i className="fa-solid fa-triangle-exclamation mt-0.5"></i>
-                <span>Notice: All drops require a 2-week lead time for student verification sync and approval.</span>
+        <div className="grid gap-5 md:grid-cols-2 lg:grid-cols-3">
+          {drops.map(drop => {
+            const remaining = drop.maxClaims === null ? null : Math.max(0, drop.maxClaims - drop.claimCount);
+            const redeemed = drop.claimStatus === "redeemed";
+            const claimed = drop.claimStatus === "claimed";
+            return <article key={drop.id} className="brutal-card brutal-shadow bg-card flex flex-col overflow-hidden">
+              {drop.imageUrl ? <img src={drop.imageUrl} alt="" className="h-40 w-full object-cover border-b-2 border-border" /> : <div className="flex h-40 items-center justify-center bg-gradient-to-br from-secondary/20 via-amber-100 to-primary/10 text-5xl" aria-hidden="true">🎁</div>}
+              <div className="flex flex-1 flex-col p-5">
+                <div className="flex items-start justify-between gap-3"><span className="rounded-full border border-emerald-300 bg-emerald-100 px-2.5 py-1 text-[10px] font-black uppercase tracking-wider text-emerald-800">Live Drop</span>{drop.isSoldOut ? <span className="text-xs font-bold text-rose-700">Fully claimed</span> : remaining !== null ? <span className="text-xs font-bold text-muted-foreground">{remaining} left</span> : <span className="text-xs font-bold text-muted-foreground">Limited offer</span>}</div>
+                <h2 className="mt-4 text-xl font-black leading-tight">{drop.title}</h2>
+                {drop.description && <p className="mt-2 flex-1 text-sm leading-relaxed text-muted-foreground">{drop.description}</p>}
+                <div className="mt-5 border-t-2 border-border pt-4"><p className="text-xs font-semibold text-muted-foreground">{drop.maxClaims === null ? "Available while this Drop is live." : `${drop.claimCount} of ${drop.maxClaims} claimed.`}</p>{redeemed ? <div className="mt-3 rounded-lg border border-emerald-300 bg-emerald-50 px-3 py-2 text-sm font-bold text-emerald-800">Redeemed successfully</div> : <button onClick={() => openRedemption(drop)} disabled={drop.isSoldOut || recordView.isPending} className="mt-3 w-full brutal-btn bg-secondary text-secondary-foreground px-4 py-2.5 text-sm disabled:cursor-not-allowed disabled:opacity-60">{claimed ? "Open my QR code" : drop.isSoldOut ? "Fully claimed" : "Claim this Drop"}</button>}</div>
               </div>
-
-              <form onSubmit={handleCreateDropSubmit} className="space-y-4">
-                <div>
-                  <label className="block text-xs font-extrabold uppercase mb-1">Brand/Partner Name</label>
-                  <input
-                    type="text"
-                    placeholder="e.g., Chipotle"
-                    value={dropTitle}
-                    onChange={(e) => setDropTitle(e.target.value)}
-                    className="w-full p-3 brutal-border rounded-lg bg-background text-foreground font-semibold text-sm focus:outline-none"
-                  />
-                </div>
-                <div>
-                  <label className="block text-xs font-extrabold uppercase mb-1">Offer Details</label>
-                  <input
-                    type="text"
-                    placeholder="e.g., 50% off burrito"
-                    value={dropOffer}
-                    onChange={(e) => setDropOffer(e.target.value)}
-                    className="w-full p-3 brutal-border rounded-lg bg-background text-foreground font-semibold text-sm focus:outline-none"
-                  />
-                </div>
-                <div>
-                  <label className="block text-xs font-extrabold uppercase mb-1">Promo Code</label>
-                  <input
-                    type="text"
-                    placeholder="e.g., CHIPOTLE50"
-                    value={dropCode}
-                    onChange={(e) => setDropCode(e.target.value)}
-                    className="w-full p-3 brutal-border rounded-lg bg-background text-foreground font-semibold text-sm focus:outline-none"
-                  />
-                </div>
-                <div>
-                  <label className="block text-xs font-extrabold uppercase mb-1">Launch Date</label>
-                  <input
-                    type="date"
-                    value={dropDate}
-                    onChange={(e) => setDropDate(e.target.value)}
-                    className="w-full p-3 brutal-border rounded-lg bg-background text-foreground font-semibold text-sm focus:outline-none"
-                  />
-                </div>
-                <div>
-                  <label className="block text-xs font-extrabold uppercase mb-1">Offer Banner Image (AWS S3 Upload)</label>
-                  <div className="p-3 bg-background border-2 border-dashed border-border rounded-lg text-center relative">
-                    {uploadedImageUrl ? (
-                      <div className="space-y-2">
-                        <img src={uploadedImageUrl} alt="Preview" className="h-20 mx-auto rounded object-cover border border-border" />
-                        <p className="text-[10px] text-emerald-600 font-bold"><i className="fa-solid fa-cloud-arrow-up"></i> s3://jutjut-drops/{dropImage?.name}</p>
-                      </div>
-                    ) : (
-                      <label className="cursor-pointer block py-2">
-                        <span className="text-xs font-bold text-primary hover:underline">
-                          {isUploading ? "Uploading to S3..." : "Choose Image File"}
-                        </span>
-                        <input
-                          type="file"
-                          accept="image/*"
-                          onChange={handleImageChange}
-                          className="hidden"
-                          disabled={isUploading}
-                        />
-                        <p className="text-[9px] text-muted-foreground mt-1">Saves directly to AWS S3 Bucket</p>
-                      </label>
-                    )}
-                  </div>
-                </div>
-                <button type="submit" className="w-full brutal-btn bg-secondary text-secondary-foreground py-2.5 text-sm font-bold">
-                  Submit Drop Proposal
-                </button>
-              </form>
-            </div>
-          </div>
-
-          {/* Business Dashboard Analytics & Calendar */}
-          <div className="lg:col-span-7 space-y-6">
-            {/* Calendar View */}
-            <div className="brutal-card brutal-shadow bg-card">
-              <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3 mb-4 border-b border-border pb-3">
-                <h3 className="text-sm font-black uppercase tracking-wider flex items-center gap-2">
-                  <i className="fa-solid fa-calendar-days text-primary"></i> Drop Scheduler Calendar
-                </h3>
-                
-                {/* Month/Year Navigators */}
-                <div className="flex items-center gap-1.5 bg-background brutal-border p-1 rounded-lg">
-                  <button
-                    onClick={() => {
-                      setCurrentDate(prev => new Date(prev.getFullYear(), prev.getMonth() - 1, 1));
-                    }}
-                    className="h-7 w-7 rounded hover:bg-accent flex items-center justify-center text-xs"
-                    title="Previous Month"
-                  >
-                    <i className="fa-solid fa-chevron-left"></i>
-                  </button>
-                  
-                  {/* Dropdowns for Month and Year */}
-                  <select
-                    value={currentDate.getMonth()}
-                    onChange={(e) => {
-                      setCurrentDate(prev => new Date(prev.getFullYear(), parseInt(e.target.value), 1));
-                    }}
-                    className="text-xs font-bold bg-transparent focus:outline-none cursor-pointer"
-                  >
-                    {["January", "February", "March", "April", "May", "June", "July", "August", "September", "October", "November", "December"].map((m, idx) => (
-                      <option key={m} value={idx}>{m}</option>
-                    ))}
-                  </select>
-
-                  <select
-                    value={currentDate.getFullYear()}
-                    onChange={(e) => {
-                      setCurrentDate(prev => new Date(parseInt(e.target.value), prev.getMonth(), 1));
-                    }}
-                    className="text-xs font-bold bg-transparent focus:outline-none cursor-pointer"
-                  >
-                    {[2025, 2026, 2027, 2028, 2029, 2030].map(y => (
-                      <option key={y} value={y}>{y}</option>
-                    ))}
-                  </select>
-
-                  <button
-                    onClick={() => {
-                      setCurrentDate(prev => new Date(prev.getFullYear(), prev.getMonth() + 1, 1));
-                    }}
-                    className="h-7 w-7 rounded hover:bg-accent flex items-center justify-center text-xs"
-                    title="Next Month"
-                  >
-                    <i className="fa-solid fa-chevron-right"></i>
-                  </button>
-                </div>
-              </div>
-              
-              {/* Days Grid */}
-              <div className="grid grid-cols-7 gap-1 text-center font-bold text-[10px] text-muted-foreground border-b border-border pb-2">
-                {["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"].map(d => (
-                  <span key={d}>{d}</span>
-                ))}
-              </div>
-              <div className="grid grid-cols-7 gap-1 text-center text-xs font-bold mt-2">
-                {/* Empty cells for padding of the first day of month */}
-                {Array.from({ length: new Date(currentDate.getFullYear(), currentDate.getMonth(), 1).getDay() }).map((_, i) => (
-                  <div key={`empty-${i}`} className="aspect-square"></div>
-                ))}
-                
-                {/* Month Days */}
-                {Array.from({ length: new Date(currentDate.getFullYear(), currentDate.getMonth() + 1, 0).getDate() }).map((_, i) => {
-                  const day = i + 1;
-                  // Make some mock drop dates for May 2026, otherwise dynamic mock dates
-                  const isDropDay = (currentDate.getMonth() === 4 && currentDate.getFullYear() === 2026 && (day === 2 || day === 16)) || (day % 14 === 0);
-                  return (
-                    <div
-                      key={day}
-                      className={`aspect-square flex flex-col items-center justify-center rounded border-2 border-transparent ${
-                        isDropDay
-                          ? "bg-amber-500/10 border-amber-500 text-amber-600 dark:text-amber-400"
-                          : "hover:bg-accent text-muted-foreground"
-                      }`}
-                    >
-                      <span>{day}</span>
-                      {isDropDay && <span className="h-1.5 w-1.5 bg-amber-500 rounded-full mt-0.5"></span>}
-                    </div>
-                  );
-                })}
-              </div>
-            </div>
-
-            {/* Read-Only Demo Analytics */}
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-              <div className="brutal-card brutal-shadow bg-card p-4 text-center">
-                <p className="text-[10px] text-muted-foreground uppercase font-bold">Total Redemptions</p>
-                <p className="text-3xl font-black text-primary mt-1">2,715</p>
-                <p className="text-[10px] text-emerald-600 dark:text-emerald-400 font-bold mt-1">
-                  <i className="fa-solid fa-arrow-trend-up"></i> +15% vs last week
-                </p>
-              </div>
-              <div className="brutal-card brutal-shadow bg-card p-4 text-center">
-                <p className="text-[10px] text-muted-foreground uppercase font-bold">Student Reach</p>
-                <p className="text-3xl font-black text-secondary mt-1">12,450</p>
-                <p className="text-[10px] text-emerald-600 dark:text-emerald-400 font-bold mt-1">
-                  <i className="fa-solid fa-circle-check"></i> 100% verified emails
-                </p>
-              </div>
-            </div>
-          </div>
+            </article>;
+          })}
         </div>
       )}
-      {/* QR Code Redemption Overlay */}
-      <DropQRDisplay
-        dropId={qrDropId ?? 0}
-        dropTitle={qrDropTitle}
-        open={qrDropId !== null}
-        onClose={() => setQrDropId(null)}
-      />
+
+      <DropQRDisplay dropId={qrDrop?.id ?? 0} dropTitle={qrDrop?.title ?? ""} open={qrDrop !== null} onClose={() => { setQrDrop(null); void refetch(); }} />
     </div>
   );
 };

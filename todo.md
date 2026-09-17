@@ -397,6 +397,17 @@
 - [x] R5.1 Add floating back-to-top button to LandingPage (appears after scrolling down, smooth scroll to hero)
 - [x] R5.2 Verify and fix sticky nav on LandingPage — urgency banner moved above nav so nav sticks correctly from page top
 
+## UX and ROI Improvements (September 2026)
+
+- [x] UXROI1 Use OAuth as the app shell's authentication source and restore the intended protected destination after sign-in
+- [x] UXROI2 Make global navigation and Practicals' default workspace role-aware for students, businesses and approved institutions
+- [x] UXROI3 Connect Job Board applications and views to durable backend records; remove misleading prototype listings and evidence
+- [x] UXROI4 Rebuild the student Drop view around live claim status, capacity, QR redemption, and honest empty/error states
+- [x] UXROI5 Align public job-credit pricing and launch-gated employer calls to action with the current commercial model
+- [x] UXROI6 Surface confirmed Drop redemptions, redemption rate and cost per redemption in business analytics
+- [x] UXROI7 Add an evidence-led institution review workspace with editable decision rationales, approval conditions, completion review and institution-owned concern triage
+- [x] UXROI8 Validate the work with TypeScript, full regression tests, practicals workflow coverage and public-preview inspection
+
 ## SEO & AI Indexability Fixes (July 2026)
 
 - [x] SEO1 Add robots.txt to client/public/

@@ -9,8 +9,8 @@ import { z } from "zod";
 import { protectedProcedure, router } from "../_core/trpc";
 import { getDb } from "../db";
 import { getDropAnalyticsDetail, recordDropView } from "../db";
-import { drops, dropClaims, employers } from "../../drizzle/schema";
-import { eq, desc, and, inArray, sql } from "drizzle-orm";
+import { drops, dropClaims, dropRedemptionTokens, employers } from "../../drizzle/schema";
+import { eq, desc, and, inArray, isNotNull, sql } from "drizzle-orm";
 import { notifyOwner } from "../_core/notification";
 
 // ─── Drops management ─────────────────────────────────────────────────────────
@@ -143,18 +143,34 @@ const dropsRouter = router({
       .where(eq(drops.businessId, ctx.user.id))
       .orderBy(desc(drops.createdAt));
 
+    const dropIds = ownedDrops.map(drop => drop.id);
+    const redemptionRows = dropIds.length > 0
+      ? await db
+          .select({ dropId: dropRedemptionTokens.dropId })
+          .from(dropRedemptionTokens)
+          .where(and(inArray(dropRedemptionTokens.dropId, dropIds), isNotNull(dropRedemptionTokens.redeemedAt)))
+      : [];
+    const redemptionsByDrop = new Map<number, number>();
+    redemptionRows.forEach(row => redemptionsByDrop.set(row.dropId, (redemptionsByDrop.get(row.dropId) ?? 0) + 1));
+
     return ownedDrops.map(d => {
       const claimRate = d.impressions > 0 ? Math.round((d.claimCount / d.impressions) * 10000) / 100 : 0;
       const costPerClaim = d.claimCount > 0 ? Math.round((d.sponsorshipFee / 100 / d.claimCount) * 100) / 100 : 0;
+      const redemptions = redemptionsByDrop.get(d.id) ?? 0;
+      const redemptionRate = d.claimCount > 0 ? Math.round((redemptions / d.claimCount) * 10000) / 100 : 0;
+      const costPerRedemption = redemptions > 0 ? Math.round((d.sponsorshipFee / 100 / redemptions) * 100) / 100 : 0;
       return {
         id: d.id,
         title: d.title,
         status: d.status,
         impressions: d.impressions,
         claims: d.claimCount,
+        redemptions,
         claimRate,
+        redemptionRate,
         sponsorshipFeeDollars: d.sponsorshipFee / 100,
         costPerClaim,
+        costPerRedemption,
         scheduledDate: d.scheduledDate,
         createdAt: d.createdAt,
       };

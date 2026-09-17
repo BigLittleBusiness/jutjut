@@ -2,10 +2,10 @@
  * Business Dashboard — Drop Retailer Analytics
  *
  * Provides Drop retailers with:
- * - Summary table of all their drops (impressions, claims, claim rate, cost-per-claim)
+ * - Summary table of all their drops (impressions, claims, redemptions and cost-per-redemption)
  * - Expandable detail panel per drop with:
- *   - KPI cards (impressions, claims, claim rate, cost/impression, cost/claim)
- *   - Claims over time (line chart)
+ *   - KPI cards (impressions, claims, verified redemptions and cost metrics)
+ *   - Claims and redemptions over time (line chart)
  *   - Breakdown by school (bar chart)
  *   - Breakdown by year level (bar chart)
  *   - Breakdown by postcode (table)
@@ -225,9 +225,12 @@ function DropAnalyticsDetailPanel({ dropId, onClose }: { dropId: number; onClose
   const kpis = [
     { label: "Impressions", value: drop.impressions.toLocaleString(), icon: <Eye className="w-3.5 h-3.5" /> },
     { label: "Claims", value: drop.claims.toLocaleString(), icon: <TrendingUp className="w-3.5 h-3.5" /> },
+    { label: "Redeemed", value: drop.redemptions.toLocaleString(), icon: <CheckCircle2 className="w-3.5 h-3.5" /> },
     { label: "Claim Rate", value: `${metrics.claim_rate}%`, icon: <Percent className="w-3.5 h-3.5" /> },
+    { label: "Redemption Rate", value: `${drop.claims > 0 ? ((drop.redemptions / drop.claims) * 100).toFixed(1) : "0.0"}%`, icon: <Percent className="w-3.5 h-3.5" /> },
     { label: "Cost / Impression", value: `$${metrics.cost_per_impression.toFixed(2)}`, icon: <DollarSign className="w-3.5 h-3.5" /> },
     { label: "Cost / Claim", value: `$${metrics.cost_per_claim.toFixed(2)}`, icon: <DollarSign className="w-3.5 h-3.5" /> },
+    { label: "Cost / Redemption", value: `$${metrics.cost_per_redemption.toFixed(2)}`, icon: <DollarSign className="w-3.5 h-3.5" /> },
     { label: "Spend", value: `$${(drop.sponsorship_fee / 100).toFixed(2)}`, icon: <DollarSign className="w-3.5 h-3.5" /> },
   ];
 
@@ -262,17 +265,19 @@ function DropAnalyticsDetailPanel({ dropId, onClose }: { dropId: number; onClose
         ))}
       </div>
 
-      {/* Charts row: claims over time + school breakdown */}
+      <p className="-mt-2 text-xs text-muted-foreground">A <strong>claim</strong> shows student intent. A <strong>redemption</strong> is confirmed when staff scan the student’s QR code.</p>
+
+      {/* Charts row: claims and redemptions over time + school breakdown */}
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
         {breakdowns.claims_over_time.length > 0 && (
           <div>
-            <p className="text-xs font-semibold mb-2 text-muted-foreground uppercase tracking-wider">Claims Over Time</p>
+            <p className="text-xs font-semibold mb-2 text-muted-foreground uppercase tracking-wider">Claims &amp; Redemptions Over Time</p>
             <ResponsiveContainer width="100%" height={140}>
               <LineChart
-                data={breakdowns.claims_over_time.map(p => ({
-                  label: `${p.date.slice(5)} ${String(p.hour).padStart(2, "0")}:00`,
-                  count: p.count,
-                }))}
+                data={Array.from(new Set([...breakdowns.claims_over_time, ...breakdowns.redemptions_over_time].map(p => `${p.date}:${p.hour}`))).sort().map(key => {
+                  const [date, hour] = key.split(":");
+                  return { label: `${date.slice(5)} ${hour.padStart(2, "0")}:00`, claims: breakdowns.claims_over_time.find(p => `${p.date}:${p.hour}` === key)?.count ?? 0, redemptions: breakdowns.redemptions_over_time.find(p => `${p.date}:${p.hour}` === key)?.count ?? 0 };
+                })}
                 margin={{ top: 4, right: 8, left: -20, bottom: 0 }}
               >
                 <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" />
@@ -280,9 +285,10 @@ function DropAnalyticsDetailPanel({ dropId, onClose }: { dropId: number; onClose
                 <YAxis tick={{ fontSize: 10 }} allowDecimals={false} />
                 <Tooltip
                   contentStyle={{ fontSize: 11, background: "hsl(var(--card))", border: "1px solid hsl(var(--border))" }}
-                  formatter={(v: number) => [v, "Claims"]}
+                  formatter={(v: number, name: string) => [v, name === "claims" ? "Claims" : "Redeemed"]}
                 />
-                <Line type="monotone" dataKey="count" stroke="hsl(var(--primary))" strokeWidth={2} dot={false} />
+                <Line type="monotone" dataKey="claims" name="claims" stroke="hsl(var(--primary))" strokeWidth={2} dot={false} />
+                <Line type="monotone" dataKey="redemptions" name="redemptions" stroke="#16a34a" strokeWidth={2} dot={false} />
               </LineChart>
             </ResponsiveContainer>
           </div>
@@ -695,26 +701,31 @@ function AnalyticsTab() {
   // Aggregate KPIs across all drops
   const totalImpressions = summary.reduce((s, d) => s + d.impressions, 0);
   const totalClaims = summary.reduce((s, d) => s + d.claims, 0);
+  const totalRedemptions = summary.reduce((s, d) => s + d.redemptions, 0);
   const overallClaimRate = totalImpressions > 0
     ? ((totalClaims / totalImpressions) * 100).toFixed(1)
     : "0.0";
   const totalSpend = summary.reduce((s, d) => s + (d.sponsorshipFeeDollars ?? 0), 0);
+  const overallRedemptionRate = totalClaims > 0 ? ((totalRedemptions / totalClaims) * 100).toFixed(1) : "0.0";
 
   // Chart data — one bar group per drop (truncate title for readability)
   const chartData = summary.map(d => ({
     name: d.title.length > 18 ? d.title.slice(0, 16) + "…" : d.title,
     Impressions: d.impressions,
     Claims: d.claims,
+    Redeemed: d.redemptions,
   }));
 
   return (
     <div className="space-y-5">
       {/* KPI summary row */}
-      <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+      <div className="grid grid-cols-2 sm:grid-cols-5 gap-3">
         {[
           { label: "Total Impressions", value: totalImpressions.toLocaleString(), icon: <Eye className="w-4 h-4" /> },
           { label: "Total Claims", value: totalClaims.toLocaleString(), icon: <TrendingUp className="w-4 h-4" /> },
+          { label: "Redeemed", value: totalRedemptions.toLocaleString(), icon: <CheckCircle2 className="w-4 h-4" /> },
           { label: "Overall Claim Rate", value: `${overallClaimRate}%`, icon: <Percent className="w-4 h-4" /> },
+          { label: "Claim-to-Redemption", value: `${overallRedemptionRate}%`, icon: <Percent className="w-4 h-4" /> },
           { label: "Total Spend", value: totalSpend > 0 ? `$${totalSpend.toFixed(2)}` : "—", icon: <DollarSign className="w-4 h-4" /> },
         ].map(kpi => (
           <Card key={kpi.label} className="border">
@@ -733,7 +744,7 @@ function AnalyticsTab() {
       {chartData.length > 0 && (
         <Card className="border">
           <CardHeader className="pb-2">
-            <CardTitle className="text-sm font-semibold">Impressions vs Claims by Drop</CardTitle>
+            <CardTitle className="text-sm font-semibold">Impressions, Claims &amp; Redemptions by Drop</CardTitle>
           </CardHeader>
           <CardContent>
             <ResponsiveContainer width="100%" height={220}>
@@ -751,6 +762,7 @@ function AnalyticsTab() {
                 />
                 <Bar dataKey="Impressions" fill="hsl(var(--primary))" radius={[3, 3, 0, 0]} />
                 <Bar dataKey="Claims" fill="hsl(var(--primary) / 0.4)" radius={[3, 3, 0, 0]} />
+                <Bar dataKey="Redeemed" fill="#16a34a" radius={[3, 3, 0, 0]} />
               </BarChart>
             </ResponsiveContainer>
           </CardContent>
@@ -765,8 +777,9 @@ function AnalyticsTab() {
               <th className="text-left py-2 pr-4 font-medium">Offer</th>
               <th className="text-right py-2 px-3 font-medium">Impressions</th>
               <th className="text-right py-2 px-3 font-medium">Claims</th>
+              <th className="text-right py-2 px-3 font-medium">Redeemed</th>
               <th className="text-right py-2 px-3 font-medium">Claim Rate</th>
-              <th className="text-right py-2 px-3 font-medium">Cost/Claim</th>
+              <th className="text-right py-2 px-3 font-medium">Cost/Redeemed</th>
               <th className="text-right py-2 px-3 font-medium">Status</th>
               <th className="text-right py-2 pl-3 font-medium">Date</th>
             </tr>
@@ -793,9 +806,10 @@ function AnalyticsTab() {
                   </td>
                   <td className="text-right py-2.5 px-3 tabular-nums">{d.impressions.toLocaleString()}</td>
                   <td className="text-right py-2.5 px-3 tabular-nums">{d.claims.toLocaleString()}</td>
+                  <td className="text-right py-2.5 px-3 tabular-nums">{d.redemptions.toLocaleString()}</td>
                   <td className="text-right py-2.5 px-3 tabular-nums">{d.claimRate}%</td>
                   <td className="text-right py-2.5 px-3 tabular-nums">
-                    {d.costPerClaim > 0 ? `$${d.costPerClaim.toFixed(2)}` : "—"}
+                    {d.costPerRedemption > 0 ? `$${d.costPerRedemption.toFixed(2)}` : "—"}
                   </td>
                   <td className="text-right py-2.5 px-3">
                     <Badge variant={d.status === "active" ? "default" : "secondary"}>

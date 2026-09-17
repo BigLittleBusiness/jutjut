@@ -1,6 +1,7 @@
 import React, { useState, useMemo } from "react";
 import { useApp, Job, JobCategory } from "@/contexts/AppContext";
 import { trpc } from "@/lib/trpc";
+import { toast } from "sonner";
 
 const ALL_CATEGORIES: JobCategory[] = [
   "Tutoring",
@@ -19,9 +20,9 @@ const CATEGORY_ICONS: Record<JobCategory, string> = {
 };
 
 export const JobBoard: React.FC = () => {
-  const { jobs: mockJobs, applyToJob, simplifyJobs, savedJobIds, toggleSaveJob } = useApp();
+  const { simplifyJobs, savedJobIds, toggleSaveJob } = useApp();
   // Fetch live jobs from DB (employer-posted)
-  const { data: dbJobs = [] } = trpc.student.jobs.list.useQuery();
+  const { data: dbJobs = [], isLoading, error, refetch } = trpc.student.jobs.list.useQuery();
   // Map DB jobs to the AppContext Job shape
   const dbJobsMapped: Job[] = dbJobs.map(j => ({
     id: String(j.id),
@@ -38,9 +39,10 @@ export const JobBoard: React.FC = () => {
     description: j.description ?? "",
     simplifiedDescription: j.plainDescription ?? j.description ?? "",
   }));
-  // DB jobs take priority; mock jobs fill in the rest
-  const dbJobIds = new Set(dbJobsMapped.map(j => j.id));
-  const jobs: Job[] = [...dbJobsMapped, ...mockJobs.filter(j => !dbJobIds.has(j.id))];
+  // Jobs are always live listings. An empty board is clearer and safer than
+  // showing a sample job that cannot receive a durable application.
+  const jobs: Job[] = dbJobsMapped;
+  const liveJobIds = useMemo(() => new Set(dbJobsMapped.map(job => job.id)), [dbJobsMapped]);
 
   // Tab: "all" | "saved"
   const [activeTab, setActiveTab] = useState<"all" | "saved">("all");
@@ -61,6 +63,21 @@ export const JobBoard: React.FC = () => {
 
   // Selected job for apply modal
   const [selectedJob, setSelectedJob] = useState<Job | null>(null);
+  const [completedJob, setCompletedJob] = useState<Job | null>(null);
+  const recordView = trpc.employer.jobs.recordView.useMutation();
+  const applyForJob = trpc.employer.jobs.applyForJob.useMutation({
+    onSuccess: () => {
+      if (!selectedJob) return;
+      setCompletedJob(selectedJob);
+      setSelectedJob(null);
+      toast.success("Your application has been recorded.");
+    },
+    onError: (applyError) => toast.error(applyError.message || "Your application could not be recorded. Please try again."),
+  });
+  const { data: kitPreview, isLoading: kitLoading } = trpc.employer.privacy.previewProfile.useQuery(undefined, {
+    enabled: selectedJob !== null,
+    retry: false,
+  });
 
   const toggleCategory = (cat: JobCategory) => {
     setSelectedCategories((prev) =>
@@ -136,7 +153,10 @@ export const JobBoard: React.FC = () => {
     (noCoverLetterOnly ? 1 : 0) +
     (neuroFriendlyOnly ? 1 : 0);
 
-  const handleApplyClick = (job: Job) => setSelectedJob(job);
+  const handleApplyClick = (job: Job) => {
+    if (liveJobIds.has(job.id)) recordView.mutate({ jobId: Number(job.id) });
+    setSelectedJob(job);
+  };
 
   const savedJobs = useMemo(
     () => jobs.filter((j) => savedJobIds.has(j.id)),
@@ -145,8 +165,8 @@ export const JobBoard: React.FC = () => {
 
   const handleConfirmApply = () => {
     if (selectedJob) {
-      applyToJob(selectedJob.id);
-      setSelectedJob(null);
+      if (!liveJobIds.has(selectedJob.id)) return;
+      applyForJob.mutate({ jobId: Number(selectedJob.id) });
     }
   };
 
@@ -154,11 +174,12 @@ export const JobBoard: React.FC = () => {
     <div className="container mx-auto px-4 py-6 space-y-6">
 
 
-      {/* ── Prototype banner ─────────────────────────────────────────────── */}
-      <div className="flex items-center gap-3 rounded-xl border-2 border-amber-400 bg-amber-50 dark:bg-amber-950/30 px-4 py-3 text-sm font-semibold text-amber-800 dark:text-amber-300">
-        <i className="fa-solid fa-flask text-amber-500 flex-shrink-0"  aria-hidden="true"/>
-        <span><strong>Prototype preview</strong> — Job listings shown here are sample data. Live employer postings are coming soon.</span>
-      </div>
+      {/* ── Trustworthy inventory status ───────────────────────────────── */}
+      {isLoading ? <div className="h-14 rounded-xl bg-muted animate-pulse" /> : error ? (
+        <div role="alert" className="flex flex-wrap items-center justify-between gap-3 rounded-xl border-2 border-rose-300 bg-rose-50 px-4 py-3 text-sm font-semibold text-rose-900 dark:bg-rose-950/30 dark:text-rose-100"><span><i className="fa-solid fa-circle-exclamation mr-2" />We could not load current jobs. Your saved jobs are still available locally.</span><button onClick={() => refetch()} className="brutal-btn bg-card text-foreground py-1.5 px-3 text-xs">Try again</button></div>
+      ) : (
+        <div className="flex items-center gap-3 rounded-xl border-2 border-primary/30 bg-primary/5 px-4 py-3 text-sm font-semibold text-foreground"><i className="fa-solid fa-shield-halved text-primary" aria-hidden="true"/><span><strong>Live listings only.</strong> Applying shares your available JutJut Kit and creates a record you can rely on.</span></div>
+      )}
       {/* ── Search bar + sort ─────────────────────────────────────── */}
       <div className="brutal-card brutal-shadow bg-card space-y-4">
         <div className="flex flex-col sm:flex-row gap-3">
@@ -435,9 +456,9 @@ export const JobBoard: React.FC = () => {
           {activeTab === "all" && (filteredJobs.length === 0 ? (
             <div className="brutal-card bg-card text-center py-12">
               <div className="text-4xl mb-3">🔍</div>
-              <h3 className="text-lg font-black">No jobs match your search</h3>
+              <h3 className="text-lg font-black">{jobs.length === 0 ? "No live jobs are available yet" : "No jobs match your search"}</h3>
               <p className="text-xs text-muted-foreground mt-1">
-                Try adjusting your search term, category, or filter settings.
+                {jobs.length === 0 ? "Check back soon—new employer listings will appear here when they are ready to receive applications." : "Try adjusting your search term, category, or filter settings."}
               </p>
               {activeFilterCount > 0 && (
                 <button
@@ -561,19 +582,15 @@ export const JobBoard: React.FC = () => {
 
             <div className="bg-muted p-4 rounded-lg border-2 border-border text-xs space-y-3 mb-6">
               <p className="font-extrabold text-foreground border-b border-border pb-1">
-                💼 Included in Your Application:
+                💼 Your available JutJut Kit:
               </p>
-              <div className="space-y-1 font-semibold text-muted-foreground">
-                <p className="flex items-center gap-2 text-foreground">
-                  <i className="fa-solid fa-circle-check text-emerald-500"></i> Verified Student Status
-                </p>
-                <p className="flex items-center gap-2 text-foreground">
-                  <i className="fa-solid fa-circle-check text-emerald-500"></i> Sports Achievement (Basketball Coach Vouch)
-                </p>
-                <p className="flex items-center gap-2 text-muted-foreground">
-                  <i className="fa-solid fa-circle-xmark text-muted-foreground"></i> High School Report Card (Unverified)
-                </p>
+              {kitLoading ? <div className="h-16 rounded bg-background animate-pulse" /> : <div className="space-y-1 font-semibold text-muted-foreground">
+                <p className="flex items-center gap-2 text-foreground"><i className="fa-solid fa-circle-check text-emerald-500"></i>{kitPreview?.vouches.length ?? 0} verified {kitPreview?.vouches.length === 1 ? "vouch" : "vouches"}</p>
+                <p className="flex items-center gap-2 text-foreground"><i className="fa-solid fa-circle-check text-emerald-500"></i>{kitPreview?.credentials.length ?? 0} credential{(kitPreview?.credentials.length ?? 0) === 1 ? "" : "s"}</p>
+                <p className="flex items-center gap-2 text-foreground"><i className={`fa-solid ${kitPreview?.shareContact ? "fa-circle-check text-emerald-500" : "fa-circle-info text-primary"}`}></i>{kitPreview?.shareContact ? "Contact details shared with this application" : "Contact details remain private"}</p>
               </div>
+              }
+              <p className="text-[11px] leading-relaxed text-muted-foreground">Your contact-sharing choice is recorded with this application. You can change future sharing in Privacy Settings.</p>
             </div>
 
             <div className="flex gap-3">
@@ -585,11 +602,22 @@ export const JobBoard: React.FC = () => {
               </button>
               <button
                 onClick={handleConfirmApply}
+                disabled={applyForJob.isPending || kitLoading}
                 className="flex-1 brutal-btn bg-primary text-primary-foreground py-2 text-xs"
               >
-                Send My Kit
+                {applyForJob.isPending ? "Sending…" : "Send My Kit"}
               </button>
             </div>
+          </div>
+        </div>
+      )}
+      {completedJob && (
+        <div className="fixed inset-0 bg-background/80 backdrop-blur-sm z-50 flex items-center justify-center p-4" role="dialog" aria-modal="true" aria-labelledby="application-sent-title">
+          <div className="w-full max-w-md brutal-card brutal-shadow bg-card text-center">
+            <div className="h-16 w-16 rounded-full bg-emerald-500/10 text-emerald-600 flex items-center justify-center text-3xl mx-auto mb-3 brutal-border">✓</div>
+            <h3 id="application-sent-title" className="text-xl font-black">Application sent</h3>
+            <p className="mt-2 text-sm text-muted-foreground">Your JutJut Kit has been sent to <strong className="text-foreground">{completedJob.company}</strong> for {completedJob.title}.</p>
+            <button onClick={() => setCompletedJob(null)} className="mt-6 w-full brutal-btn bg-primary text-primary-foreground py-2 text-xs">Keep browsing</button>
           </div>
         </div>
       )}

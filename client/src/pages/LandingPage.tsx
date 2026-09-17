@@ -75,28 +75,28 @@ const FAQ_ITEMS = [
 // ── Pricing data ─────────────────────────────────────────────────────────────
 const PRICING = [
   {
-    name: "Starter",
+    name: "Explore",
     price: "$0",
-    period: "forever",
+    period: "to get started",
     highlight: false,
     tag: null,
-    features: ["1 active job post", "Basic applicant profiles", "Email support", "JutJut job board listing"],
+    features: ["Create your employer profile", "View the verified-student hiring model", "Plan a job, Drop or Practical", "No subscription commitment"],
   },
   {
-    name: "Growth",
-    price: "$49",
-    period: "per month",
+    name: "Single job credit",
+    price: "$15",
+    period: "per job post",
     highlight: true,
-    tag: "Most popular",
-    features: ["5 active job posts", "Full My Kit profiles", "Priority listing", "Promo code access", "Auto-repost", "Chat support"],
+    tag: "Current pricing",
+    features: ["One live job listing", "Verified student applications", "Applicant and listing performance", "No recurring subscription"],
   },
   {
-    name: "Scale",
-    price: "$129",
-    period: "per month",
+    name: "Five-job credit pack",
+    price: "$50",
+    period: "five job posts",
     highlight: false,
-    tag: null,
-    features: ["Unlimited job posts", "Verified applicants only filter", "Dedicated account manager", "Analytics dashboard", "Custom branding", "API access"],
+    tag: "Best value",
+    features: ["Five live job listings", "$10 per listing", "Verified student applications", "Use credits when you are ready"],
   },
 ];
 
@@ -321,6 +321,12 @@ export default function LandingPage({ onSignIn }: LandingPageProps) {
     document.getElementById(id)?.scrollIntoView({ behavior: "smooth" });
   };
 
+  const joinWaitlistAs = (role: "student" | "employer" | "other") => {
+    setWaitlistRole(role);
+    setWaitlistState("idle");
+    scrollTo("waitlist");
+  };
+
   /** Preserves the Practicals destination through the app's existing sign-in gate. */
   const openPracticals = () => {
     window.dispatchEvent(new CustomEvent("jutjut:navigate", { detail: { page: "practicals" } }));
@@ -527,10 +533,10 @@ export default function LandingPage({ onSignIn }: LandingPageProps) {
                 onMouseEnter={e => { e.currentTarget.style.transform = "translate(-2px,-2px)"; e.currentTarget.style.boxShadow = "6px 6px 0 #1f2937"; }}
                 onMouseLeave={e => { e.currentTarget.style.transform = ""; e.currentTarget.style.boxShadow = "4px 4px 0 #1f2937"; }}
               >🎓 I'm a student – join waitlist</button>
-              <button onClick={() => scrollTo("employers")} style={{ background: "#f59e0b", border: "2px solid #1f2937", borderRadius: 10, padding: "14px 28px", fontWeight: 800, fontSize: 15, color: "#1f2937", cursor: "pointer", boxShadow: "4px 4px 0 #1f2937", transition: "all 0.15s" }}
+              <button onClick={() => joinWaitlistAs("employer")} style={{ background: "#f59e0b", border: "2px solid #1f2937", borderRadius: 10, padding: "14px 28px", fontWeight: 800, fontSize: 15, color: "#1f2937", cursor: "pointer", boxShadow: "4px 4px 0 #1f2937", transition: "all 0.15s" }}
                 onMouseEnter={e => { e.currentTarget.style.transform = "translate(-2px,-2px)"; e.currentTarget.style.boxShadow = "6px 6px 0 #1f2937"; }}
                 onMouseLeave={e => { e.currentTarget.style.transform = ""; e.currentTarget.style.boxShadow = "4px 4px 0 #1f2937"; }}
-              >💼 I'm hiring – post a job</button>
+              >💼 I'm hiring – join employer waitlist</button>
             </div>
             <div style={{ display: "flex", gap: 20, flexWrap: "wrap", fontSize: 13, color: "#6b7280", fontWeight: 600 }}>
               <span>✅ 100% free for students</span>
@@ -739,10 +745,10 @@ export default function LandingPage({ onSignIn }: LandingPageProps) {
           </div>
           <Reveal delay={400}>
             <div style={{ textAlign: "center", marginTop: "2.5rem" }}>
-              <button onClick={() => scrollTo("pricing")} style={{ background: "#f59e0b", border: "2px solid #1f2937", borderRadius: 10, padding: "14px 32px", fontWeight: 800, fontSize: 15, color: "#1f2937", cursor: "pointer", boxShadow: "4px 4px 0 #1f2937", transition: "all 0.15s" }}
+              <button onClick={() => joinWaitlistAs("employer")} style={{ background: "#f59e0b", border: "2px solid #1f2937", borderRadius: 10, padding: "14px 32px", fontWeight: 800, fontSize: 15, color: "#1f2937", cursor: "pointer", boxShadow: "4px 4px 0 #1f2937", transition: "all 0.15s" }}
                 onMouseEnter={e => { e.currentTarget.style.transform = "translate(-2px,-2px)"; e.currentTarget.style.boxShadow = "6px 6px 0 #1f2937"; }}
                 onMouseLeave={e => { e.currentTarget.style.transform = ""; e.currentTarget.style.boxShadow = "4px 4px 0 #1f2937"; }}
-              >💼 Start hiring verified students →</button>
+              >💼 Join employer waitlist →</button>
             </div>
           </Reveal>
         </div>
@@ -804,7 +810,7 @@ export default function LandingPage({ onSignIn }: LandingPageProps) {
               <span style={{ background: "#eff6ff", border: "2px solid #3b82f6", borderRadius: 6, padding: "4px 14px", fontSize: 12, fontWeight: 800, color: "#1d4ed8", textTransform: "uppercase", letterSpacing: 1 }}>Employer &amp; Recruiter Pricing</span>
               <h2 style={{ fontSize: "clamp(1.8rem, 4vw, 2.8rem)", fontWeight: 900, marginTop: "1rem", marginBottom: "0.75rem", color: "#1f2937" }}>Pricing for employers &amp; recruiters</h2>
               <p style={{ fontSize: "1.05rem", color: "#6b7280", maxWidth: 520, margin: "0 auto" }}>
-                <strong style={{ color: "#059669" }}>Students always use JutJut for free.</strong> The plans below are for businesses and recruiters hiring on the platform. No lock-in contracts.
+                <strong style={{ color: "#059669" }}>Students always use JutJut for free.</strong> Employers buy job-post credits when they are ready to publish. No recurring subscription or lock-in contract.
               </p>
             </div>
           </Reveal>
@@ -835,10 +841,10 @@ export default function LandingPage({ onSignIn }: LandingPageProps) {
                       </div>
                     ))}
                   </div>
-                  <button onClick={() => scrollTo("waitlist")} style={{ width: "100%", background: plan.highlight ? "#0d9488" : "#fff", border: "2px solid " + (plan.highlight ? "#5eead4" : "#1f2937"), borderRadius: 10, padding: "12px", fontWeight: 800, fontSize: 14, color: plan.highlight ? "#fff" : "#1f2937", cursor: "pointer", boxShadow: "3px 3px 0 " + (plan.highlight ? "#5eead4" : "#1f2937"), transition: "all 0.15s" }}
+                  <button onClick={() => joinWaitlistAs("employer")} style={{ width: "100%", background: plan.highlight ? "#0d9488" : "#fff", border: "2px solid " + (plan.highlight ? "#5eead4" : "#1f2937"), borderRadius: 10, padding: "12px", fontWeight: 800, fontSize: 14, color: plan.highlight ? "#fff" : "#1f2937", cursor: "pointer", boxShadow: "3px 3px 0 " + (plan.highlight ? "#5eead4" : "#1f2937"), transition: "all 0.15s" }}
                     onMouseEnter={e => { e.currentTarget.style.transform = "translate(-1px,-1px)"; }}
                     onMouseLeave={e => { e.currentTarget.style.transform = ""; }}
-                  >{plan.name === "Starter" ? "Start for free" : plan.name === "Growth" ? "Start free trial" : "Contact sales"}</button>
+                  >Join employer waitlist</button>
                 </div>
               </Reveal>
             ))}
@@ -907,13 +913,15 @@ export default function LandingPage({ onSignIn }: LandingPageProps) {
                 <div style={{ border: "2px solid #1f2937", borderRadius: 12, overflow: "hidden", boxShadow: faqOpen === i ? "4px 4px 0 #0d9488" : "3px 3px 0 #1f2937", transition: "box-shadow 0.2s" }}>
                   <button
                     onClick={() => setFaqOpen(faqOpen === i ? null : i)}
+                    aria-expanded={faqOpen === i}
+                    aria-controls={`faq-answer-${i}`}
                     style={{ width: "100%", background: faqOpen === i ? "#f0fdf9" : "#fff", border: "none", padding: "1.1rem 1.25rem", display: "flex", justifyContent: "space-between", alignItems: "center", cursor: "pointer", textAlign: "left", transition: "background 0.15s" }}
                   >
                     <span style={{ fontWeight: 800, fontSize: 15, color: "#1f2937", paddingRight: "1rem" }}>{item.q}</span>
                     <span style={{ fontSize: 20, color: "#0d9488", flexShrink: 0, transform: faqOpen === i ? "rotate(45deg)" : "none", transition: "transform 0.2s", fontWeight: 900 }}>+</span>
                   </button>
                   {faqOpen === i && (
-                    <div style={{ padding: "0 1.25rem 1.25rem", background: "#f0fdf9", borderTop: "1px solid #d1fae5" }}>
+                    <div id={`faq-answer-${i}`} style={{ padding: "0 1.25rem 1.25rem", background: "#f0fdf9", borderTop: "1px solid #d1fae5" }}>
                       <p style={{ fontSize: 14, color: "#374151", lineHeight: 1.7, margin: 0, paddingTop: "0.75rem" }}>{item.a}</p>
                     </div>
                   )}
@@ -933,7 +941,7 @@ export default function LandingPage({ onSignIn }: LandingPageProps) {
               Be first when JutJut launches
             </h2>
             <p style={{ fontSize: "1.05rem", color: "#9ca3af", marginBottom: "2rem", lineHeight: 1.6 }}>
-              Be among the first to experience JutJut when we launch. We'll notify you the moment your school goes live.
+              {waitlistRole === "employer" ? "Join the employer waitlist and we’ll contact you about verified student talent, campaigns or course-linked practicals for your organisation." : "Be among the first to experience JutJut when we launch. We'll notify you the moment your school goes live."}
             </p>
             {waitlistState === "success" ? (
               <div
@@ -998,6 +1006,7 @@ export default function LandingPage({ onSignIn }: LandingPageProps) {
                 <div style={{ display: "flex", gap: 10, flexWrap: "wrap" }}>
                   <div style={{ flex: "1 1 130px" }}>
                     <input
+                      aria-label="Last name"
                       type="text"
                       placeholder="Last name"
                       value={waitlistLastName}
@@ -1014,6 +1023,7 @@ export default function LandingPage({ onSignIn }: LandingPageProps) {
                   <div style={{ flex: "1 1 140px", display: "flex", flexDirection: "column", gap: 4 }}>
                     <div style={{ position: "relative" }}>
                       <input
+                        aria-label="First name"
                         type="text"
                         placeholder="First name *"
                         value={waitlistFirstName}
@@ -1064,6 +1074,7 @@ export default function LandingPage({ onSignIn }: LandingPageProps) {
                   <div style={{ flex: "2 1 200px", display: "flex", flexDirection: "column", gap: 4 }}>
                     <div style={{ position: "relative" }}>
                       <input
+                        aria-label="Email address"
                         type="email"
                         placeholder="your@email.com *"
                         value={waitlistEmail}
@@ -1130,6 +1141,7 @@ export default function LandingPage({ onSignIn }: LandingPageProps) {
                 {/* School field — shown for students */}
                 {waitlistRole === "student" && (
                   <input
+                    aria-label="School"
                     type="text"
                     placeholder="Your school (optional)"
                     value={waitlistSchool}

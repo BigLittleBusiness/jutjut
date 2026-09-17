@@ -1,6 +1,8 @@
 import { useEffect, useMemo, useState } from "react";
 import { useAuth } from "@/_core/hooks/useAuth";
 import { trpc } from "@/lib/trpc";
+import { useUserRole } from "@/hooks/useUserRole";
+import InstitutionWorkspace from "@/pages/InstitutionWorkspace";
 import { dismissPracticalsWelcome, getPracticalsWelcomeStorageKey, hasSeenPracticalsWelcome } from "@/lib/practicalsWelcome";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -416,11 +418,20 @@ function InstitutionPracticals() {
 }
 
 export default function PracticalsHub() {
+  const { isInstitution, isEmployer, loading: roleLoading } = useUserRole();
   const [role, setRole] = useState<HubRole>("student");
+  // A provider should arrive in their operational queue, not a student view.
+  // The effect intentionally never overrides a workspace explicitly chosen in-session.
+  const [hasChosenWorkspace, setHasChosenWorkspace] = useState(false);
+  useEffect(() => {
+    if (roleLoading || hasChosenWorkspace) return;
+    if (isInstitution) setRole("institution");
+    else if (isEmployer) setRole("business");
+  }, [isInstitution, isEmployer, roleLoading, hasChosenWorkspace]);
   const tabs = useMemo(() => [
     { id: "student" as const, label: "My Practicals", icon: GraduationCap, description: "Find and complete a course-linked practical." },
     { id: "business" as const, label: "Host a Practical", icon: BriefcaseBusiness, description: "Submit a project, placement or cohort brief." },
     { id: "institution" as const, label: "Institution Hub", icon: Building2, description: "Set pathways, review and approve outcomes." },
   ], []);
-  return <div className="min-h-[calc(100vh-8rem)] bg-[radial-gradient(circle_at_top_right,rgba(13,148,136,0.12),transparent_28%),radial-gradient(circle_at_left_30%,rgba(245,158,11,0.10),transparent_22%)]"><div className="container mx-auto max-w-7xl px-4 pt-6"><div className="rounded-2xl border-2 border-border bg-card p-2 shadow-sm flex flex-col gap-2 sm:flex-row">{tabs.map(tab => { const Icon = tab.icon; const selected = role === tab.id; return <button key={tab.id} onClick={() => setRole(tab.id)} className={`flex min-w-0 flex-1 items-center gap-3 rounded-xl px-4 py-3 text-left transition-all ${selected ? "bg-primary text-primary-foreground brutal-shadow-amber" : "hover:bg-muted"}`}><Icon className="w-5 h-5 shrink-0" /><span className="min-w-0"><span className="block font-extrabold text-sm">{tab.label}</span><span className={`block truncate text-xs ${selected ? "text-primary-foreground/80" : "text-muted-foreground"}`}>{tab.description}</span></span></button>})}</div></div>{role === "student" && <StudentPracticals />}{role === "business" && <BusinessPracticals />}{role === "institution" && <InstitutionPracticals />}</div>;
+  return <div className="min-h-[calc(100vh-8rem)] bg-[radial-gradient(circle_at_top_right,rgba(13,148,136,0.12),transparent_28%),radial-gradient(circle_at_left_30%,rgba(245,158,11,0.10),transparent_22%)]"><div className="container mx-auto max-w-7xl px-4 pt-6"><div role="tablist" aria-label="JutJut Practicals workspaces" className="rounded-2xl border-2 border-border bg-card p-2 shadow-sm flex flex-col gap-2 sm:flex-row">{tabs.map(tab => { const Icon = tab.icon; const selected = role === tab.id; return <button key={tab.id} role="tab" aria-selected={selected} aria-controls={`${tab.id}-practicals-panel`} id={`${tab.id}-practicals-tab`} onClick={() => { setHasChosenWorkspace(true); setRole(tab.id); }} className={`flex min-w-0 flex-1 items-center gap-3 rounded-xl px-4 py-3 text-left transition-all ${selected ? "bg-primary text-primary-foreground brutal-shadow-amber" : "hover:bg-muted"}`}><Icon className="w-5 h-5 shrink-0" /><span className="min-w-0"><span className="block font-extrabold text-sm">{tab.label}</span><span className={`block truncate text-xs ${selected ? "text-primary-foreground/80" : "text-muted-foreground"}`}>{tab.description}</span></span></button>})}</div></div><div role="tabpanel" id={`${role}-practicals-panel`} aria-labelledby={`${role}-practicals-tab`}>{role === "student" && <StudentPracticals />}{role === "business" && <BusinessPracticals />}{role === "institution" && <InstitutionWorkspace />}</div></div>;
 }

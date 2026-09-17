@@ -658,6 +658,54 @@ export async function getInstitutionArrangements(institutionId: number) {
     .orderBy(desc(practicalArrangements.updatedAt));
 }
 
+/** Institution-owned exception queue for safety, wellbeing, conduct and scope concerns. */
+export async function getInstitutionConcerns(institutionId: number) {
+  const db = await getDb();
+  if (!db) return [];
+  return db
+    .select({
+      concern: practicalConcerns,
+      arrangement: practicalArrangements,
+      student: users,
+      opportunity: practicalOpportunities,
+      pathway: coursePathways,
+    })
+    .from(practicalConcerns)
+    .innerJoin(practicalArrangements, eq(practicalArrangements.id, practicalConcerns.arrangementId))
+    .innerJoin(users, eq(users.id, practicalArrangements.studentUserId))
+    .innerJoin(practicalOpportunities, eq(practicalOpportunities.id, practicalArrangements.opportunityId))
+    .innerJoin(coursePathways, eq(coursePathways.id, practicalArrangements.coursePathwayId))
+    .where(eq(practicalArrangements.institutionId, institutionId))
+    .orderBy(desc(practicalConcerns.updatedAt));
+}
+
+export async function updateInstitutionConcern(data: {
+  concernId: number;
+  institutionId: number;
+  coordinatorUserId: number;
+  status: "under_review" | "resolved";
+  resolution?: string | null;
+}) {
+  const db = await getDb();
+  if (!db) throw new Error("Database unavailable");
+  const rows = await db
+    .select({ id: practicalConcerns.id })
+    .from(practicalConcerns)
+    .innerJoin(practicalArrangements, eq(practicalArrangements.id, practicalConcerns.arrangementId))
+    .where(and(eq(practicalConcerns.id, data.concernId), eq(practicalArrangements.institutionId, data.institutionId)))
+    .limit(1);
+  if (!rows[0]) return null;
+
+  await db.update(practicalConcerns).set({
+    status: data.status,
+    assignedToUserId: data.coordinatorUserId,
+    resolution: data.status === "resolved" ? data.resolution ?? null : null,
+    resolvedAt: data.status === "resolved" ? new Date() : null,
+    updatedAt: new Date(),
+  }).where(eq(practicalConcerns.id, data.concernId));
+  return { success: true };
+}
+
 export async function confirmInstitutionCompletion(data: { arrangementId: number; institutionId: number; coordinatorUserId: number; outcomeSummary: string }) {
   const db = await getDb();
   if (!db) throw new Error("Database unavailable");
