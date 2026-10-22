@@ -152,7 +152,10 @@ vi.mock("./encryption", () => ({
 vi.mock("./_core/notification", () => ({
   notifyOwner: vi.fn().mockResolvedValue(true),
 }));
-
+vi.mock("./emailService", () => ({
+  sendEmail: vi.fn().mockResolvedValue({ success: true, messageId: "test-message" }),
+  sendEmailSilent: vi.fn().mockResolvedValue(undefined),
+}));
 import {
   getOverviewMetrics,
   getSignupsLast30Days,

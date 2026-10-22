@@ -12,7 +12,6 @@ import type { Express, Request, Response } from "express";
 import { ENV } from "../_core/env";
 import { logger } from "../_core/logger";
 import { verifyWebhookSignature } from "../pinpayments";
-import { adjustCredits, getPromoCode, incrementPromoCodeUsage, recordPromoRedemption } from "../db";
 
 interface PinWebhookPayload {
   event: {
@@ -67,68 +66,16 @@ export function registerPinPaymentsWebhook(app: Express) {
       logger.info({ eventType }, `[Webhook] PinPayments event: ${eventType}`);
 
       if (eventType === "charge.succeeded") {
-        await handleChargeSucceeded(payload.data);
+        // Settlement is paused until provider event identity, transaction state
+        // and credit grant are reconciled atomically. A webhook must never be a
+        // second path that grants the same browser-settled purchase twice.
+        logger.warn({ eventType }, "[Webhook] Ignored PinPayments settlement while credit purchases are disabled");
       }
 
       // Always respond 200 quickly so PinPayments doesn't retry
       res.status(200).json({ received: true });
     }
   );
-}
-
-async function handleChargeSucceeded(data: PinWebhookPayload["data"]) {
-  const meta = data.metadata ?? {};
-  const employerId = meta.employer_id ? parseInt(meta.employer_id, 10) : null;
-  const creditPackSize = meta.credit_pack_size ? parseInt(meta.credit_pack_size, 10) : null;
-  const promoCode = meta.promo_code ?? null;
-  const userId = meta.user_id ? parseInt(meta.user_id, 10) : null;
-
-  if (!employerId || !creditPackSize) {
-    logger.warn({ meta }, "[Webhook] charge.succeeded missing employer_id or credit_pack_size in metadata");
-    return;
-  }
-
-  // Add credits
-  await adjustCredits({
-    employerId,
-    amount: creditPackSize,
-    type: "purchase",
-    reference: data.token,
-    description: `Webhook: charge.succeeded — ${data.description}`,
-  });
-
-  logger.info({ creditPackSize, employerId, chargeToken: data.token }, `[Webhook] Added ${creditPackSize} credit(s) to employer ${employerId}`);
-
-  // Handle promo code bonus credits
-  if (promoCode) {
-    const promo = await getPromoCode(promoCode);
-    if (promo && promo.bonusCredits > 0) {
-      await adjustCredits({
-        employerId,
-        amount: promo.bonusCredits,
-        type: "promo_bonus",
-        reference: promo.code,
-        description: `Webhook: bonus credits from promo ${promo.code}`,
-      });
-      await incrementPromoCodeUsage(promo.id);
-      logger.info({ bonusCredits: promo.bonusCredits, promoCode: promo.code }, `[Webhook] Added ${promo.bonusCredits} bonus credit(s) from promo ${promo.code}`);
-    } else if (promo) {
-      await incrementPromoCodeUsage(promo.id);
-    }
-    // Record per-user redemption for admin detail view
-    if (promo) {
-      await recordPromoRedemption({
-        promoCodeId: promo.id,
-        promoCode: promo.code,
-        redeemedByUserId: userId,
-        redeemedByEmployerId: employerId,
-        discountType: promo.discountType,
-        discountValue: promo.discountValue,
-        bonusCreditsAwarded: promo.bonusCredits,
-        chargeToken: data.token,
-      });
-    }
-  }
 }
 
 /**

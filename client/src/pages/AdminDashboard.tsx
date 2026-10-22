@@ -861,22 +861,19 @@ function PaymentsSection() {
         </CardHeader>
         <CardContent>
           <p className="text-sm text-muted-foreground mb-4">
-            All new credit purchases will be processed through the active gateway. Existing transactions are unaffected.
-            Switching gateways takes effect immediately — ensure the corresponding API keys are configured below before switching.
+            Credit checkout, automatic rebilling and provider refunds are currently disabled while settlement controls are verified. Gateway keys may be maintained here, but no provider should be activated from this screen.
           </p>
           <div className="flex gap-3">
             <Button
               variant={activeGateway === "pin" ? "default" : "outline"}
-              disabled={setGatewayMut.isPending || activeGateway === "pin"}
-              onClick={() => switchGateway("pin")}
+              disabled
             >
               {activeGateway === "pin" ? "✓ PinPayments (active)" : "Switch to PinPayments"}
             </Button>
             <Button
               variant={activeGateway === "stripe" ? "default" : "outline"}
               style={activeGateway === "stripe" ? { background: "#635bff", borderColor: "#635bff", color: "white" } : {}}
-              disabled={setGatewayMut.isPending || activeGateway === "stripe"}
-              onClick={() => switchGateway("stripe")}
+              disabled
             >
               {activeGateway === "stripe" ? "✓ Stripe (active)" : "Switch to Stripe"}
             </Button>
@@ -951,9 +948,7 @@ function PaymentsSection() {
                 <p className="text-xs text-muted-foreground font-mono">{key}</p>
               </div>
             ))}
-            <p className="text-xs text-muted-foreground border-t pt-2">
-              Webhook endpoint: <span className="font-mono">/api/webhooks/stripe</span>
-            </p>
+            <p className="text-xs text-muted-foreground border-t pt-2">Stripe webhook settlement is not yet enabled. Do not configure a webhook endpoint as live.</p>
           </CardContent>
         </Card>
       </div>
@@ -1000,11 +995,7 @@ function PaymentsSection() {
                     </TableCell>
                     <TableCell className="text-xs">{fmt(row.transaction.createdAt)}</TableCell>
                     <TableCell>
-                      {row.transaction.status === "succeeded" && (
-                        <Button size="sm" variant="outline" onClick={() => refundMut.mutate({ transactionId: row.transaction.id })}>
-                          Refund
-                        </Button>
-                      )}
+                      {row.transaction.status === "succeeded" && <span className="text-xs font-semibold text-muted-foreground">Provider refund not enabled</span>}
                     </TableCell>
                   </TableRow>
                 ))}

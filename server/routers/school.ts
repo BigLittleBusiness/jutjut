@@ -19,6 +19,7 @@ import { adminProcedure, protectedProcedure, router } from "../_core/trpc";
 import { notifyOwner } from "../_core/notification";
 import { sendEmailSilent } from "../emailService";
 import { createNotification } from "../db.admin";
+import { getEmployerByUserId } from "../db";
 import {
   getSchoolByDomain,
   getSchoolById,
@@ -27,6 +28,8 @@ import {
   approveSchool,
   getStudentsForSchool,
   getStudentKitForSchool,
+  getStudentKitForAuthorizedSchool,
+  isStudentEnrolledInSchool,
   enrolStudentInSchool,
   getEmployersForSchools,
   createPlacement,
@@ -36,6 +39,7 @@ import {
   updatePlacementStatus,
   signPlacementAsStudent,
   getPlacementsForEmployer,
+  getPlacementsForStudent,
   updateSchoolContact,
 } from "../db.school";
 
@@ -186,8 +190,8 @@ const schoolStudentsRouter = router({
   /** View a single student's full My Kit + job applications. */
   kit: requireSchoolAccess
     .input(z.object({ studentId: z.number().int().positive() }))
-    .query(async ({ input }) => {
-      const kit = await getStudentKitForSchool(input.studentId);
+    .query(async ({ ctx, input }) => {
+      const kit = await getStudentKitForAuthorizedSchool(input.studentId, ctx.school.id);
       if (!kit) throw new TRPCError({ code: "NOT_FOUND", message: "Student not found." });
       return kit;
     }),
@@ -235,6 +239,9 @@ const schoolPlacementsRouter = router({
       })
     )
     .mutation(async ({ ctx, input }) => {
+      if (!(await isStudentEnrolledInSchool(input.studentId, ctx.school.id))) {
+        throw new TRPCError({ code: "NOT_FOUND", message: "Student not found in this school." });
+      }
       const token = randomUUID();
       await createPlacement({
         schoolId: ctx.school.id,
@@ -333,9 +340,10 @@ const schoolPlacementsRouter = router({
   /** Get placement details via employer token (for the approval email link). */
   getByToken: protectedProcedure
     .input(z.object({ token: z.string().uuid() }))
-    .query(async ({ input }) => {
+    .query(async ({ ctx, input }) => {
       const placement = await getPlacementByToken(input.token);
-      if (!placement) throw new TRPCError({ code: "NOT_FOUND" });
+      const employer = await getEmployerByUserId(ctx.user.id);
+      if (!placement || !employer || placement.employerId !== employer.id) throw new TRPCError({ code: "NOT_FOUND" });
       // Return sanitised view — no other students' data
       return placement;
     }),
@@ -352,7 +360,8 @@ const schoolPlacementsRouter = router({
     )
     .mutation(async ({ ctx, input }) => {
       const placement = await getPlacementByToken(input.token);
-      if (!placement) throw new TRPCError({ code: "NOT_FOUND" });
+      const employer = await getEmployerByUserId(ctx.user.id);
+      if (!placement || !employer || placement.employerId !== employer.id) throw new TRPCError({ code: "NOT_FOUND" });
       if (placement.status !== "pending_employer") {
         throw new TRPCError({
           code: "BAD_REQUEST",
@@ -393,8 +402,7 @@ const schoolPlacementsRouter = router({
 
   /** Student views their own placements. */
   myPlacements: protectedProcedure.query(async ({ ctx }) => {
-    const db_module = await import("../db.school");
-    return db_module.getPlacementsForEmployer(ctx.user.id); // reuse — returns by studentId effectively
+    return getPlacementsForStudent(ctx.user.id);
   }),
 
   /** Student signs the placement (final step). */

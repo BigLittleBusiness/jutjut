@@ -537,10 +537,11 @@ export const adminRouter = router({
 
     refund: adminProcedure
       .input(z.object({ transactionId: z.number().int() }))
-      .mutation(async ({ ctx, input }) => {
-        await adminUpdateTransactionStatus(input.transactionId, "refunded");
-        await log(ctx.user.id, "refund_transaction", "transaction", input.transactionId);
-        return { ok: true };
+      .mutation(async () => {
+        throw new TRPCError({
+          code: "PRECONDITION_FAILED",
+          message: "Provider-backed refunds are not enabled. This screen will not mark a transaction refunded locally.",
+        });
       }),
 
     // Gateway settings — encrypted at rest

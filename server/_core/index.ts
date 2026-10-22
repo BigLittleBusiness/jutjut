@@ -14,7 +14,6 @@ import { createContext } from "./context.js";
 import { serveStatic, setupVite } from "./vite.js";
 import { registerPinPaymentsWebhook } from "../webhooks/pinpayments.js";
 import { dropImageUploadMiddleware, businessLogoUploadMiddleware } from "../uploadHandler.js";
-import { startAutoRepostCron } from "../cron/autoRepost.js";
 import { sesWebhookHandler } from "../sesWebhook.js";
 import { adminDailySummaryHandler } from "../scheduledHandlers.js";
 import { preGraduationReminderHandler } from "../cron/preGraduationReminder.js";
@@ -119,7 +118,9 @@ async function startServer() {
   app.use(express.urlencoded({ limit: "1mb", extended: true }));
 
   // ── gzip/brotli compression ────────────────────────────────────────────────
-  app.use(compression());
+  // compression's declaration is still expressed against Express 4's handler
+  // shape; runtime middleware is compatible with Express 5.
+  app.use(compression() as unknown as express.RequestHandler);
 
 
   // ── Health check (Cloud Run startup/liveness probe) ─────────────────────────
@@ -259,7 +260,8 @@ async function startServer() {
 
   server.listen(port, () => {
     logger.info({ port }, `Server running on http://localhost:${port}/`);
-    startAutoRepostCron();
+    // Automatic repost billing remains disabled until provider settlement is
+    // fully reconciled and safe to retry. Expired listings are not recharged.
   });
 
   // ── Graceful shutdown (ECS Fargate SIGTERM / local SIGINT) ─────────────────

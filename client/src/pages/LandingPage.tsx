@@ -63,13 +63,13 @@ function Reveal({ children, delay = 0, className = "" }: { children: React.React
 
 // ── FAQ data ──────────────────────────────────────────────────────────────────
 const FAQ_ITEMS = [
-  { q: "Is JutJut really free for students?", a: "Yes — 100% free for students, forever. We make money from employers who post jobs, not from you." },
-  { q: "How does skill verification work?", a: "Your teacher, coach, or employer logs in and confirms your skill directly on JutJut. Once verified, it shows a green tick on your My Kit profile that employers can trust." },
-  { q: "What is The Drop?", a: "The Drop is our weekly perks board. Local businesses post exclusive discounts, freebies, and offers just for JutJut students. New drops every Monday." },
-  { q: "Can I use JutJut to apply for university?", a: "Yes. The YourWay portal lets you submit your verified My Kit directly to participating universities as evidence of skills and character alongside your academic results." },
-  { q: "What accessibility features does JutJut have?", a: "JutJut has Quiet Mode (reduces motion and visual clutter), Plain Language Mode (simplifies all text), and Stepped Forms (one question at a time). All features are free and always on." },
-  { q: "How do employers see my profile?", a: "When you apply for a job with one click, your My Kit — including verified skills, report card grades, and credentials — is shared with that employer. You control what is visible." },
-  { q: "Is my data safe?", a: "Your data belongs to you. We never sell it. You can delete your account and all associated data at any time from your settings." },
+  { q: "Is JutJut free for students?", a: "JutJut is not charging students during its current rollout. Any future student pricing would be communicated before it applies." },
+  { q: "How does skill verification work?", a: "A student sends a secure request to a person who knows their work. The item remains pending until that person responds; JutJut does not create a verified skill locally." },
+  { q: "What is The Drop?", a: "The Drop is a business-funded offers area. Availability, capacity and redemption conditions are set on each live listing; offers are not guaranteed to appear on a fixed weekly schedule." },
+  { q: "Can I apply to university through JutJut?", a: "Not currently. JutJut does not transmit applications, profiles or academic documents to universities until a verified institutional integration is in place." },
+  { q: "What accessibility preferences are available?", a: "You can choose reduced-motion and plain-language job-view preferences in this browser. These presentation preferences do not replace a support plan or university accommodation." },
+  { q: "What happens when I apply for a job?", a: "JutJut records your application to a live listing and records your contact-sharing preference at that time. An application does not guarantee an interview, offer or employer response." },
+  { q: "Can I manage my account data?", a: "JutJut currently provides account privacy settings. Full self-service account deletion is not yet available, so it is not represented as a completed feature." },
 ];
 
 // ── Pricing data ─────────────────────────────────────────────────────────────
@@ -77,43 +77,43 @@ const PRICING = [
   {
     name: "Explore",
     price: "$0",
-    period: "to get started",
+    period: "during the rollout",
     highlight: false,
     tag: null,
     features: ["Create your employer profile", "View the verified-student hiring model", "Plan a job, Drop or Practical", "No subscription commitment"],
   },
   {
     name: "Single job credit",
-    price: "$15",
-    period: "per job post",
+    price: "Planned",
+    period: "credit pricing",
     highlight: true,
-    tag: "Current pricing",
-    features: ["One live job listing", "Verified student applications", "Applicant and listing performance", "No recurring subscription"],
+    tag: "Checkout paused",
+    features: ["Pricing is subject to launch confirmation", "No card checkout is currently available", "No recurring subscription is enabled", "Employers can join the waitlist"],
   },
   {
     name: "Five-job credit pack",
-    price: "$50",
-    period: "five job posts",
+    price: "Planned",
+    period: "multi-listing credit pack",
     highlight: false,
-    tag: "Best value",
-    features: ["Five live job listings", "$10 per listing", "Verified student applications", "Use credits when you are ready"],
+    tag: "Not for sale yet",
+    features: ["Pack structure is subject to launch confirmation", "No automatic rebilling", "No card checkout is currently available", "Employers can register interest"],
   },
 ];
 
 // ── Student features ──────────────────────────────────────────────────────────
 const STUDENT_FEATURES = [
-  { icon: "🎓", title: "My Kit", desc: "Your verified digital portfolio. Skills, grades, credentials — all in one place, confirmed by real people." },
-  { icon: "💼", title: "Jobs Board", desc: "Part-time and casual roles matched to your skills. Apply with one click — your Kit is attached automatically." },
-  { icon: "🎁", title: "The Drop", desc: "Weekly exclusive perks from local businesses. Discounts, freebies, and offers just for JutJut students." },
-  { icon: "🏛️", title: "YourWay", desc: "Submit your verified profile directly to participating universities as evidence beyond your ATAR." },
+  { icon: "🎓", title: "My Kit", desc: "Request and track genuine skill confirmations from people who know your work." },
+  { icon: "💼", title: "Jobs Board", desc: "Browse live employer listings and record an application with clear privacy choices." },
+  { icon: "🎁", title: "The Drop", desc: "Discover live student offers with listing-specific availability and redemption conditions." },
+  { icon: "🏛️", title: "YourWay", desc: "Set local display preferences; university submission is not currently available." },
 ];
 
 // ── Employer features ─────────────────────────────────────────────────────────
 const EMPLOYER_FEATURES = [
-  { icon: "✅", title: "Verified applicants", desc: "Every student's skills are confirmed by teachers and coaches — no more guessing from a resume." },
-  { icon: "⚡", title: "One-click hiring", desc: "Students apply with their full verified Kit. You see real evidence, not just a cover letter." },
-  { icon: "🔁", title: "Auto-repost", desc: "Roles automatically re-post when they expire so you never miss a candidate." },
-  { icon: "📊", title: "Analytics", desc: "See who viewed, applied, and was hired. Understand your reach in the student market." },
+  { icon: "✅", title: "Evidence-led applications", desc: "Applications preserve the student's contact-sharing choice and use server-recorded verification outcomes." },
+  { icon: "⚡", title: "Clear application records", desc: "Students apply only to live listings, creating a durable record for the employer workflow." },
+  { icon: "⏸️", title: "No automatic billing", desc: "Credit purchases and automatic reposting remain paused until payment settlement is verified end-to-end." },
+  { icon: "📊", title: "Measured activity", desc: "Businesses can review listing views, applications and verified Drop redemptions where data exists." },
 ];
 
 // ── Trust stats ───────────────────────────────────────────────────────────────
@@ -380,7 +380,7 @@ export default function LandingPage({ onSignIn }: LandingPageProps) {
       "@type": "WebSite",
       "name": "JutJut",
       "url": "https://jutjut.com.au",
-      "description": "JutJut helps Australian students turn verified skills into jobs, university pathways, and weekly perks. Free for students. Always.",
+      "description": "JutJut is an Australian student-platform rollout for skill evidence, live jobs, course-linked practicals and business offers.",
       "potentialAction": {
         "@type": "SearchAction",
         "target": "https://jutjut.com.au/#waitlist",
@@ -393,7 +393,7 @@ export default function LandingPage({ onSignIn }: LandingPageProps) {
       "name": "JutJut",
       "url": "https://jutjut.com.au",
       "logo": "https://jutjut.com.au/favicon.svg",
-      "description": "Australian student platform for verified skills, part-time jobs, university pathways, and weekly perks.",
+      "description": "Australian student-platform rollout for genuine verification requests, live job listings, course-linked practicals and business offers.",
       "address": {
         "@type": "PostalAddress",
         "addressCountry": "AU"
@@ -429,7 +429,7 @@ export default function LandingPage({ onSignIn }: LandingPageProps) {
         "description": "Free for students"
       },
       "url": "https://jutjut.com.au",
-      "description": "Verified skills, part-time jobs, university entry, and weekly student perks for Australian students."
+      "description": "A controlled Australian rollout for skill evidence, live jobs, course-linked practicals and student offers."
     }
   ];
 
@@ -518,7 +518,7 @@ export default function LandingPage({ onSignIn }: LandingPageProps) {
           <div>
             <div style={{ display: "flex", gap: 8, marginBottom: "1.5rem", flexWrap: "wrap" }}>
               <span style={{ background: "#dcfce7", border: "2px solid #16a34a", borderRadius: 6, padding: "4px 12px", fontSize: 12, fontWeight: 800, color: "#15803d", textTransform: "uppercase", letterSpacing: 1 }}>🎓 Free for students</span>
-              <span style={{ background: "#fef9c3", border: "2px solid #ca8a04", borderRadius: 6, padding: "4px 12px", fontSize: 12, fontWeight: 800, color: "#92400e", textTransform: "uppercase", letterSpacing: 1 }}>🇦🇺 Australian owned</span>
+              <span style={{ background: "#fef9c3", border: "2px solid #ca8a04", borderRadius: 6, padding: "4px 12px", fontSize: 12, fontWeight: 800, color: "#92400e", textTransform: "uppercase", letterSpacing: 1 }}>🇦🇺 Australian-focused rollout</span>
             </div>
             <h1 style={{ fontSize: "clamp(2.2rem, 5vw, 3.5rem)", fontWeight: 900, lineHeight: 1.1, marginBottom: "1.25rem", color: "#1f2937" }}>
               Turn your proof into{" "}
@@ -526,7 +526,7 @@ export default function LandingPage({ onSignIn }: LandingPageProps) {
               – JutJut.
             </h1>
             <p style={{ fontSize: "1.15rem", color: "#4b5563", marginBottom: "2rem", lineHeight: 1.6, maxWidth: 480 }}>
-              Verified skills, part-time jobs, university entry, and weekly student perks. Free for students. Always.
+              A controlled rollout for skill evidence, live job opportunities, course-linked practicals and student offers.
             </p>
             <div style={{ display: "flex", gap: 12, flexWrap: "wrap", marginBottom: "1.5rem" }}>
               <button onClick={() => scrollTo("waitlist")} style={{ background: "#0d9488", border: "2px solid #1f2937", borderRadius: 10, padding: "14px 28px", fontWeight: 800, fontSize: 15, color: "#fff", cursor: "pointer", boxShadow: "4px 4px 0 #1f2937", transition: "all 0.15s" }}
@@ -539,8 +539,8 @@ export default function LandingPage({ onSignIn }: LandingPageProps) {
               >💼 I'm hiring – join employer waitlist</button>
             </div>
             <div style={{ display: "flex", gap: 20, flexWrap: "wrap", fontSize: 13, color: "#6b7280", fontWeight: 600 }}>
-              <span>✅ 100% free for students</span>
-              <span>✅ No credit card needed</span>
+              <span>✅ No student fees during rollout</span>
+              <span>✅ No student card checkout</span>
               <span>✅ Your data, your control</span>
             </div>
           </div>
@@ -548,7 +548,7 @@ export default function LandingPage({ onSignIn }: LandingPageProps) {
           {/* Right — My Kit mockup */}
           <div style={{ display: "flex", justifyContent: "center" }}>
             <div style={{ background: "#fff", border: "2px solid #1f2937", borderRadius: 16, padding: "1.5rem", width: "100%", maxWidth: 340, boxShadow: "6px 6px 0 #1f2937" }}>
-              <div style={{ display: "flex", alignItems: "center", gap: 12, marginBottom: "1rem" }}>
+              <p style={{ margin: "0 0 10px", fontSize: 11, fontWeight: 800, color: "#6b7280", textTransform: "uppercase", letterSpacing: 1 }}>Illustrative My Kit layout — not a live student account</p><div style={{ display: "flex", alignItems: "center", gap: 12, marginBottom: "1rem" }}>
                 <div style={{ width: 48, height: 48, background: "#0d9488", borderRadius: 12, display: "flex", alignItems: "center", justifyContent: "center", color: "#fff", fontWeight: 900, fontSize: 16, border: "2px solid #1f2937" }}>JC</div>
                 <div>
                   <div style={{ fontWeight: 800, fontSize: 16, color: "#1f2937" }}>Jamie Chen</div>
@@ -589,7 +589,7 @@ export default function LandingPage({ onSignIn }: LandingPageProps) {
             <div style={{ textAlign: "center", marginBottom: "3rem" }}>
               <span style={{ background: "#f0fdf9", border: "2px solid #0d9488", borderRadius: 6, padding: "4px 14px", fontSize: 12, fontWeight: 800, color: "#0d9488", textTransform: "uppercase", letterSpacing: 1 }}>For Students</span>
               <h2 style={{ fontSize: "clamp(1.8rem, 4vw, 2.8rem)", fontWeight: 900, marginTop: "1rem", marginBottom: "0.75rem", color: "#1f2937" }}>Everything you need to get ahead</h2>
-              <p style={{ fontSize: "1.05rem", color: "#6b7280", maxWidth: 520, margin: "0 auto" }}>One platform for verified skills, jobs, perks, and university pathways. Built for Australian students.</p>
+              <p style={{ fontSize: "1.05rem", color: "#6b7280", maxWidth: 520, margin: "0 auto" }}>One platform for real verification requests, live jobs, course-linked practicals and listing-specific offers.</p>
             </div>
           </Reveal>
           <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(220px, 1fr))", gap: "1.5rem" }}>
@@ -670,12 +670,12 @@ export default function LandingPage({ onSignIn }: LandingPageProps) {
               <span style={{ background: "#0d9488", border: "2px solid #5eead4", borderRadius: 6, padding: "4px 14px", fontSize: 12, fontWeight: 800, color: "#fff", textTransform: "uppercase", letterSpacing: 1 }}>Your Way</span>
               <h2 style={{ fontSize: "clamp(1.8rem, 4vw, 2.6rem)", fontWeight: 900, marginTop: "1rem", marginBottom: "1rem", color: "#f9fafb" }}>JutJut works the way <em>you</em> work</h2>
               <p style={{ fontSize: "1.05rem", color: "#9ca3af", lineHeight: 1.7, marginBottom: "1.5rem" }}>
-                We built JutJut with accessibility at its core — not as an afterthought. Every student deserves a platform that meets them where they are.
+                JutJut includes optional local display preferences and is continuing accessibility improvements. These controls do not replace personalised support or formal accommodations.
               </p>
               {[
                 { icon: "🔕", title: "Quiet Mode", desc: "Reduces motion, animations, and visual clutter for a calmer experience." },
-                { icon: "💬", title: "Plain Language", desc: "Simplifies all text across the platform — no jargon, no confusion." },
-                { icon: "📋", title: "Stepped Forms", desc: "One question at a time. No overwhelming walls of fields." },
+                { icon: "💬", title: "Plain-language job view", desc: "Uses an employer-provided plain description when one is available." },
+                { icon: "💻", title: "Local preference", desc: "Preferences are stored in this browser and do not send information to an institution." },
               ].map((item, i) => (
                 <div key={i} style={{ display: "flex", gap: 14, marginBottom: "1.25rem", alignItems: "flex-start" }}>
                   <div style={{ width: 40, height: 40, background: "#374151", border: "2px solid #4b5563", borderRadius: 10, display: "flex", alignItems: "center", justifyContent: "center", fontSize: 20, flexShrink: 0 }}>{item.icon}</div>
@@ -694,8 +694,8 @@ export default function LandingPage({ onSignIn }: LandingPageProps) {
               <div style={{ fontSize: 11, fontWeight: 800, color: "#9ca3af", letterSpacing: 2, textTransform: "uppercase", marginBottom: "1.25rem" }}>Accessibility Settings</div>
               {[
                 { label: "Quiet Mode", sub: "Reduces motion & clutter", on: true },
-                { label: "Plain Language", sub: "Simplify all text", on: true },
-                { label: "Stepped Forms", sub: "One question at a time", on: false },
+                { label: "Plain-language job view", sub: "Uses employer-provided plain text where available", on: true },
+                { label: "Local preference", sub: "Stored in this browser", on: false },
               ].map((s, i) => (
                 <div key={i} style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "14px 0", borderBottom: i < 2 ? "1px solid #4b5563" : "none" }}>
                   <div>
@@ -725,8 +725,8 @@ export default function LandingPage({ onSignIn }: LandingPageProps) {
           <Reveal>
             <div style={{ textAlign: "center", marginBottom: "3rem" }}>
               <span style={{ background: "#fef9c3", border: "2px solid #ca8a04", borderRadius: 6, padding: "4px 14px", fontSize: 12, fontWeight: 800, color: "#92400e", textTransform: "uppercase", letterSpacing: 1 }}>For Employers</span>
-              <h2 style={{ fontSize: "clamp(1.8rem, 4vw, 2.8rem)", fontWeight: 900, marginTop: "1rem", marginBottom: "0.75rem", color: "#1f2937" }}>Hire verified students with confidence</h2>
-              <p style={{ fontSize: "1.05rem", color: "#6b7280", maxWidth: 520, margin: "0 auto" }}>No more unverified resumes. Every JutJut applicant comes with confirmed skills, real grades, and a digital portfolio.</p>
+              <h2 style={{ fontSize: "clamp(1.8rem, 4vw, 2.8rem)", fontWeight: 900, marginTop: "1rem", marginBottom: "0.75rem", color: "#1f2937" }}>Build a considered student hiring workflow</h2>
+              <p style={{ fontSize: "1.05rem", color: "#6b7280", maxWidth: 520, margin: "0 auto" }}>JutJut is building a workflow for live student applications, recorded privacy choices and evidence that has been genuinely verified when available.</p>
             </div>
           </Reveal>
           <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(240px, 1fr))", gap: "1.5rem" }}>
@@ -760,25 +760,25 @@ export default function LandingPage({ onSignIn }: LandingPageProps) {
           <Reveal>
             <div>
               <span style={{ background: "#fdf4ff", border: "2px solid #a855f7", borderRadius: 6, padding: "4px 14px", fontSize: 12, fontWeight: 800, color: "#7e22ce", textTransform: "uppercase", letterSpacing: 1 }}>The Drop</span>
-              <h2 style={{ fontSize: "clamp(1.8rem, 4vw, 2.6rem)", fontWeight: 900, marginTop: "1rem", marginBottom: "1rem", color: "#1f2937" }}>Weekly perks, just for you</h2>
+              <h2 style={{ fontSize: "clamp(1.8rem, 4vw, 2.6rem)", fontWeight: 900, marginTop: "1rem", marginBottom: "1rem", color: "#1f2937" }}>Student offers, listing by listing</h2>
               <p style={{ fontSize: "1.05rem", color: "#6b7280", lineHeight: 1.7, marginBottom: "1.5rem" }}>
-                Every Monday, local businesses drop exclusive discounts, freebies, and offers exclusively for JutJut students. Free coffee, gym passes, software deals, and more.
+                Businesses can publish student offers with their own availability, capacity and redemption conditions. The examples below demonstrate the format only; they are not live offers.
               </p>
               <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
-                {["🎯 New drops every Monday", "🏪 Local businesses near your school", "🆓 Completely free to claim", "⏰ Limited time — first come, first served"].map((item, i) => (
+                {["🎯 Listing-specific availability", "🏪 Business-set offer terms", "🧾 Capacity shown when configured", "⏰ Time-limited QR redemption where enabled"].map((item, i) => (
                   <div key={i} style={{ display: "flex", alignItems: "center", gap: 10, fontSize: 14, fontWeight: 600, color: "#374151" }}>{item}</div>
                 ))}
               </div>
               <button onClick={() => scrollTo("waitlist")} style={{ marginTop: "1.75rem", background: "#a855f7", border: "2px solid #1f2937", borderRadius: 10, padding: "12px 28px", fontWeight: 800, fontSize: 14, color: "#fff", cursor: "pointer", boxShadow: "4px 4px 0 #1f2937", transition: "all 0.15s" }}
                 onMouseEnter={e => { e.currentTarget.style.transform = "translate(-2px,-2px)"; e.currentTarget.style.boxShadow = "6px 6px 0 #1f2937"; }}
                 onMouseLeave={e => { e.currentTarget.style.transform = ""; e.currentTarget.style.boxShadow = "4px 4px 0 #1f2937"; }}
-              >🎁 See this week's drops</button>
+              >🎁 Register interest in The Drop</button>
             </div>
           </Reveal>
 
           {/* Drop cards mockup */}
           <Reveal delay={150}>
-            <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
+            <div style={{ display: "flex", flexDirection: "column", gap: 12 }}><p style={{ margin: "0", fontSize: 11, fontWeight: 800, color: "#6b7280", textTransform: "uppercase", letterSpacing: 1 }}>Illustrative offer layout — not live offers</p>
               {[
                 { emoji: "☕", title: "Free Coffee", biz: "The Grind Café", tag: "Expires in 2 days", tagColor: "#ef4444", claimed: "47 / 50 claimed" },
                 { emoji: "💻", title: "3 months free Canva Pro", biz: "Canva", tag: "New this week", tagColor: "#0d9488", claimed: "12 / 100 claimed" },
@@ -810,7 +810,7 @@ export default function LandingPage({ onSignIn }: LandingPageProps) {
               <span style={{ background: "#eff6ff", border: "2px solid #3b82f6", borderRadius: 6, padding: "4px 14px", fontSize: 12, fontWeight: 800, color: "#1d4ed8", textTransform: "uppercase", letterSpacing: 1 }}>Employer &amp; Recruiter Pricing</span>
               <h2 style={{ fontSize: "clamp(1.8rem, 4vw, 2.8rem)", fontWeight: 900, marginTop: "1rem", marginBottom: "0.75rem", color: "#1f2937" }}>Pricing for employers &amp; recruiters</h2>
               <p style={{ fontSize: "1.05rem", color: "#6b7280", maxWidth: 520, margin: "0 auto" }}>
-                <strong style={{ color: "#059669" }}>Students always use JutJut for free.</strong> Employers buy job-post credits when they are ready to publish. No recurring subscription or lock-in contract.
+                <strong style={{ color: "#059669" }}>JutJut is in a controlled rollout.</strong> Employer pricing is indicative only; card checkout and automatic rebilling are currently paused while payment controls are verified.
               </p>
             </div>
           </Reveal>
@@ -880,9 +880,9 @@ export default function LandingPage({ onSignIn }: LandingPageProps) {
           </Reveal>
           <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(280px, 1fr))", gap: "1.5rem" }}>
             {[
-              { emoji: "🎓", scenario: "A Year 12 student applies for a part-time café role. Her teacher has verified her customer service and maths skills on JutJut. The employer can see the verification instantly — no reference calls needed.", label: "Student → Local employer", tag: "My Kit scenario" },
-              { emoji: "🏫", scenario: "A school counsellor helps a student with dyslexia use Plain Language Mode to complete his university application through the YourWay portal — at his own pace, one step at a time.", label: "Student → University pathway", tag: "YourWay + Accessibility scenario" },
-              { emoji: "☕", scenario: "A local café partners with JutJut to post a weekly free coffee drop. Students redeem it in-store, driving foot traffic and building a loyal student customer base before they've spent a cent on advertising.", label: "Local business → Student community", tag: "The Drop scenario" },
+              { emoji: "🎓", scenario: "A Year 12 student requests a genuine customer-service verification from a supervisor, then applies to a live listing. JutJut records the application and the student's contact-sharing choice.", label: "Student → Local employer", tag: "Illustrative workflow" },
+              { emoji: "🏫", scenario: "A student uses reduced-motion and plain-language job-view preferences while exploring the platform. These browser preferences do not create an accommodation or submit data to a university.", label: "Student → Accessible presentation", tag: "Illustrative workflow" },
+              { emoji: "☕", scenario: "A local café configures an approved offer with a claim limit and QR redemption. Students can only see it after the listing is live, and redemptions are recorded when confirmed by staff.", label: "Local business → Student community", tag: "Illustrative workflow" },
             ].map((c, i) => (
               <Reveal key={i} delay={i * 100}>
                 <div style={{ background: "#fff", border: "2px solid #1f2937", borderRadius: 14, padding: "1.5rem", boxShadow: "4px 4px 0 #1f2937" }}>
@@ -1183,17 +1183,10 @@ export default function LandingPage({ onSignIn }: LandingPageProps) {
             <span style={{ fontSize: 12, color: "#6b7280" }}>© 2026 JutJut Pty Ltd. ABN 00 000 000 000. Built with care for student success.</span>
           </div>
           <div style={{ display: "flex", flexDirection: "column", gap: 8, alignItems: "flex-end" }}>
-            <div style={{ display: "flex", gap: 16, alignItems: "center" }}>
-              {/* Social media links */}
-              <a href="https://instagram.com" target="_blank" rel="noopener noreferrer" aria-label="JutJut on Instagram" style={{ color: "#9ca3af", fontSize: 18, textDecoration: "none", transition: "color 0.15s" }} onMouseEnter={e => (e.currentTarget.style.color = "#f9fafb")} onMouseLeave={e => (e.currentTarget.style.color = "#9ca3af")}>&#x1F4F8;</a>
-              <a href="https://linkedin.com" target="_blank" rel="noopener noreferrer" aria-label="JutJut on LinkedIn" style={{ color: "#9ca3af", fontSize: 18, textDecoration: "none", transition: "color 0.15s" }} onMouseEnter={e => (e.currentTarget.style.color = "#f9fafb")} onMouseLeave={e => (e.currentTarget.style.color = "#9ca3af")}>&#x1F517;</a>
-              <a href="https://tiktok.com" target="_blank" rel="noopener noreferrer" aria-label="JutJut on TikTok" style={{ color: "#9ca3af", fontSize: 18, textDecoration: "none", transition: "color 0.15s" }} onMouseEnter={e => (e.currentTarget.style.color = "#f9fafb")} onMouseLeave={e => (e.currentTarget.style.color = "#9ca3af")}>&#x1F3B5;</a>
-            </div>
+            <span style={{ color: "#9ca3af", fontSize: 12, textAlign: "right", maxWidth: 360 }}>JutJut is in a controlled rollout. Formal privacy, terms and support contact details will be published before public launch.</span>
             <div style={{ display: "flex", gap: 20, fontSize: 13, color: "#9ca3af", fontWeight: 600, flexWrap: "wrap", justifyContent: "flex-end" }}>
               <button onClick={onSignIn} style={{ background: "none", border: "none", cursor: "pointer", color: "#9ca3af", fontWeight: 600, fontSize: 13 }}>Sign in</button>
-              <button onClick={() => scrollTo("waitlist")} style={{ background: "none", border: "none", cursor: "pointer", color: "#9ca3af", fontWeight: 600, fontSize: 13 }}>Privacy</button>
-              <button onClick={() => scrollTo("waitlist")} style={{ background: "none", border: "none", cursor: "pointer", color: "#9ca3af", fontWeight: 600, fontSize: 13 }}>Terms</button>
-              <button onClick={() => scrollTo("waitlist")} style={{ background: "none", border: "none", cursor: "pointer", color: "#9ca3af", fontWeight: 600, fontSize: 13 }}>Contact</button>
+              <button onClick={() => scrollTo("waitlist")} style={{ background: "none", border: "none", cursor: "pointer", color: "#9ca3af", fontWeight: 600, fontSize: 13 }}>Register interest</button>
             </div>
           </div>
         </div>

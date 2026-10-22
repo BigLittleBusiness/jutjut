@@ -1,5 +1,4 @@
 import React, { useState } from "react";
-import { useApp } from "@/contexts/AppContext";
 import NotificationBell from "@/components/NotificationBell";
 import { useTheme } from "@/contexts/ThemeContext";
 import { Link, useLocation } from "wouter";
@@ -13,8 +12,7 @@ interface NavbarProps {
 }
 
 export const Navbar: React.FC<NavbarProps> = ({ onNavigate, currentPage }) => {
-  const { userProfile } = useApp();
-  const { isAuthenticated, logout } = useAuth();
+  const { isAuthenticated, logout, user } = useAuth();
   const { theme, toggleTheme } = useTheme();
   const { isBusiness, isEmployer, isInstitution, isSchool, isAdmin } = useUserRole();
   const [isOpen, setIsOpen] = useState(false);
@@ -207,13 +205,13 @@ export const Navbar: React.FC<NavbarProps> = ({ onNavigate, currentPage }) => {
                   className="flex items-center gap-2 brutal-border rounded-xl p-1 pr-3 bg-card hover:bg-accent transition-all brutal-shadow active:translate-x-[1px] active:translate-y-[1px] active:shadow-none"
                 >
                   <img
-                    src={userProfile.avatar}
-                    alt={userProfile.name}
+                    src="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 80 80'%3E%3Crect width='80' height='80' rx='16' fill='%230d9488'/%3E%3Cpath d='M40 39a13 13 0 1 0 0-26 13 13 0 0 0 0 26Zm0 6c-16 0-29 8-29 18v4h58v-4c0-10-13-18-29-18Z' fill='white'/%3E%3C/svg%3E"
+                    alt="Account avatar"
                     className="h-8 w-8 rounded-lg object-cover brutal-border"
                   />
                   <div className="text-left">
-                    <p className="text-xs font-extrabold leading-none">{userProfile.name}</p>
-                    <p className="text-[10px] text-muted-foreground leading-none mt-0.5">{userProfile.school}</p>
+                    <p className="text-xs font-extrabold leading-none">{user?.name || "Account"}</p>
+                    <p className="text-[10px] text-muted-foreground leading-none mt-0.5">{user?.email || "Signed in"}</p>
                   </div>
                   <i className={`fa-solid fa-chevron-down text-xs text-muted-foreground transition-transform duration-200 ml-1 ${isProfileOpen ? "rotate-180" : ""}`}></i>
                 </button>
@@ -231,8 +229,8 @@ export const Navbar: React.FC<NavbarProps> = ({ onNavigate, currentPage }) => {
                       >
                         {/* User info header */}
                         <div className="px-3 py-2 border-b-2 border-border mb-1">
-                          <p className="text-xs font-extrabold leading-none text-foreground">{userProfile.name}</p>
-                          <p className="text-[10px] text-muted-foreground leading-none mt-1">{userProfile.school}</p>
+                          <p className="text-xs font-extrabold leading-none text-foreground">{user?.name || "Account"}</p>
+                          <p className="text-[10px] text-muted-foreground leading-none mt-1">{user?.email || "Signed in"}</p>
                         </div>
 
                         {/* My Kit / Profile */}

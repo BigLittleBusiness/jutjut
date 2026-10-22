@@ -65,6 +65,8 @@ vi.mock("./db.school", () => ({
   approveSchool: vi.fn(),
   getStudentsForSchool: vi.fn(),
   getStudentKitForSchool: vi.fn(),
+  getStudentKitForAuthorizedSchool: vi.fn(),
+  isStudentEnrolledInSchool: vi.fn(),
   enrolStudentInSchool: vi.fn(),
   getEmployersForSchools: vi.fn(),
   createPlacement: vi.fn(),
@@ -74,13 +76,18 @@ vi.mock("./db.school", () => ({
   updatePlacementStatus: vi.fn(),
   signPlacementAsStudent: vi.fn(),
   getPlacementsForEmployer: vi.fn(),
+  getPlacementsForStudent: vi.fn(),
 }));
 
 vi.mock("./_core/notification", () => ({
   notifyOwner: vi.fn().mockResolvedValue(true),
 }));
-
+vi.mock("./db", async (importOriginal) => ({
+  ...(await importOriginal<typeof import("./db")>()),
+  getEmployerByUserId: vi.fn(),
+}));
 import * as dbSchool from "./db.school";
+import * as db from "./db";
 
 const APPROVED_SCHOOL = {
   id: 5,
@@ -262,14 +269,14 @@ describe("school.students.kit", () => {
 
   it("returns kit for a valid student ID", async () => {
     const mockKit = { user: { id: 42, name: "Jamie", email: "jamie@brisbaneshs.eq.edu.au", createdAt: new Date() }, profile: null, credentials: [], vouches: [], reportCards: [], applications: [] };
-    vi.mocked(dbSchool.getStudentKitForSchool).mockResolvedValue(mockKit as any);
+    vi.mocked(dbSchool.getStudentKitForAuthorizedSchool).mockResolvedValue(mockKit as any);
     const caller = appRouter.createCaller(schoolStaffCtx());
     const result = await caller.school.students.kit({ studentId: 42 });
     expect(result.user.id).toBe(42);
   });
 
   it("throws NOT_FOUND for unknown student", async () => {
-    vi.mocked(dbSchool.getStudentKitForSchool).mockResolvedValue(null);
+    vi.mocked(dbSchool.getStudentKitForAuthorizedSchool).mockResolvedValue(null);
     const caller = appRouter.createCaller(schoolStaffCtx());
     await expect(caller.school.students.kit({ studentId: 999 })).rejects.toMatchObject({
       code: "NOT_FOUND",
@@ -306,6 +313,7 @@ describe("school.placements.create", () => {
   beforeEach(() => {
     vi.mocked(dbSchool.getSchoolByDomain).mockResolvedValue(APPROVED_SCHOOL as any);
     vi.mocked(dbSchool.createPlacement).mockResolvedValue(undefined as any);
+    vi.mocked(dbSchool.isStudentEnrolledInSchool).mockResolvedValue(true);
   });
 
   it("creates a placement and returns a UUID employer token", async () => {
@@ -347,6 +355,20 @@ describe("school.placements.create", () => {
         hoursPerWeek: 41,
       })
     ).rejects.toThrow();
+  });
+
+  it("rejects a placement request for a student outside the staff member's school", async () => {
+    vi.mocked(dbSchool.isStudentEnrolledInSchool).mockResolvedValue(false);
+    vi.mocked(dbSchool.createPlacement).mockClear();
+    const caller = appRouter.createCaller(schoolStaffCtx());
+    await expect(caller.school.placements.create({
+      studentId: 999,
+      employerId: 7,
+      startDate: "2026-07-01",
+      endDate: "2026-07-05",
+      hoursPerWeek: 8,
+    })).rejects.toMatchObject({ code: "NOT_FOUND" });
+    expect(dbSchool.createPlacement).not.toHaveBeenCalled();
   });
 });
 
@@ -405,6 +427,7 @@ describe("school.placements.employerRespond", () => {
 
   beforeEach(() => {
     vi.mocked(dbSchool.updatePlacementStatus).mockResolvedValue(undefined as any);
+    vi.mocked(db.getEmployerByUserId).mockResolvedValue({ id: 7, userId: 10, status: "active" } as any);
   });
 
   it("approves placement and records employer signature", async () => {
@@ -412,6 +435,7 @@ describe("school.placements.employerRespond", () => {
       id: 2,
       status: "pending_employer",
       employerToken: TOKEN,
+      employerId: 7,
     } as any);
     const caller = appRouter.createCaller(schoolStaffCtx());
     const result = await caller.school.placements.employerRespond({
@@ -433,6 +457,7 @@ describe("school.placements.employerRespond", () => {
       id: 2,
       status: "pending_employer",
       employerToken: TOKEN,
+      employerId: 7,
     } as any);
     const caller = appRouter.createCaller(schoolStaffCtx());
     const result = await caller.school.placements.employerRespond({
@@ -449,6 +474,7 @@ describe("school.placements.employerRespond", () => {
       id: 2,
       status: "approved_by_employer",
       employerToken: TOKEN,
+      employerId: 7,
     } as any);
     const caller = appRouter.createCaller(schoolStaffCtx());
     await expect(
@@ -470,6 +496,28 @@ describe("school.placements.employerRespond", () => {
         signerName: "Bob",
       })
     ).rejects.toMatchObject({ code: "NOT_FOUND" });
+  });
+});
+
+describe("school.placements.employerRespond authorization", () => {
+  const TOKEN = "550e8400-e29b-41d4-a716-446655440000";
+
+  it("rejects a token held by another business", async () => {
+    vi.mocked(dbSchool.updatePlacementStatus).mockClear();
+    vi.mocked(dbSchool.getPlacementByToken).mockResolvedValue({
+      id: 2,
+      status: "pending_employer",
+      employerToken: TOKEN,
+      employerId: 99,
+    } as any);
+    vi.mocked(db.getEmployerByUserId).mockResolvedValue({ id: 7, userId: 10, status: "active" } as any);
+    const caller = appRouter.createCaller(schoolStaffCtx());
+    await expect(caller.school.placements.employerRespond({
+      token: TOKEN,
+      decision: "approve",
+      signerName: "Bob Employer",
+    })).rejects.toMatchObject({ code: "NOT_FOUND" });
+    expect(dbSchool.updatePlacementStatus).not.toHaveBeenCalled();
   });
 });
 

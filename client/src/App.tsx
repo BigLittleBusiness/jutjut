@@ -165,11 +165,10 @@ function MainLayout() {
       {/* Footer */}
       <footer className="border-t-2 border-border bg-card py-6 text-center text-xs text-muted-foreground font-bold uppercase tracking-wider">
         <div className="container mx-auto px-4 flex flex-col sm:flex-row justify-between items-center gap-4">
-          <p>© 2026 JutJut Pty Ltd. ABN 00 000 000 000. Built with care for student success.</p>
+          <p>© 2026 JutJut. Controlled rollout — do not treat unavailable features as live services.</p>
           <div className="flex gap-4">
-            <button onClick={() => handleNavigate("privacy-settings")} className="hover:underline bg-transparent border-none cursor-pointer text-muted-foreground font-bold text-xs uppercase tracking-wider">Privacy</button>
-            <button onClick={() => handleNavigate("privacy-settings")} className="hover:underline bg-transparent border-none cursor-pointer text-muted-foreground font-bold text-xs uppercase tracking-wider">Terms</button>
-            <button onClick={() => handleNavigate("email-preferences")} className="hover:underline bg-transparent border-none cursor-pointer text-muted-foreground font-bold text-xs uppercase tracking-wider">Support</button>
+            <button onClick={() => handleNavigate("privacy-settings")} className="hover:underline bg-transparent border-none cursor-pointer text-muted-foreground font-bold text-xs uppercase tracking-wider">Privacy settings</button>
+            <button onClick={() => handleNavigate("email-preferences")} className="hover:underline bg-transparent border-none cursor-pointer text-muted-foreground font-bold text-xs uppercase tracking-wider">Email preferences</button>
           </div>
         </div>
       </footer>

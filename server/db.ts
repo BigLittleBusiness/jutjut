@@ -160,7 +160,7 @@ import {
   waitlistSignups,
   WaitlistSignup,
 } from "../drizzle/schema";
-import { and, lte, desc, sql, count, avg, isNotNull, inArray } from "drizzle-orm";
+import { and, lte, gte, desc, sql, count, avg, isNotNull, inArray } from "drizzle-orm";
 
 export async function getEmployerByUserId(userId: number) {
   const db = await getDb();
@@ -246,6 +246,72 @@ export async function adjustCredits(params: {
     reference: params.reference ?? null,
     description: params.description ?? null,
     createdAt: new Date(),
+  });
+}
+
+/**
+ * Atomically reserves one credit and creates one job listing. The conditional
+ * debit makes concurrent browser requests safe: only one can consume the last
+ * credit, and the enclosing transaction rolls back if a dependent write fails.
+ */
+export async function createJobWithCreditSpend(params: {
+  employerId: number;
+  postedByUserId: number;
+  title: string;
+  employer: string;
+  description?: string | null;
+  wage?: string | null;
+  distance?: string | null;
+  type: "casual" | "part-time" | "full-time" | "volunteer";
+  noCoverLetter: boolean;
+  isFeatured: boolean;
+  featuredUntil?: Date | null;
+  expiresAt: Date;
+  now: Date;
+}): Promise<{ success: true; jobId: number; newBalance: number } | { success: false }> {
+  const db = await getDb();
+  if (!db) throw new Error("Database not available");
+
+  return db.transaction(async (tx) => {
+    const debit = await tx
+      .update(employerCredits)
+      .set({ creditBalance: sql`credit_balance - 1`, updatedAt: params.now })
+      .where(and(eq(employerCredits.employerId, params.employerId), gte(employerCredits.creditBalance, 1)));
+    const header = Array.isArray(debit) ? debit[0] : debit;
+    const affectedRows = Number((header as { affectedRows?: number; rowsAffected?: number }).affectedRows ?? (header as { rowsAffected?: number }).rowsAffected ?? 0);
+    if (affectedRows !== 1) return { success: false } as const;
+
+    const inserted = await tx.insert(jobs).values({
+      title: params.title,
+      employer: params.employer,
+      description: params.description ?? null,
+      wage: params.wage ?? null,
+      distance: params.distance ?? null,
+      type: params.type,
+      noCoverLetter: params.noCoverLetter,
+      isActive: true,
+      postedByUserId: params.postedByUserId,
+      isFeatured: params.isFeatured,
+      featuredUntil: params.featuredUntil ?? null,
+      expiresAt: params.expiresAt,
+      autoRepostEnabled: false,
+      autoRepostNextDate: null,
+      viewCount: 0,
+      applyCount: 0,
+      createdAt: params.now,
+      updatedAt: params.now,
+    });
+    const jobId = Number((inserted as unknown as { insertId: number }).insertId);
+    await tx.insert(creditTransactions).values({
+      employerId: params.employerId,
+      amount: -1,
+      type: "job_post",
+      reference: String(jobId),
+      description: `Job post: ${params.title}${params.isFeatured ? " (featured)" : ""}`,
+      createdAt: params.now,
+    });
+    const balanceRows = await tx.select({ creditBalance: employerCredits.creditBalance }).from(employerCredits).where(eq(employerCredits.employerId, params.employerId)).limit(1);
+    return { success: true, jobId, newBalance: balanceRows[0]?.creditBalance ?? 0 } as const;
   });
 }
 
@@ -1060,6 +1126,7 @@ export async function getStudentVouches(userId: number) {
       voucherName: vouches.voucherName,
       voucherTitle: vouches.voucherTitle,
       voucherOrg: vouches.voucherOrg,
+      skillName: vouches.skillName,
       message: vouches.message,
       status: vouches.status,
       createdAt: vouches.createdAt,

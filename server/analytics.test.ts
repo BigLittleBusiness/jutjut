@@ -238,6 +238,12 @@ describe("employer.jobs.applyForJob", () => {
   it("successfully applies to a job", async () => {
     const db = await import("./db");
     vi.mocked(db.getDb).mockResolvedValueOnce(fakeDb as never);
+    vi.mocked(db.getJobById).mockResolvedValueOnce({
+      id: 1,
+      isActive: true,
+      expiresAt: new Date(Date.now() + 60_000),
+      postedByUserId: 999,
+    } as any);
     vi.mocked(db.applyToJob).mockResolvedValueOnce({ alreadyApplied: false });
 
     const caller = appRouter.createCaller(createUserContext(10));
@@ -248,6 +254,12 @@ describe("employer.jobs.applyForJob", () => {
   it("throws CONFLICT when user has already applied", async () => {
     const db = await import("./db");
     vi.mocked(db.getDb).mockResolvedValueOnce(fakeDb as never);
+    vi.mocked(db.getJobById).mockResolvedValueOnce({
+      id: 1,
+      isActive: true,
+      expiresAt: new Date(Date.now() + 60_000),
+      postedByUserId: 999,
+    } as any);
     vi.mocked(db.applyToJob).mockResolvedValueOnce({ alreadyApplied: true });
 
     const caller = appRouter.createCaller(createUserContext(10));

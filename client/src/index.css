@@ -126,6 +126,22 @@
   }
 }
 
+/* One high-contrast focus treatment for native controls and custom triggers. */
+:where(a, button, input, select, textarea, [role="button"], [role="switch"], [tabindex]):focus-visible {
+  outline: 3px solid #0d9488 !important;
+  outline-offset: 3px;
+  box-shadow: 0 0 0 6px rgba(245, 158, 11, 0.38) !important;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    scroll-behavior: auto !important;
+    transition-duration: 0.01ms !important;
+  }
+}
+
 /* Playful Neo-Brutalism Custom Utilities */
 .brutal-border {
   border: 2px solid var(--border) !important;

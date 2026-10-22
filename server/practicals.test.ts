@@ -180,4 +180,15 @@ describe("JutJut Practicals — permissions and approval gates", () => {
     })).resolves.toEqual({ success: true });
     expect(db.updateInstitutionConcern).toHaveBeenCalledWith(expect.objectContaining({ concernId: 77, institutionId: 7, coordinatorUserId: 42, status: "resolved" }));
   });
+
+  it("does not allow a student to raise a concern against another student's arrangement", async () => {
+    vi.mocked(db.createPracticalConcern).mockResolvedValue(null as any);
+    const caller = appRouter.createCaller(makeContext(makeUser({ email: "student@example.com" })));
+    await expect(caller.practicals.student.raiseConcern({
+      arrangementId: 999,
+      category: "safety",
+      description: "This belongs to another student and must not be visible or changed by my account.",
+    })).rejects.toMatchObject({ code: "NOT_FOUND" });
+    expect(db.createPracticalConcern).toHaveBeenCalledWith(expect.objectContaining({ arrangementId: 999, raisedByUserId: 42 }));
+  });
 });

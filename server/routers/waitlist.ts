@@ -59,13 +59,14 @@ export const waitlistRouter = router({
         content: `${input.firstName ? input.firstName + (input.lastName ? " " + input.lastName : "") + " — " : ""}${input.email} (${input.role}${input.school ? ", " + input.school : ""}) joined the waitlist.`,
       }).catch(() => {/* silently ignore notification failures */});
 
-      // Send waitlist confirmation email to the new signup
+      // Send a truthful waitlist acknowledgement. This is not an account or
+      // email-verification workflow, so it must not contain a broken verify link.
       void sendEmailSilent({
         to: input.email,
-        templateId: "student_verify_email",
+        templateId: "waitlist_confirmation",
         data: {
-          student_name: input.firstName,
-          verify_url: `${process.env.APP_BASE_URL ?? "https://jutjut.com.au"}/verify`,
+          first_name: input.firstName,
+          audience: input.role === "employer" ? "employer" : "student",
         },
       });
 

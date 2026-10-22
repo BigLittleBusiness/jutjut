@@ -68,6 +68,16 @@ type Template = {
 };
 
 const TEMPLATES: Record<string, Template> = {
+  waitlist_confirmation: {
+    subject: "You're on the JutJut waitlist",
+    html: BASE_HTML(`
+      <h1>Thanks for registering your interest, {{first_name}}.</h1>
+      <p>We have saved your {{audience}} waitlist registration for JutJut.</p>
+      <p>This email confirms a waitlist entry only. It does not create an account or require you to verify a link.</p>
+      <p>We will contact you when there is a relevant launch or pilot update.</p>
+    `, "JutJut waitlist confirmation"),
+    text: "Thanks for registering your interest, {{first_name}}. We have saved your {{audience}} waitlist registration for JutJut. This email confirms a waitlist entry only; it does not create an account or require link verification. We will contact you when there is a relevant launch or pilot update.",
+  },
 
   // ── 1. Student: email verification ──────────────────────────────────────────
   student_verify_email: {

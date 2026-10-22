@@ -1,4 +1,4 @@
-import { AXIOS_TIMEOUT_MS, COOKIE_NAME, ONE_YEAR_MS } from "@shared/const";
+import { AXIOS_TIMEOUT_MS, COOKIE_NAME, SESSION_TTL_MS } from "@shared/const";
 import { ForbiddenError } from "@shared/_core/errors";
 import axios, { type AxiosInstance } from "axios";
 import { parse as parseCookieHeader } from "cookie";
@@ -38,8 +38,19 @@ class OAuthService {
   }
 
   private decodeState(state: string): string {
-    const redirectUri = atob(state);
-    return redirectUri;
+    try {
+      const parsed = JSON.parse(atob(state)) as { redirectUri?: unknown; nonce?: unknown };
+      if (typeof parsed.redirectUri !== "string" || typeof parsed.nonce !== "string" || parsed.nonce.length < 32) {
+        throw new Error("invalid state payload");
+      }
+      const redirect = new URL(parsed.redirectUri);
+      if (redirect.pathname !== "/api/oauth/callback" || redirect.protocol !== "https:") {
+        throw new Error("invalid redirect URI");
+      }
+      return redirect.toString();
+    } catch {
+      throw new Error("Invalid OAuth state");
+    }
   }
 
   async getTokenByCode(
@@ -182,7 +193,7 @@ class SDKServer {
     options: { expiresInMs?: number } = {}
   ): Promise<string> {
     const issuedAt = Date.now();
-    const expiresInMs = options.expiresInMs ?? ONE_YEAR_MS;
+    const expiresInMs = options.expiresInMs ?? SESSION_TTL_MS;
     const expirationSeconds = Math.floor((issuedAt + expiresInMs) / 1000);
     const secretKey = this.getSessionSecret();
 
@@ -298,6 +309,12 @@ class SDKServer {
 
     if (!user) {
       throw ForbiddenError("User not found");
+    }
+
+    // Account status is checked on every authenticated request so a suspension
+    // takes effect immediately for existing browser sessions as well as new ones.
+    if (user.status !== "active") {
+      throw ForbiddenError("Account is not active");
     }
 
     await db.upsertUser({

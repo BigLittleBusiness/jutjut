@@ -419,7 +419,11 @@ const studentRouter = router({
       category: z.enum(["safety", "wellbeing", "conduct", "scope_change", "other"]),
       description: z.string().trim().min(20).max(5000),
     }))
-    .mutation(async ({ ctx, input }) => createPracticalConcern({ ...input, raisedByUserId: ctx.user.id })),
+    .mutation(async ({ ctx, input }) => {
+      const concern = await createPracticalConcern({ ...input, raisedByUserId: ctx.user.id });
+      if (!concern) throw new TRPCError({ code: "NOT_FOUND", message: "Practical arrangement not found." });
+      return concern;
+    }),
 });
 
 export const practicalsRouter = router({

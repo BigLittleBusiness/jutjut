@@ -733,6 +733,15 @@ export async function createPracticalConcern(data: {
 }) {
   const db = await getDb();
   if (!db) throw new Error("Database unavailable");
+  const arrangement = await db
+    .select({ id: practicalArrangements.id })
+    .from(practicalArrangements)
+    .where(and(
+      eq(practicalArrangements.id, data.arrangementId),
+      eq(practicalArrangements.studentUserId, data.raisedByUserId)
+    ))
+    .limit(1);
+  if (!arrangement[0]) return null;
   const result = await db.insert(practicalConcerns).values({ ...data, status: "open" });
   return { id: Number((result as unknown as { insertId: number }).insertId) };
 }

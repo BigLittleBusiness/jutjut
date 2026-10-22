@@ -199,6 +199,24 @@ export async function getStudentKitForSchool(studentId: number) {
 
 // ─── Employer directory (school view) ─────────────────────────────────────────
 
+/** Verify enrollment before any school staff member can disclose a student's Kit. */
+export async function getStudentKitForAuthorizedSchool(studentId: number, schoolId: number) {
+  const db = await getDb();
+  if (!db) return null;
+  const membership = await db.select({ id: schoolStudents.id }).from(schoolStudents)
+    .where(and(eq(schoolStudents.schoolId, schoolId), eq(schoolStudents.studentId, studentId))).limit(1);
+  if (!membership[0]) return null;
+  return getStudentKitForSchool(studentId);
+}
+
+export async function isStudentEnrolledInSchool(studentId: number, schoolId: number) {
+  const db = await getDb();
+  if (!db) return false;
+  const membership = await db.select({ id: schoolStudents.id }).from(schoolStudents)
+    .where(and(eq(schoolStudents.schoolId, schoolId), eq(schoolStudents.studentId, studentId))).limit(1);
+  return Boolean(membership[0]);
+}
+
 export async function getEmployersForSchools(opts?: {
   search?: string;
   postcode?: string;
@@ -389,6 +407,13 @@ export async function getPlacementsForEmployer(employerId: number) {
     .from(placements)
     .where(eq(placements.employerId, employerId))
     .orderBy(placements.createdAt);
+}
+
+/** Return placement records belonging only to the signed-in student. */
+export async function getPlacementsForStudent(studentId: number) {
+  const db = await getDb();
+  if (!db) return [];
+  return db.select().from(placements).where(eq(placements.studentId, studentId)).orderBy(placements.createdAt);
 }
 
 // ─── School contact update ────────────────────────────────────────────────────

@@ -22,8 +22,6 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } f
 import { toast } from "sonner";
 import { Coins, Plus, BarChart2, Briefcase, Star, RefreshCw, CreditCard, Tag, Info, ChevronDown, ChevronRight, Users, Eye, TrendingUp, Clock, Mail, ShieldOff, Settings, Building2, Phone, MapPin, CheckCircle2 } from "lucide-react";
 import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, LineChart, Line, CartesianGrid } from "recharts";
-import { loadStripe } from "@stripe/stripe-js";
-import { Elements, CardElement, useStripe, useElements } from "@stripe/react-stripe-js";
 
 
 // ─── Credit balance card ──────────────────────────────────────────────────────
@@ -50,9 +48,9 @@ function CreditBalanceCard({ onBuyCredits }: { onBuyCredits: () => void }) {
               </p>
             </div>
           </div>
-          <Button onClick={onBuyCredits} size="sm" className="gap-2">
+          <Button disabled size="sm" className="gap-2" title="Credit settlement is temporarily unavailable">
             <Plus className="w-4 h-4" />
-            Buy Credits
+            Purchases unavailable
           </Button>
         </div>
         {balance === 0 && (
@@ -61,6 +59,7 @@ function CreditBalanceCard({ onBuyCredits }: { onBuyCredits: () => void }) {
             You need at least 1 credit to post a job.
           </p>
         )}
+        <p className="mt-3 text-xs font-semibold text-muted-foreground">Card checkout and automatic rebilling are paused while JutJut verifies provider settlement and refund controls. Existing credit balances are unaffected.</p>
       </CardContent>
     </Card>
   );
@@ -68,462 +67,15 @@ function CreditBalanceCard({ onBuyCredits }: { onBuyCredits: () => void }) {
 
 // ─── Buy Credits Modal ────────────────────────────────────────────────────────
 
-// Stripe card element styles to match the site theme
-const STRIPE_ELEMENT_STYLE = {
-  base: {
-    fontSize: "14px",
-    color: "#1a1a1a",
-    fontFamily: "inherit",
-    "::placeholder": { color: "#9ca3af" },
-  },
-  invalid: { color: "#ef4444" },
-};
-
-// Inner form for Stripe — must be inside <Elements> provider
-function StripePaymentForm({
-  onToken,
-  isPending,
-}: {
-  onToken: (paymentMethodId: string) => void;
-  isPending: boolean;
-}) {
-  const stripe = useStripe();
-  const elements = useElements();
-  const [cardError, setCardError] = useState<string | null>(null);
-
-  const handleSubmit = async () => {
-    if (!stripe || !elements) return;
-    const cardEl = elements.getElement(CardElement);
-    if (!cardEl) return;
-    const { error, paymentMethod } = await stripe.createPaymentMethod({
-      type: "card",
-      card: cardEl,
-    });
-    if (error) {
-      setCardError(error.message ?? "Card error");
-    } else if (paymentMethod) {
-      setCardError(null);
-      onToken(paymentMethod.id);
-    }
-  };
-
-  return (
-    <div className="space-y-3">
-      <Label className="flex items-center gap-1">
-        <CreditCard className="w-3.5 h-3.5" />
-        Card Details
-      </Label>
-      <div className="border rounded-md px-3 py-3 bg-background">
-        <CardElement options={{ style: STRIPE_ELEMENT_STYLE, hidePostalCode: true }} />
-      </div>
-      {cardError && <p className="text-xs text-red-500">{cardError}</p>}
-      <p className="text-xs text-muted-foreground flex items-center gap-1">
-        <span>⚡</span> Powered by Stripe — your card details are never stored on JutJut servers.
-      </p>
-      <Button className="w-full" onClick={handleSubmit} disabled={!stripe || isPending}>
-        {isPending ? "Processing..." : "Confirm Payment"}
-      </Button>
-    </div>
-  );
-}
-
 function BuyCreditsModal({ open, onClose }: { open: boolean; onClose: () => void }) {
-  const [selectedPack, setSelectedPack] = useState<"pack_1" | "pack_5">("pack_1");
-  const [promoCode, setPromoCode] = useState("");
-  const [promoResult, setPromoResult] = useState<{
-    savingsCents: number;
-    subtotalCents: number;
-    gstCents: number;
-    totalCents: number;
-    bonusCredits: number;
-    code: string;
-  } | null>(null);
-  const [cardToken, setCardToken] = useState(""); // PinPayments token
-  const [saveCard, setSaveCard] = useState(false);
-  const [includeGst, setIncludeGst] = useState(false);
-  const [stripePromise, setStripePromise] = useState<ReturnType<typeof loadStripe> | null>(null);
-
-  const utils = trpc.useUtils();
-
-  // Fetch active gateway and (if Stripe) the publishable key
-  const activeGatewayQuery = trpc.employer.credits.activeGateway.useQuery();
-  const stripeKeyQuery = trpc.employer.credits.stripePublishableKey.useQuery(undefined, {
-    enabled: activeGatewayQuery.data?.gateway === "stripe",
-  });
-
-  const activeGateway = activeGatewayQuery.data?.gateway ?? "pin";
-
-  // Initialise Stripe.js lazily once we have the publishable key
-  useEffect(() => {
-    if (activeGateway === "stripe" && stripeKeyQuery.data?.publishableKey) {
-      setStripePromise(loadStripe(stripeKeyQuery.data.publishableKey));
-    }
-  }, [activeGateway, stripeKeyQuery.data?.publishableKey]);
-
-  const validatePromo = trpc.employer.credits.validatePromo.useMutation({
-    onSuccess: (data) => {
-      setPromoResult({
-        savingsCents: data.savingsCents,
-        subtotalCents: data.subtotalCents,
-        gstCents: data.gstCents,
-        totalCents: data.totalCents,
-        bonusCredits: data.bonusCredits,
-        code: data.code,
-      });
-      toast.success(`Promo code applied: saving $${(data.savingsCents / 100).toFixed(2)}`);
-    },
-    onError: (err) => {
-      setPromoResult(null);
-      toast.error(err.message);
-    },
-  });
-
-  const purchase = trpc.employer.credits.purchase.useMutation({
-    onSuccess: (data) => {
-      toast.success(`Payment successful! ${data.creditsAdded} credit(s) added. New balance: ${data.newBalance}`);
-      utils.employer.credits.balance.invalidate();
-      utils.employer.credits.history.invalidate();
-      onClose();
-      resetForm();
-    },
-    onError: (err) => {
-      toast.error(`Payment failed: ${err.message}`);
-    },
-  });
-
-  const resetForm = () => {
-    setSelectedPack("pack_1");
-    setPromoCode("");
-    setPromoResult(null);
-    setCardToken("");
-    setSaveCard(false);
-  };
-
-  const packs = [
-    { id: "pack_1" as const, credits: 1, priceAud: 15, label: "1 Credit — $15 AUD" },
-    { id: "pack_5" as const, credits: 5, priceAud: 50, label: "5 Credits — $50 AUD (save $25)" },
-  ];
-
-  const selectedPackData = packs.find(p => p.id === selectedPack)!;
-  const baseAmountCents = selectedPackData.priceAud * 100;
-  const displaySubtotal = promoResult ? promoResult.subtotalCents : baseAmountCents;
-  const displayGst = includeGst ? Math.round(displaySubtotal * 0.1) : 0;
-  const displayTotal = displaySubtotal + displayGst;
-
-  const handleApplyPromo = () => {
-    if (!promoCode.trim()) return;
-    validatePromo.mutate({ code: promoCode.trim(), packId: selectedPack });
-  };
-
-  // Called by PinPayments path
-  const handlePinPay = () => {
-    if (!cardToken.trim()) {
-      toast.error("Please enter your card token.");
-      return;
-    }
-    purchase.mutate({
-      packId: selectedPack,
-      cardToken,
-      saveCard,
-      promoCode: promoResult ? promoResult.code : undefined,
-      includeGst,
-      ipAddress: "0.0.0.0",
-    });
-  };
-
-  // Called by Stripe Elements path after createPaymentMethod
-  const handleStripeToken = (paymentMethodId: string) => {
-    purchase.mutate({
-      packId: selectedPack,
-      cardToken: paymentMethodId, // server routes this to Stripe
-      saveCard,
-      promoCode: promoResult ? promoResult.code : undefined,
-      includeGst,
-      ipAddress: "0.0.0.0",
-    });
-  };
-
-  return (
-    <Dialog open={open} onOpenChange={(v) => { if (!v) { onClose(); resetForm(); } }}>
-      <DialogContent className="max-w-md">
-        <DialogHeader>
-          <DialogTitle className="flex items-center gap-2">
-            <CreditCard className="w-5 h-5 text-primary" />
-            Buy Credits
-          </DialogTitle>
-          <DialogDescription>
-            Credits are used to post jobs. 1 credit = 1 standard job post (30 days).
-          </DialogDescription>
-        </DialogHeader>
-
-        <div className="space-y-5">
-          {/* Pack selection */}
-          <div className="space-y-2">
-            <Label>Select Pack</Label>
-            <div className="grid grid-cols-2 gap-3">
-              {packs.map(pack => (
-                <button
-                  key={pack.id}
-                  onClick={() => { setSelectedPack(pack.id); setPromoResult(null); }}
-                  className={`p-3 rounded-lg border-2 text-left transition-all ${
-                    selectedPack === pack.id
-                      ? "border-primary bg-primary/5"
-                      : "border-border hover:border-primary/40"
-                  }`}
-                >
-                  <p className="font-semibold text-sm">{pack.credits} Credit{pack.credits > 1 ? "s" : ""}</p>
-                  <p className="text-lg font-bold text-primary">${pack.priceAud} AUD</p>
-                  {pack.credits === 5 && (
-                    <Badge variant="secondary" className="text-xs mt-1">Best Value</Badge>
-                  )}
-                </button>
-              ))}
-            </div>
-          </div>
-
-          {/* Promo code */}
-          <div className="space-y-2">
-            <Label className="flex items-center gap-1">
-              <Tag className="w-3.5 h-3.5" />
-              Promo Code
-            </Label>
-            <div className="flex gap-2">
-              <Input
-                placeholder="Enter promo code"
-                value={promoCode}
-                onChange={e => { setPromoCode(e.target.value.toUpperCase()); setPromoResult(null); }}
-                className="uppercase"
-              />
-              <Button
-                variant="outline"
-                onClick={handleApplyPromo}
-                disabled={!promoCode.trim() || validatePromo.isPending}
-              >
-                Apply
-              </Button>
-            </div>
-            {promoResult && (
-              <p className="text-sm text-green-600 dark:text-green-400">
-                ✓ Saving ${(promoResult.savingsCents / 100).toFixed(2)}
-                {promoResult.bonusCredits > 0 && ` + ${promoResult.bonusCredits} bonus credit(s)`}
-              </p>
-            )}
-          </div>
-
-          {/* GST toggle */}
-          <div className="flex items-center justify-between">
-            <Label htmlFor="include-gst" className="text-sm">I am GST registered (+10% GST)</Label>
-            <Switch id="include-gst" checked={includeGst} onCheckedChange={setIncludeGst} />
-          </div>
-
-          {/* Save card toggle */}
-          <div className="flex items-center justify-between">
-            <Label htmlFor="save-card" className="text-sm">Save card for auto-repost</Label>
-            <Switch id="save-card" checked={saveCard} onCheckedChange={setSaveCard} />
-          </div>
-
-          {/* Price summary */}
-          <div className="rounded-lg bg-muted/50 p-4 space-y-1.5 text-sm">
-            <div className="flex justify-between">
-              <span className="text-muted-foreground">Subtotal (excl. GST)</span>
-              <span>${(displaySubtotal / 100).toFixed(2)} AUD</span>
-            </div>
-            {promoResult && (
-              <div className="flex justify-between text-green-600 dark:text-green-400">
-                <span>Discount</span>
-                <span>−${(promoResult.savingsCents / 100).toFixed(2)} AUD</span>
-              </div>
-            )}
-            {includeGst && (
-              <div className="flex justify-between text-muted-foreground">
-                <span>GST (10%)</span>
-                <span>${(displayGst / 100).toFixed(2)} AUD</span>
-              </div>
-            )}
-            <div className="flex justify-between font-semibold text-base pt-1 border-t border-border">
-              <span>Total</span>
-              <span>${(displayTotal / 100).toFixed(2)} AUD</span>
-            </div>
-          </div>
-
-          {/* Payment input — conditionally rendered based on active gateway */}
-          {activeGatewayQuery.isLoading ? (
-            <div className="text-sm text-muted-foreground text-center py-4">Loading payment options…</div>
-          ) : activeGateway === "stripe" ? (
-            stripePromise ? (
-              <Elements stripe={stripePromise}>
-                <StripePaymentForm onToken={handleStripeToken} isPending={purchase.isPending} />
-              </Elements>
-            ) : (
-              <div className="text-sm text-muted-foreground text-center py-4">Loading Stripe…</div>
-            )
-          ) : (
-            /* PinPayments token input */
-            <div className="space-y-2">
-              <Label className="flex items-center gap-1">
-                <CreditCard className="w-3.5 h-3.5" />
-                Card Token
-              </Label>
-              <Input
-                placeholder="card_token from PinPayments Hosted Fields"
-                value={cardToken}
-                onChange={e => setCardToken(e.target.value)}
-              />
-              <p className="text-xs text-muted-foreground">
-                🇦🇺 Powered by PinPayments. Test token: use card <code>4111 1111 1111 1111</code>.
-              </p>
-              <Button
-                className="w-full"
-                onClick={handlePinPay}
-                disabled={purchase.isPending || !cardToken.trim()}
-              >
-                {purchase.isPending ? "Processing..." : `Pay $${(displayTotal / 100).toFixed(2)} AUD`}
-              </Button>
-            </div>
-          )}
-        </div>
-      </DialogContent>
-    </Dialog>
-  );
+  return <Dialog open={open} onOpenChange={(value) => { if (!value) onClose(); }}>
+    <DialogContent className="max-w-md">
+      <DialogHeader><DialogTitle>Credit purchases are unavailable</DialogTitle><DialogDescription>JutJut has paused card checkout while payment settlement, refunds and provider reconciliation are being verified.</DialogDescription></DialogHeader>
+      <div className="rounded-lg border border-amber-300 bg-amber-50 p-4 text-sm leading-6 text-amber-950">No card details can be entered here, no payment will be taken, and no credits will be granted until the complete provider flow is verified.</div>
+      <div className="flex justify-end"><Button onClick={onClose}>Close</Button></div>
+    </DialogContent>
+  </Dialog>;
 }
-
-// ─── Post Job Modal ───────────────────────────────────────────────────────────
-
-function PostJobModal({ open, onClose }: { open: boolean; onClose: () => void }) {
-  const [form, setForm] = useState({
-    title: "",
-    employer: "",
-    description: "",
-    wage: "",
-    distance: "",
-    type: "casual" as "casual" | "part-time" | "full-time" | "volunteer",
-    noCoverLetter: false,
-    isFeatured: false,
-    autoRepostEnabled: false,
-  });
-
-  const utils = trpc.useUtils();
-  const { data: balanceData } = trpc.employer.credits.balance.useQuery();
-  const balance = balanceData?.balance ?? 0;
-
-  const postJob = trpc.employer.jobs.post.useMutation({
-    onSuccess: (data) => {
-      toast.success(`Job posted! Expires in 30 days. New credit balance: ${data.newBalance}`);
-      utils.employer.credits.balance.invalidate();
-      utils.employer.jobs.list.invalidate();
-      onClose();
-      setForm({ title: "", employer: "", description: "", wage: "", distance: "", type: "casual", noCoverLetter: false, isFeatured: false, autoRepostEnabled: false });
-    },
-    onError: (err) => {
-      toast.error(err.message);
-    },
-  });
-
-  return (
-    <Dialog open={open} onOpenChange={(v) => { if (!v) onClose(); }}>
-      <DialogContent className="max-w-lg max-h-[90vh] overflow-y-auto">
-        <DialogHeader>
-          <DialogTitle className="flex items-center gap-2">
-            <Briefcase className="w-5 h-5 text-primary" />
-            Post a Job
-          </DialogTitle>
-          <DialogDescription>
-            Costs 1 credit. Current balance: <strong>{balance}</strong>
-          </DialogDescription>
-        </DialogHeader>
-
-        <div className="space-y-4">
-          <div className="space-y-1.5">
-            <Label>Job Title *</Label>
-            <Input value={form.title} onChange={e => setForm(f => ({ ...f, title: e.target.value }))} placeholder="e.g. Barista, Retail Assistant" />
-          </div>
-
-          <div className="space-y-1.5">
-            <Label>Business Name *</Label>
-            <Input value={form.employer} onChange={e => setForm(f => ({ ...f, employer: e.target.value }))} placeholder="Your business name" />
-          </div>
-
-          <div className="space-y-1.5">
-            <Label>Description</Label>
-            <Textarea value={form.description} onChange={e => setForm(f => ({ ...f, description: e.target.value }))} placeholder="What will the student be doing?" rows={4} />
-          </div>
-
-          <div className="grid grid-cols-2 gap-3">
-            <div className="space-y-1.5">
-              <Label>Pay Rate</Label>
-              <Input value={form.wage} onChange={e => setForm(f => ({ ...f, wage: e.target.value }))} placeholder="e.g. $18/hr" />
-            </div>
-            <div className="space-y-1.5">
-              <Label>Location / Distance</Label>
-              <Input value={form.distance} onChange={e => setForm(f => ({ ...f, distance: e.target.value }))} placeholder="e.g. 2km from CBD" />
-            </div>
-          </div>
-
-          <div className="space-y-1.5">
-            <Label>Job Type</Label>
-            <Select value={form.type} onValueChange={v => setForm(f => ({ ...f, type: v as typeof form.type }))}>
-              <SelectTrigger>
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="casual">Casual</SelectItem>
-                <SelectItem value="part-time">Part-Time</SelectItem>
-                <SelectItem value="full-time">Full-Time</SelectItem>
-                <SelectItem value="volunteer">Volunteer</SelectItem>
-              </SelectContent>
-            </Select>
-          </div>
-
-          <div className="space-y-3 pt-1">
-            <div className="flex items-center justify-between">
-              <Label htmlFor="no-cover" className="text-sm">No cover letter required</Label>
-              <Switch id="no-cover" checked={form.noCoverLetter} onCheckedChange={v => setForm(f => ({ ...f, noCoverLetter: v }))} />
-            </div>
-
-            <div className="flex items-center justify-between">
-              <div>
-                <Label htmlFor="featured" className="text-sm flex items-center gap-1">
-                  <Star className="w-3.5 h-3.5 text-amber-500" />
-                  Featured post (top of board, 7 days)
-                </Label>
-                <p className="text-xs text-muted-foreground">No extra credit — just a visual boost</p>
-              </div>
-              <Switch id="featured" checked={form.isFeatured} onCheckedChange={v => setForm(f => ({ ...f, isFeatured: v }))} />
-            </div>
-
-            <div className="flex items-center justify-between">
-              <div>
-                <Label htmlFor="auto-repost" className="text-sm flex items-center gap-1">
-                  <RefreshCw className="w-3.5 h-3.5 text-blue-500" />
-                  Auto-repost when expired
-                </Label>
-                <p className="text-xs text-muted-foreground">Uses 1 credit on expiry (or charges saved card)</p>
-              </div>
-              <Switch id="auto-repost" checked={form.autoRepostEnabled} onCheckedChange={v => setForm(f => ({ ...f, autoRepostEnabled: v }))} />
-            </div>
-          </div>
-
-          {balance < 1 && (
-            <p className="text-sm text-destructive flex items-center gap-1">
-              <Info className="w-4 h-4" />
-              Insufficient credits. Please buy credits before posting.
-            </p>
-          )}
-
-          <Button
-            className="w-full"
-            onClick={() => postJob.mutate(form)}
-            disabled={postJob.isPending || !form.title.trim() || !form.employer.trim() || balance < 1}
-          >
-            {postJob.isPending ? "Posting..." : "Post Job (1 credit)"}
-          </Button>
-        </div>
-      </DialogContent>
-    </Dialog>
-  );
-}
-
-// ─── Job Analytics Detail Panel ───────────────────────────────────────────────
 
 function JobAnalyticsDetailPanel({ jobId, onClose }: { jobId: number; onClose: () => void }) {
   const { data, isLoading } = trpc.employer.jobs.analyticsDetail.useQuery({ jobId });
@@ -681,6 +233,7 @@ function JobAnalyticsDetailPanel({ jobId, onClose }: { jobId: number; onClose: (
 }
 
 // ─── Job Analytics Table ──────────────────────────────────────────────────────
+
 
 function JobAnalyticsTable() {
   const { data: analytics, isLoading } = trpc.employer.jobs.analytics.useQuery();
@@ -1205,6 +758,7 @@ function AccountSettingsTab() {
   );
 }
 
+
 // ─── Post a Job Tab ─────────────────────────────────────────────────────────
 
 function PostJobTab({ onBuyCredits }: { onBuyCredits: () => void }) {
@@ -1265,7 +819,7 @@ function PostJobTab({ onBuyCredits }: { onBuyCredits: () => void }) {
             </div>
             <div className="space-y-1.5">
               <Label>Business Name <span className="text-destructive">*</span></Label>
-              <Input value={form.employer} onChange={e => setForm(f => ({ ...f, employer: e.target.value }))} placeholder="Your business name" />
+              <Input value={form.employer} readOnly aria-readonly="true" placeholder="Your verified business name" />
             </div>
             <div className="space-y-1.5">
               <Label>Description</Label>
@@ -1312,9 +866,9 @@ function PostJobTab({ onBuyCredits }: { onBuyCredits: () => void }) {
                   <Label htmlFor="pjt-auto" className="text-sm flex items-center gap-1 cursor-pointer">
                     <RefreshCw className="w-3.5 h-3.5 text-blue-500" /> Auto-repost when expired
                   </Label>
-                  <p className="text-xs text-muted-foreground">Uses 1 credit on expiry</p>
+                  <p className="text-xs text-muted-foreground">Unavailable while automatic billing is paused</p>
                 </div>
-                <Switch id="pjt-auto" checked={form.autoRepostEnabled} onCheckedChange={v => setForm(f => ({ ...f, autoRepostEnabled: v }))} />
+                <Switch id="pjt-auto" checked={false} disabled aria-label="Automatic reposting is unavailable while payment settlement is paused" />
               </div>
             </div>
             {credits < 1 && (
@@ -1322,8 +876,7 @@ function PostJobTab({ onBuyCredits }: { onBuyCredits: () => void }) {
                 <Info className="w-4 h-4 text-amber-600 mt-0.5 shrink-0" />
                 <div className="text-sm">
                   <p className="font-medium text-amber-800 dark:text-amber-200">No credits remaining</p>
-                  <p className="text-amber-700 dark:text-amber-300">Purchase credits to post a job.</p>
-                  <Button size="sm" variant="outline" className="mt-2" onClick={onBuyCredits}>Buy Credits</Button>
+                  <p className="text-amber-700 dark:text-amber-300">Credit purchases are temporarily unavailable while settlement controls are verified.</p>
                 </div>
               </div>
             )}

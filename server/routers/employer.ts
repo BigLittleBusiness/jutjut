@@ -10,6 +10,7 @@ import {
   upsertEmployer,
   setEmployerPaymentToken,
   getCreditBalance,
+  createJobWithCreditSpend,
   adjustCredits,
   getTransactionHistory,
   getPromoCode,
@@ -32,10 +33,6 @@ import {
   CREDIT_PACKS,
   type CreditPackId,
 } from "../pinpayments";
-import {
-  createStripeCharge,
-  createOrUpdateStripeCustomer,
-} from "../stripe";
 import { jobs, users, transactions } from "../../drizzle/schema";
 import { eq } from "drizzle-orm";
 import { sendEmailSilent } from "../emailService";
@@ -126,9 +123,7 @@ const creditsRouter = router({
     .input(
       z.object({
         packId: z.enum(["pack_1", "pack_5"]),
-        // PinPayments: card_token from Hosted Fields
         cardToken: z.string().optional(),
-        // Stripe: PaymentMethod ID from Stripe Elements (pm_...)
         paymentMethodId: z.string().optional(),
         saveCard: z.boolean().default(false),
         promoCode: z.string().optional(),
@@ -136,239 +131,22 @@ const creditsRouter = router({
         ipAddress: z.string().default("0.0.0.0"),
       })
     )
-    .mutation(async ({ ctx, input }) => {
-      // Ensure employer profile exists
-      let employer = await getEmployerByUserId(ctx.user.id);
-      if (!employer) {
-        throw new TRPCError({
-          code: "PRECONDITION_FAILED",
-          message: "Please complete your employer profile before purchasing credits.",
-        });
-      }
-
-      const pack = getCreditPack(input.packId);
-
-      // Validate promo code if provided
-      let promo = input.promoCode ? await getPromoCode(input.promoCode) : null;
-
-      const { subtotalCents, gstCents, totalCents } = calculateChargeAmount({
-        baseAmountCents: pack.priceAud,
-        discountType: promo?.discountType,
-        discountValue:
-          promo?.discountType === "fixed"
-            ? promo.discountValue * 100
-            : promo?.discountValue,
-        includeGst: input.includeGst,
+    .mutation(async () => {
+      // Do not charge a card or grant credits until the end-to-end provider
+      // contract is verified: idempotent settlement, signed webhooks, provider
+      // refunds and reconciliation must all be in place together.
+      throw new TRPCError({
+        code: "PRECONDITION_FAILED",
+        message: "Credit purchases are temporarily unavailable while payment settlement is being verified. No card was charged and no credits were added.",
       });
-
-      const employerId = employer.id;
-      const activeGateway = await getActiveGateway();
-      const chargeDescription = `JutJut ${pack.credits} credit${pack.credits > 1 ? "s" : ""} (${input.packId})`;
-      const chargeMetadata = {
-        employer_id: String(employerId),
-        credit_pack_id: input.packId,
-        credit_pack_size: String(pack.credits),
-        promo_code: promo?.code ?? "",
-        user_id: String(ctx.user.id),
-      };
-
-      let chargeRef: string; // charge token (Pin) or PaymentIntent ID (Stripe)
-      let pinpaymentsChargeId: string | null = null;
-      let stripeChargeId: string | null = null;
-
-      if (activeGateway === "stripe") {
-        // ── Stripe path ────────────────────────────────────────────────────────
-        if (!input.paymentMethodId) {
-          throw new TRPCError({
-            code: "BAD_REQUEST",
-            message: "A Stripe PaymentMethod ID is required when Stripe is the active gateway.",
-          });
-        }
-
-        let pmId = input.paymentMethodId;
-
-        // Optionally save card as Stripe customer for auto-repost
-        if (input.saveCard && ctx.user.email) {
-          try {
-            const customer = await createOrUpdateStripeCustomer({
-              email: ctx.user.email,
-              paymentMethodId: input.paymentMethodId,
-            });
-            // Store Stripe customer ID in the paymentToken field (reused)
-            await setEmployerPaymentToken(employer.id, customer.customerId);
-            pmId = customer.paymentMethodId;
-            const refreshed = await getEmployerByUserId(ctx.user.id);
-            if (refreshed) employer = refreshed;
-          } catch (err) {
-            logger.warn({ err }, "[Stripe] Could not create/update customer");
-          }
-        }
-
-        const stripeResult = await createStripeCharge({
-          amountCents: totalCents,
-          description: chargeDescription,
-          email: ctx.user.email ?? "noreply@jutjut.com.au",
-          paymentMethodId: pmId,
-          metadata: chargeMetadata,
-        });
-
-        if (!stripeResult.success) {
-          throw new TRPCError({
-            code: "PAYMENT_REQUIRED",
-            message: `Payment declined: ${stripeResult.statusMessage}`,
-          });
-        }
-
-        stripeChargeId = stripeResult.chargeId;
-        chargeRef = stripeResult.chargeId;
-      } else {
-        // ── PinPayments path ───────────────────────────────────────────────────
-        if (!input.cardToken) {
-          throw new TRPCError({
-            code: "BAD_REQUEST",
-            message: "A card token is required when PinPayments is the active gateway.",
-          });
-        }
-
-        let chargeToken = input.cardToken;
-        if (input.saveCard && ctx.user.email) {
-          try {
-            const customer = await createCustomer({
-              email: ctx.user.email,
-              cardToken: input.cardToken,
-            });
-            await setEmployerPaymentToken(employer.id, customer.token);
-            chargeToken = customer.token;
-            const refreshed = await getEmployerByUserId(ctx.user.id);
-            if (refreshed) employer = refreshed;
-          } catch (err) {
-            logger.warn({ err }, "[PinPayments] Could not create customer");
-          }
-        }
-
-        const charge = await createCharge({
-          amount: totalCents,
-          description: chargeDescription,
-          email: ctx.user.email ?? "noreply@jutjut.com.au",
-          ipAddress: input.ipAddress,
-          cardToken: chargeToken,
-          metadata: chargeMetadata,
-        });
-
-        if (!charge.success) {
-          throw new TRPCError({
-            code: "PAYMENT_REQUIRED",
-            message: `Payment declined: ${charge.status_message}`,
-          });
-        }
-
-        pinpaymentsChargeId = charge.token;
-        chargeRef = charge.token;
-      }
-
-      // ── Record transaction in DB ───────────────────────────────────────────
-      const db = await getDb();
-      if (db) {
-        await db.insert(transactions).values({
-          employerId,
-          amountCents: totalCents,
-          pinpaymentsChargeId,
-          stripeChargeId,
-          gateway: activeGateway,
-          status: "succeeded",
-          description: chargeDescription,
-          createdAt: new Date(),
-          updatedAt: new Date(),
-        });
-      }
-
-      // Add credits
-      await adjustCredits({
-        employerId,
-        amount: pack.credits,
-        type: "purchase",
-        reference: chargeRef,
-        description: `Purchased ${pack.credits} credit(s) — ${input.packId}`,
-      });
-
-      // Add bonus credits from promo
-      if (promo && promo.bonusCredits > 0) {
-        await adjustCredits({
-          employerId,
-          amount: promo.bonusCredits,
-          type: "promo_bonus",
-          reference: promo.code,
-          description: `Bonus credits from promo ${promo.code}`,
-        });
-        await incrementPromoCodeUsage(promo.id);
-      } else if (promo) {
-        await incrementPromoCodeUsage(promo.id);
-      }
-
-      // Record per-user redemption for admin detail view
-      if (promo) {
-        await recordPromoRedemption({
-          promoCodeId: promo.id,
-          promoCode: promo.code,
-          redeemedByUserId: ctx.user.id,
-          redeemedByEmployerId: employerId,
-          discountType: promo.discountType,
-          discountValue: promo.discountValue,
-          bonusCreditsAwarded: promo.bonusCredits,
-          chargeToken: chargeRef,
-        });
-      }
-
-      const newBalance = await getCreditBalance(employerId);
-
-      // Send purchase receipt email
-      void sendEmailSilent({
-        to: ctx.user.email ?? "",
-        templateId: "credit_purchase_receipt",
-        userId: ctx.user.id,
-        data: {
-          employer_name: employer.businessName,
-          credits_purchased: String(pack.credits + (promo?.bonusCredits ?? 0)),
-          amount_paid: `$${(totalCents / 100).toFixed(2)}`,
-          charge_reference: chargeRef,
-          new_balance: String(newBalance),
-          purchase_date: new Date().toLocaleDateString("en-AU"),
-          dashboard_url: `${process.env.APP_BASE_URL ?? "https://jutjut.com.au"}/employer`,
-        },
-      });
-
-      // In-app notification: credit purchase confirmed
-      void createNotification({
-        userId: ctx.user.id,
-        type: "credit_purchase",
-        title: `Credits added: ${pack.credits + (promo?.bonusCredits ?? 0)} credits`,
-        body: `Payment of $${(totalCents / 100).toFixed(2)} confirmed. New balance: ${newBalance} credits.`,
-        link: "/employer",
-      });
-      return {
-        success: true,
-        chargeToken: chargeRef,
-        creditsAdded: pack.credits + (promo?.bonusCredits ?? 0),
-        newBalance,
-        subtotalCents,
-        gstCents,
-        totalCents,
-        gateway: activeGateway,
-      };
     }),
 
-  /** Returns the currently active payment gateway so the frontend can render the correct payment UI */
-  activeGateway: protectedProcedure.query(async () => {
-    const gateway = await getActiveGateway();
-    return { gateway };
-  }),
+  /** Payment configuration is retained for administrators, but checkout is intentionally disabled. */
+  activeGateway: protectedProcedure.query(async () => ({
+    gateway: await getActiveGateway(),
+    purchasesEnabled: false,
+  })),
 
-  /** Returns the Stripe publishable key (safe to expose to frontend) */
-  stripePublishableKey: protectedProcedure.query(async () => {
-    const { getStripePublishableKey } = await import("../stripe");
-    const key = await getStripePublishableKey();
-    return { publishableKey: key };
-  }),
 });
 
 // ─── Jobs ─────────────────────────────────────────────────────────────────────
@@ -401,57 +179,34 @@ const employerJobsRouter = router({
         });
       }
 
-      const balance = await getCreditBalance(employerProfile.id);
-      if (balance < 1) {
-        throw new TRPCError({
-          code: "PAYMENT_REQUIRED",
-          message: "You need at least 1 credit to post a job. Please buy credits.",
-        });
-      }
-
-      const db = await getDb();
-      if (!db) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: "Database unavailable." });
-
       const now = new Date();
       const expiresAt = new Date(now.getTime() + 30 * 24 * 60 * 60 * 1000); // 30 days
       const featuredUntil = input.isFeatured
         ? new Date(now.getTime() + 7 * 24 * 60 * 60 * 1000) // 7 days
         : null;
-      const autoRepostNextDate = input.autoRepostEnabled
-        ? new Date(expiresAt.getTime() + 24 * 60 * 60 * 1000) // expiry + 1 day
-        : null;
-
-      const [result] = await db.insert(jobs).values({
+      const posted = await createJobWithCreditSpend({
+        employerId: employerProfile.id,
+        postedByUserId: ctx.user.id,
         title: input.title,
-        employer: input.employer,
+        // A listing is always attributed to the verified business profile, not a browser-provided name.
+        employer: employerProfile.businessName,
         description: input.description ?? null,
         wage: input.wage ?? null,
         distance: input.distance ?? null,
         type: input.type,
         noCoverLetter: input.noCoverLetter,
-        isActive: true,
-        postedByUserId: ctx.user.id,
         isFeatured: input.isFeatured,
         featuredUntil,
         expiresAt,
-        autoRepostEnabled: input.autoRepostEnabled,
-        autoRepostNextDate,
-        viewCount: 0,
-        applyCount: 0,
-        createdAt: now,
-        updatedAt: now,
+        now,
       });
-
-      const jobId = (result as { insertId: number }).insertId;
-
-      // Deduct 1 credit
-      await adjustCredits({
-        employerId: employerProfile.id,
-        amount: -1,
-        type: "job_post",
-        reference: String(jobId),
-        description: `Job post: ${input.title}${input.isFeatured ? " (featured)" : ""}`,
-      });
+      if (!posted.success) {
+        throw new TRPCError({
+          code: "PAYMENT_REQUIRED",
+          message: "You need at least one available credit to post a job. Your balance was not changed.",
+        });
+      }
+      const { jobId, newBalance } = posted;
 
       // Send job post confirmation email
       void sendEmailSilent({
@@ -465,7 +220,7 @@ const employerJobsRouter = router({
           expires_date: expiresAt.toLocaleDateString("en-AU"),
           job_url: `${process.env.APP_BASE_URL ?? "https://jutjut.com.au"}/jobs/${jobId}`,
           dashboard_url: `${process.env.APP_BASE_URL ?? "https://jutjut.com.au"}/employer`,
-          new_balance: String(balance - 1),
+          new_balance: String(newBalance),
         },
       });
 
@@ -474,15 +229,19 @@ const employerJobsRouter = router({
         userId: ctx.user.id,
         type: "job_post",
         title: `Job posted: ${input.title}`,
-        body: `Your listing is live and expires ${expiresAt.toLocaleDateString("en-AU")}. Credits remaining: ${balance - 1}.`,
+        body: `Your listing is live and expires ${expiresAt.toLocaleDateString("en-AU")}. Credits remaining: ${newBalance}.`,
         link: "/employer",
       });
-      return { jobId, expiresAt, newBalance: balance - 1 };
+      return { jobId, expiresAt, newBalance };
     }),
 
   recordView: protectedProcedure
     .input(z.object({ jobId: z.number() }))
     .mutation(async ({ ctx, input }) => {
+      const job = await getJobById(input.jobId);
+      if (!job || !job.isActive || (job.expiresAt && job.expiresAt <= new Date())) {
+        throw new TRPCError({ code: "NOT_FOUND", message: "Job not found or no longer available." });
+      }
       await recordJobView(input.jobId, ctx.user.id);
       return { ok: true };
     }),
@@ -507,6 +266,13 @@ const employerJobsRouter = router({
     .mutation(async ({ ctx, input }) => {
       const db = await getDb();
       if (!db) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: "Database unavailable." });
+      const job = await getJobById(input.jobId);
+      if (!job || !job.isActive || (job.expiresAt && job.expiresAt <= new Date())) {
+        throw new TRPCError({ code: "NOT_FOUND", message: "Job not found or no longer available." });
+      }
+      if (job.postedByUserId === ctx.user.id) {
+        throw new TRPCError({ code: "FORBIDDEN", message: "You cannot apply to your own job listing." });
+      }
       const userRows = await db.select({ shareContactWithEmployers: users.shareContactWithEmployers }).from(users).where(eq(users.id, ctx.user.id)).limit(1);
       const contactShared = userRows[0]?.shareContactWithEmployers ?? false;
       const result = await applyToJob({

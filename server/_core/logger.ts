@@ -1,8 +1,7 @@
 /**
  * logger.ts — Structured JSON logger for production (pino).
  *
- * In development: pretty-prints with colours via pino-pretty.
- * In production (NODE_ENV=production): emits newline-delimited JSON that
+ * In every environment it emits newline-delimited JSON that
  * CloudWatch Logs, Datadog, and other AWS log aggregators can parse natively.
  *
  * Usage:
@@ -37,15 +36,5 @@ export const logger = pino(
     // Include hostname and pid in production for multi-instance tracing
     base: isDev ? undefined : { pid: process.pid, hostname: process.env.HOSTNAME ?? "unknown" },
     timestamp: pino.stdTimeFunctions.isoTime,
-  },
-  isDev
-    ? pino.transport({
-        target: "pino-pretty",
-        options: {
-          colorize: true,
-          translateTime: "SYS:HH:MM:ss",
-          ignore: "pid,hostname",
-        },
-      })
-    : undefined
+  }
 );
