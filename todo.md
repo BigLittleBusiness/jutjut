@@ -488,3 +488,12 @@
 ## JutJut Practicals First-Visit Guidance
 - [x] PRACTICALS14 Add a concise student welcome modal on first authenticated Practicals visit, with placement application steps and persistent dismissal
 - [x] PRACTICALS15 Test, visually verify, checkpoint and push the Practicals welcome modal to GitHub
+
+## Top Five Risk Remediation (October 2026)
+
+- [x] RISK1 Suspend all browser-settled credit purchases, Stripe checkout, local-only refunds and automatic payment retries until provider-side idempotent settlement, verified webhooks and reconciliation are implemented. Make credit-backed job posting atomic to prevent concurrent overspend.
+- [x] RISK2 Bind OAuth callback state to the initiating browser, reduce session lifetime, reject suspended accounts at the server boundary and scope school/practical access to the authorised tenant.
+- [x] RISK3 Correct public, waitlist and in-product claims so enrolment, pricing, verification, university functionality and deletion promises match current operational capability.
+- [x] RISK4 Remove fabricated student identities, local-only verification actions, hard-coded job/feed evidence and simulated university/accessibility behaviour from operational student-facing screens.
+- [x] RISK5 Strengthen visible focus, reduced motion and upload errors; keep public forms and calls to action accessible and truthful.
+- [x] RISK6 Upgrade production dependencies, move to Express 5-compatible routes, and verify clean production install, zero-vulnerability audit, full TypeScript/test/build gates and preview health.
